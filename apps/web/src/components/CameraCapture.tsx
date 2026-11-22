@@ -16,6 +16,19 @@ export type CameraState =
   | 'unavailable'
   | 'completed';
 
+/** Sisi terpanjang bukti selfie sebelum dikirim — kompresi agar upload & storage hemat. */
+const EVIDENCE_MAX_EDGE = 1280;
+const EVIDENCE_JPEG_QUALITY = 0.85;
+
+/** Hitung dimensi target frame: sisi terpanjang ≤ EVIDENCE_MAX_EDGE, tanpa memperbesar. */
+export function evidenceTargetSize(sourceWidth: number, sourceHeight: number): { width: number; height: number } {
+  const scale = Math.min(1, EVIDENCE_MAX_EDGE / Math.max(sourceWidth, sourceHeight));
+  return {
+    width: Math.max(1, Math.round(sourceWidth * scale)),
+    height: Math.max(1, Math.round(sourceHeight * scale)),
+  };
+}
+
 interface CameraCaptureProps {
   onCaptured: (blob: Blob, previewUrl: string) => void;
   onRetake?: () => void;
@@ -76,15 +89,16 @@ export function CameraCapture({
   const capture = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.videoWidth === 0) return;
+    const { width, height } = evidenceTargetSize(video.videoWidth, video.videoHeight);
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       setState('unavailable');
       return;
     }
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, width, height);
     canvas.toBlob(
       (blob) => {
         if (!blob) {
@@ -101,7 +115,7 @@ export function CameraCapture({
         onCaptured(blob, url);
       },
       'image/jpeg',
-      0.9,
+      EVIDENCE_JPEG_QUALITY,
     );
   }, [onCaptured, stopStream]);
 

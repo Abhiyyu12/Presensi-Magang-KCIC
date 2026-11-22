@@ -8,6 +8,8 @@ import { badRequest, unprocessable } from '../../common/errors.js';
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_DIMENSION = 4096;
 const MIN_DIMENSION = 60;
+/** Sisi terpanjang bukti yang disimpan — kompresi: foto ponsel ~4000px jadi ≤1280px. */
+const STORED_MAX_EDGE = 1280;
 
 /** Magic-byte sniffing; MIME header alone is not trusted. */
 export function sniffImageType(buf: Buffer): 'image/jpeg' | 'image/png' | 'image/webp' | null {
@@ -29,6 +31,7 @@ export interface ProcessedImage {
 /**
  * Validate + normalize an uploaded selfie:
  * size limit, allowed MIME, magic bytes, successful decode, dimension bounds,
+ * downscale longest edge to STORED_MAX_EDGE (no enlargement),
  * re-encode to JPEG (strips EXIF/metadata), sha256 of stored bytes.
  */
 export async function validateAndProcessImage(buf: Buffer, declaredMime: string): Promise<ProcessedImage> {
@@ -52,8 +55,13 @@ export async function validateAndProcessImage(buf: Buffer, declaredMime: string)
   if (width > MAX_DIMENSION || height > MAX_DIMENSION) throw unprocessable('Resolusi gambar terlalu besar.');
   if (width < MIN_DIMENSION || height < MIN_DIMENSION) throw unprocessable('Resolusi gambar terlalu kecil.');
 
-  // Re-encode: strips all EXIF/metadata, normalizes to JPEG.
-  const reencoded = await image.rotate().jpeg({ quality: 85, mozjpeg: true }).toBuffer();
+  // Re-encode + downscale: strips all EXIF/metadata, normalizes to JPEG,
+  // resize sisi terpanjang ≤ STORED_MAX_EDGE (tanpa memperbesar gambar kecil).
+  const reencoded = await image
+    .rotate()
+    .resize({ width: STORED_MAX_EDGE, height: STORED_MAX_EDGE, fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 82, mozjpeg: true })
+    .toBuffer();
   const processed = await sharp(reencoded).metadata();
   return {
     buffer: reencoded,

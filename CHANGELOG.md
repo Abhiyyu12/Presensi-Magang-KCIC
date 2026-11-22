@@ -4,6 +4,20 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: kompresi foto bukti (frontend + backend)
+
+### Ditambahkan
+- **Foto bukti selfie kini dikompres dua lapis** (permintaan user: biar tidak makan storage, baik di frontend maupun backend):
+  - **Frontend** (hemat bandwidth upload, mobile-first): frame kamera diturunkan ke sisi terpanjang **≤1280 px** (rasio asli dipertahankan, tidak memperbesar frame kecil) lalu di-encode JPEG kualitas 0.85 sebelum dikirim — berlaku otomatis untuk absen datang/pulang maupun pergerakan izin karena keduanya memakai komponen `CameraCapture` yang sama.
+  - **Backend (enforcement resmi)**: `validateAndProcessImage` kini me-resize bukti ke sisi terpanjang **≤1280 px** (`fit: inside, withoutEnlargement`) sebelum re-encode JPEG **q82 mozjpeg** — sebelumnya hanya re-encode q85 tanpa resize, jadi foto ponsel 4000 px tersimpan 4000 px (1-4 MB). EXIF/metadata tetap dibuang; dimensi, ukuran, dan checksum di DB kini mencerminkan byte final hasil kompresi.
+  - Batas input tidak berubah: file > `MAX_UPLOAD_BYTES` atau resolusi > 4096 px tetap ditolak; foto kecil tidak pernah diperbesar. **Tanpa dependensi baru** (`sharp` sudah menjadi dependency API).
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **89/89** (2 test kompresi baru: 3000×2000 → tersimpan 1280×853 dan byte lebih kecil; 100×80 tidak diperbesar); web tsc+eslint bersih + test **48/48** (2 test helper `evidenceTargetSize` baru: rasio tetap, tidak memperbesar).
+- E2E Playwright (peserta1, kamera fake Chromium, 640×480): absen masuk sukses; preview blob terkompresi frontend **7.6 KiB**; DB `file_objects` mencatat **640×480, 5.1 KiB** (hasil re-encode backend q82) di `peserta1/datang/…`; foto termuat di Detail Absensi (`naturalWidth > 0`, 640×480).
+- Demo kompresi in-browser pada frame 3000×2000: **2006 KiB → 353 KiB (82% lebih kecil)** dengan resep yang sama (≤1280 px + q0.85).
+- Artefak uji sendiri dibersihkan setelah verifikasi: baris `attendance_events`/`file_objects`/`attendance_days` peserta1 hari ini + objek MinIO terkait dihapus; sisa sampah 1.2KiB dari run test suite (10 objek) juga disapu — bucket hanya berisi 9 foto sah + `_unlinked/`.
+
 ## [2026-11-22] — UAT: bukti MinIO dipisah per kategori (datang/pulang/izin)
 
 ### Diubah
