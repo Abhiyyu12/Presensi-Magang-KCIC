@@ -46,7 +46,7 @@ Status aktual (2026-11-22, pasca-Fase 6): API 38 test hijau — 29 integrasi (`a
 
 ### E2E
 
-**BELUM DIOTOMASI — direncanakan.** Tidak ada script `test:e2e` maupun suite Playwright di repo. Verifikasi saat ini = 23 unit test web + 36 test API (inject end-to-end) + uji browser ad-hoc memakai skrip Playwright Python di luar repo (per role pada viewport 360×740, 390×844, 1280×800, termasuk alur check-in dengan kamera palsu + geolocation). Daftar journey di bawah adalah cakupan yang direncanakan untuk suite E2E terotomasi:
+**BELUM DIOTOMASI — direncanakan.** Tidak ada script `test:e2e` maupun suite Playwright di repo. Verifikasi saat ini = 24 unit test web + 38 test API (inject end-to-end) + uji browser ad-hoc memakai skrip Playwright Python di luar repo (per role pada viewport 360×740, 390×844, 1280×800; golden path peserta lengkap: check-in kamera palsu + geolocation → check-out → riwayat → unduh CSV → ajukan izin → PENDING → batalkan → CANCELLED; desktop: monitoring→detail, laporan, master, audit, approval). Daftar journey di bawah adalah cakupan yang direncanakan untuk suite E2E terotomasi:
 
 1. Admin bootstrap login and password change.
 2. Admin creates organization, participant, supervisor, schedule, assignment.

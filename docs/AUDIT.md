@@ -193,3 +193,28 @@ Bug tambahan ditemukan & diperbaiki saat eksekusi (di luar daftar audit):
 Improvement kecil (§7): **I-1** chip preset riwayat (7 hari / 30 hari / Bulan ini) selesai; **I-2** banner pengingat absen pulang di Beranda peserta selesai; **I-3** `GET /attendance/export` CSV riwayat pribadi (tanpa koordinat/foto, diaudit `ATTENDANCE_EXPORT_SELF`, ditolak untuk akun tanpa profil peserta) + tombol "Unduh CSV" di Riwayat + 2 test API baru.
 
 Verifikasi pasca-Fase 4: typecheck API & web hijau; lint kedua app hijau; **test API 36/36** (27 integrasi + 9 unit); **test web 23/23**; build web hijau. Verifikasi browser mobile 360/390 + desktop dilakukan di Fase 6.
+## 11. Fase 6 — Verifikasi browser alur kritis & temuan tambahan
+
+Uji browser Playwright ad-hoc (di luar repo) pada 390×844 dan 1280×800 menemukan **3 bug alur inti** yang lolos dari test API karena test inject memakai penanganan CSRF/scope secara eksplisit dan tidak pernah membuka form izin sebagai peserta:
+
+| ID | Temuan | Dampak | Perbaikan (commit 18a20a6) | Status |
+|---|---|---|---|---|
+| F-19 | Token CSRF cache basi pasca-login: login & ganti password merotasi cookie server-side, klien tetap mengirim token lama | Mutasi pertama setelah login selalu 403 "Token CSRF tidak valid" sampai reload | `ensureCsrfToken()` membaca cookie `csrf_token` sebagai sumber kebenaran (double-submit kanonik); fetch `/auth/csrf` hanya bila cookie belum ada (D-029) | Selesai |
+| F-20 | Scope pribadi `listAttendance` memakai `{ id: internProfileId }` (id baris hari, bukan id profil) | Riwayat pribadi & CSV pribadi selalu 0 baris | Filter diganti `{ internProfileId }`; test regresi list + CSV berisi baris | Selesai |
+| F-21 | Form izin peserta memanggil `/admin/leave-categories` (guard admin) | Peserta selalu 403 → tidak bisa mengajukan izin dari UI | Endpoint additive `GET /leaves/categories` (ACTIVE, `leave:request`); form memakai endpoint itu (D-028); test 200 peserta + 403 non-peserta | Selesai |
+
+Verifikasi akhir Fase 6 (semua perintah exit 0):
+- `pnpm --filter api test` → **38/38** (29 integrasi + 9 unit); `pnpm --filter web test` → **24/24**.
+- `pnpm --filter api lint`, `pnpm --filter web lint` (`--max-warnings 0`), `pnpm --filter api build`, `pnpm --filter web build` → hijau.
+- Golden path peserta (390×844, kamera palsu + geolocation akurasi 12 m): Beranda CTA → Absen Masuk → kamera → konfirmasi → sukses server → Beranda status terbaru → Absen Pulang → sukses → Riwayat baris hari ini → Unduh CSV (berisi baris, tanpa koordinat) → Izin: form memuat kategori → ajukan TEMPORARY → PENDING → detail → Batalkan Pengajuan → CANCELLED. Aturan "satu izin TEMPORARY aktif per hari" terbukti menolak pengajuan kedua saat masih ada yang PENDING.
+- Desktop 1280×800: peserta (beranda/absensi lengkap/riwayat+CSV/izin), pembimbing (monitoring 1 baris → detail, laporan), admin-hr (Data Master, Audit 15 baris, Approval). `/approval` sebagai pembimbing menampilkan state "Akses ditolak" dengan benar (approval hanya ADMIN_HR).
+- Mobile 360/390 + desktop per role sebelumnya diverifikasi pada Fase 4 (nav, sheet Menu, dashboard, landing IT-only).
+
+Cleanup artefak uji (data dummy, semua lewat API ber-audit atau psql terbatas):
+- Jadwal sementara peserta3 (`703a389e-…`, INDIVIDUAL semua hari) → status INACTIVE via `PATCH /admin/schedules/:id`.
+- Akun dummy `it-uji` (ADMIN_IT) → INACTIVE via `PATCH /admin/users/:id`.
+- 1 baris `workday_snapshots` basi peserta3 (Sabtu, materialisasi sebelum jadwal uji) dihapus saat 0 baris absensi; snapshot hari ini dibiarkan karena sudah direferensikan riwayat.
+- 8 baris `file_objects` + 8 objek MinIO yatim (bukti selfie palsu dari run E2E yang diulang) dihapus; 2 objek run terakhir tetap direferensikan riwayat hari ini.
+- Sisa dummy yang dibiarkan sebagai contoh: riwayat hari ini peserta3 (NEEDS_REVIEW karena pulang jauh sebelum jam jadwal tanpa izin) + 2 izin CANCELLED.
+
+Known limitation baru: bucket MinIO dipakai bersama DB dev dan DB test (`attendance_test` di-DROP tiap run) sehingga objek bukti run test menjadi yatim di bucket dev (privat, localhost). Isolasi bucket test direncanakan; tidak mempengaruhi keamanan produksi karena stack ini lokal-only.

@@ -16,7 +16,14 @@ echo "== Files =="
 [ -f pnpm-lock.yaml ] && ok "lockfile exists" || warn "pnpm-lock.yaml missing"
 
 echo "== Ports (127.0.0.1) =="
-for p in 3000 5173 5432 9000 9001; do
+# Host ports come from .env (remapped); container-internal ports stay fixed.
+envport() { grep -E "^$1=" .env 2>/dev/null | cut -d= -f2 || true; }
+API_PORT=$(envport API_PORT); API_PORT=${API_PORT:-3000}
+WEB_PORT=$(envport WEB_PORT); WEB_PORT=${WEB_PORT:-5173}
+DB_HOST_PORT=$(envport DB_HOST_PORT); DB_HOST_PORT=${DB_HOST_PORT:-5433}
+MINIO_HOST_PORT=$(envport MINIO_HOST_PORT); MINIO_HOST_PORT=${MINIO_HOST_PORT:-9002}
+MINIO_CONSOLE_HOST_PORT=$(envport MINIO_CONSOLE_HOST_PORT); MINIO_CONSOLE_HOST_PORT=${MINIO_CONSOLE_HOST_PORT:-9003}
+for p in "$API_PORT" "$WEB_PORT" "$DB_HOST_PORT" "$MINIO_HOST_PORT" "$MINIO_CONSOLE_HOST_PORT"; do
   if netstat -an 2>/dev/null | grep -q "127.0.0.1:$p .*LISTEN"; then
     ok "port $p bound"
   else
@@ -31,9 +38,9 @@ for s in db minio api web; do
 done
 
 echo "== Dependencies ready =="
-curl -sf http://127.0.0.1:3000/health/live >/dev/null 2>&1 && ok "api live" || bad "api /health/live not reachable"
-curl -sf http://127.0.0.1:3000/health/ready >/dev/null 2>&1 && ok "api ready (db+minio)" || bad "api /health/ready failing"
-curl -sf http://127.0.0.1:5173/ >/dev/null 2>&1 && ok "web reachable" || warn "web not reachable"
+curl -sf "http://127.0.0.1:${API_PORT}/health/live" >/dev/null 2>&1 && ok "api live" || bad "api /health/live not reachable"
+curl -sf "http://127.0.0.1:${API_PORT}/health/ready" >/dev/null 2>&1 && ok "api ready (db+minio)" || bad "api /health/ready failing"
+curl -sf "http://127.0.0.1:${WEB_PORT}/" >/dev/null 2>&1 && ok "web reachable" || warn "web not reachable"
 
 echo "== Migrations =="
 if [ -f apps/api/.env ]; then

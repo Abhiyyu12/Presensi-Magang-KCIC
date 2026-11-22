@@ -109,6 +109,17 @@ Catat setiap fase pembangunan. Jangan menghapus catatan kegagalan; tambahkan has
 - **Verifikasi:** label/istilah di USER_GUIDE dicocokkan dengan kode (EVENT_TYPE_LABELS, pesan server, nama tombol); tidak ada klaim fitur yang tidak ada.
 - **Catatan:** jumlah test pada entri historis dibiarkan apa adanya (33/36/23); jumlah terkini pasca-Fase 6 = API 38, web 24 (lihat entri Fase 6).
 
+## 2026-11-22 — Fase 6 — Verifikasi akhir & perbaikan alur inti (commit 18a20a6, docs 7cf6193 + entri ini)
+
+- **Status:** VERIFIED
+- **Temuan browser (docs/AUDIT.md §11):** F-19 CSRF cache basi pasca-login (403 pada mutasi pertama), F-20 scope riwayat pribadi salah kolom (0 baris), F-21 form izin peserta memanggil endpoint admin (403). Ketiganya diperbaiki + 4 test regresi baru; keputusan D-028/D-029; kontrak API_CONTRACT §5 diperbarui.
+- **Perintah & hasil (exit 0):** `pnpm --filter api test` → 38/38 (29 integrasi + 9 unit); `pnpm --filter web test` → 24/24; `pnpm --filter api lint` & `pnpm --filter web lint` (`--max-warnings 0`); `pnpm --filter api build` (prisma generate + tsc); `pnpm --filter web build` (tsc + vite). Docker `up -d --build api web` → api healthy, web started.
+- **Uji browser ad-hoc (skrip di luar repo, Playwright Python):** golden path peserta 390×844 lengkap (check-in → check-out → riwayat → CSV → izin ajukan → PENDING → batal → CANCELLED; aturan satu izin TEMPORARY aktif/hari terbukti); desktop 1280×800 peserta/pembimbing/admin-hr (monitoring→detail, laporan, master, audit, approval); state "Akses ditolak" benar untuk pembimbing di /approval. Screenshot & JSON hasil di folder temp ux-audit (tidak masuk repo).
+- **Cleanup artefak uji (dummy):** jadwal uji peserta3 → INACTIVE (PATCH admin ber-audit); akun `it-uji` → INACTIVE (PATCH admin ber-audit); 8 file_objects + 8 objek MinIO yatim milik run E2E dihapus; 1 snapshot basi dihapus lebih awal saat 0 absensi. Sisa contoh dummy: riwayat hari ini peserta3 (NEEDS_REVIEW) + 2 izin CANCELLED + 2 objek bukti terreferensi.
+- **Operasional:** `infra/scripts/doctor.sh` sebelumnya probing port hardcoded (3000/5173/5432/9000/9001) sehingga FAIL palsu dan malah menganggap stack lain "OK". Kini membaca port host dari `.env` dengan default yang sama seperti docker-compose.yml (3000/5173/5433/9002/9003). Hasil akhir: **Doctor: PASS** (port 3002/5174/5433/9002/9003 bound, 4 container running, api live+ready, web reachable, migrasi ada).
+- **Known limitations:** E2E dalam repo belum diotomasi (BELUM DIOTOMASI, lihat TESTING.md); bucket MinIO bersama dev/test → objek yatim run test (privat, lokal; isolasi direncanakan); Swagger UI tidak ada; satu user Postgres untuk runtime+migrasi (SECURITY.md §8); uji perangkat kamera/GPS nyata menunggu pilot.
+- **Next task:** pilot perangkat nyata + keputusan kebijakan KCIC yang PENDING; otomasi suite E2E dalam repo; isolasi bucket MinIO test; pemisahan kredensial DB runtime/migrasi.
+
 ## Keputusan pending (TIDAK dikarang)
 
 
