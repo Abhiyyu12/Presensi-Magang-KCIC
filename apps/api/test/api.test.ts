@@ -4,6 +4,8 @@ import { buildApp } from '../src/app/buildApp.js';
 import { getDb } from '../src/infrastructure/db.js';
 import { addDays, businessDate, zonedTimeToUtc } from '../src/common/time.js';
 import { authHeaders, buildMultipart, envelope, getHeaders, login, makeJpeg, type Session } from './helpers.js';
+import ExcelJS from 'exceljs';
+import { verifyPassword } from '../src/modules/auth/password.js';
 
 const DEV_PASSWORD = 'DevPassword123!';
 const today = businessDate();
@@ -838,5 +840,141 @@ describe('Fase 1.5: role CRUD + gabung peserta ke pengguna + filter pengguna', (
     expect(envelope(res).data.deleted).toBe(true);
     const gone = await db.role.findUnique({ where: { id: roleId } });
     expect(gone).toBeNull();
+  });
+});
+
+describe('Fase 1.5f: import pengguna via Excel', () => {
+  const suffix = `${Date.now()}`;
+  let bureauName = '';
+  const importedUsernames = [`uji.import.intern.${suffix}`, `uji.import.spv.${suffix}`];
+
+  async function buildImportWorkbook(rows: string[][]): Promise<Buffer> {
+    const wb = new ExcelJS.Workbook();
+    const sheet = wb.addWorksheet('Pengguna');
+    sheet.addRow([
+      'Username', 'Nama Lengkap', 'Email', 'No. HP', 'Kode Role', 'Nomor Peserta',
+      'Biro', 'Divisi', 'Penempatan', 'Tanggal Mulai (YYYY-MM-DD)', 'Tanggal Selesai (YYYY-MM-DD)', 'Status Peserta',
+    ]);
+    for (const row of rows) sheet.addRow(row);
+    return Buffer.from(await wb.xlsx.writeBuffer() as ArrayBuffer);
+  }
+
+  it('template berisi sheet petunjuk, master tersembunyi, dan dropdown', async () => {
+    const res = await get(app, '/api/v1/admin/users/import/template', admin);
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('spreadsheetml');
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(res.rawPayload as unknown as ArrayBuffer);
+    const names = wb.worksheets.map((w) => w.name);
+    expect(names).toContain('Petunjuk');
+    expect(names).toContain('Pengguna');
+    const master = wb.getWorksheet('Data Master');
+    expect(master?.state).toBe('hidden');
+    const pengguna = wb.getWorksheet('Pengguna')!;
+    expect(pengguna.getCell('A1').value).toBe('Username');
+    expect(pengguna.getCell('E2').dataValidation?.type).toBe('list');
+    const db = getDb();
+    bureauName = (await db.bureau.findFirstOrThrow({ where: { code: 'BIO-OPS' } })).name;
+  });
+
+  it('validate memisahkan baris valid dan error', async () => {
+    const buf = await buildImportWorkbook([
+      [
+        `uji.import.intern.${suffix}`, 'Impor Intern Uji', '', '', 'INTERN', `UJIIMP-${suffix}`,
+        bureauName, '', '', today, '', 'AKTIF',
+      ],
+      [`uji.import.spv.${suffix}`, 'Impor Pembimbing Uji', '', '', 'SUPERVISOR', '', '', '', '', '', '', ''],
+      [`uji.import.bad.${suffix}`, 'Impor Gagal', '', '', 'ROLE_TIDAK_ADA', '', '', '', '', '', '', ''],
+    ]);
+    const mp = buildMultipart({}, { field: 'file', filename: 'import.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', content: buf });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/users/import/validate',
+      headers: authHeaders(admin, { 'content-type': mp.contentType }),
+      payload: mp.body,
+    });
+    expect(res.statusCode).toBe(200);
+    const data = envelope(res).data;
+    expect(data.totalRows).toBe(3);
+    expect(data.validCount).toBe(2);
+    expect(data.errorCount).toBe(1);
+    const bad = data.rows.find((r: { username: string }) => r.username === `uji.import.bad.${suffix}`);
+    expect(bad.errors.join(' ')).toContain('tidak ada di daftar');
+  });
+
+  it('confirm membuat pengguna + profil + role, password sementara bekerja', async () => {
+    const db = getDb();
+    const buf = await buildImportWorkbook([
+      [
+        `uji.import.intern.${suffix}`, 'Impor Intern Uji', '', '', 'INTERN', `UJIIMP-${suffix}`,
+        bureauName, '', '', today, '', 'AKTIF',
+      ],
+      [`uji.import.spv.${suffix}`, 'Impor Pembimbing Uji', '', '', 'SUPERVISOR', '', '', '', '', '', '', ''],
+      [`uji.import.bad.${suffix}`, 'Impor Gagal', '', '', 'ROLE_TIDAK_ADA', '', '', '', '', '', '', ''],
+    ]);
+    const mp = buildMultipart({}, { field: 'file', filename: 'import.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', content: buf });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/users/import/confirm',
+      headers: authHeaders(admin, { 'content-type': mp.contentType }),
+      payload: mp.body,
+    });
+    expect(res.statusCode).toBe(200);
+    const data = envelope(res).data;
+    expect(data.created).toBe(2);
+    expect(data.skipped).toBe(1);
+    for (const u of data.users) {
+      expect(u.username).toContain('uji.import.');
+      expect(u.temporaryPassword).toMatch(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{12}$/);
+      const dbUser = await db.user.findUniqueOrThrow({ where: { username: u.username } });
+      expect(dbUser.mustChangePassword).toBe(true);
+      expect(await verifyPassword(dbUser.passwordHash, u.temporaryPassword)).toBe(true);
+      importedUsernames.push(u.username);
+    }
+
+    const intern = await db.user.findUniqueOrThrow({
+      where: { username: `uji.import.intern.${suffix}` },
+      include: { internProfile: { include: { bureau: true } }, roleAssignments: { include: { role: true } } },
+    });
+    expect(intern.internProfile?.participantNumber).toBe(`UJIIMP-${suffix}`);
+    expect(intern.internProfile?.bureau.name).toBe(bureauName);
+    expect(intern.roleAssignments.some((ra) => ra.role.code === 'INTERN')).toBe(true);
+    const spv = await db.user.findUniqueOrThrow({
+      where: { username: `uji.import.spv.${suffix}` },
+      include: { roleAssignments: { include: { role: true } } },
+    });
+    expect(spv.internProfile).toBeFalsy();
+    expect(spv.roleAssignments.some((ra) => ra.role.code === 'SUPERVISOR')).toBe(true);
+  });
+
+  it('impor ulang file yang sama ditolak (username sudah dipakai)', async () => {
+    const buf = await buildImportWorkbook([
+      [
+        `uji.import.intern.${suffix}`, 'Impor Intern Uji', '', '', 'INTERN', `UJIIMP-${suffix}`,
+        bureauName, '', '', today, '', 'AKTIF',
+      ],
+      [`uji.import.spv.${suffix}`, 'Impor Pembimbing Uji', '', '', 'SUPERVISOR', '', '', '', '', '', '', ''],
+    ]);
+    const mp = buildMultipart({}, { field: 'file', filename: 'import.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', content: buf });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/users/import/confirm',
+      headers: authHeaders(admin, { 'content-type': mp.contentType }),
+      payload: mp.body,
+    });
+    expect(res.statusCode).toBe(422);
+    expect(envelope(res).error?.message).toContain('Tidak ada baris valid');
+  });
+
+  afterAll(async () => {
+    const db = getDb();
+    const users = await db.user.findMany({ where: { username: { in: importedUsernames } }, select: { id: true } });
+    for (const u of users) {
+      await db.session.deleteMany({ where: { userId: u.id } });
+      await db.internProfile.deleteMany({ where: { userId: u.id } });
+      await db.userRoleAssignment.deleteMany({ where: { userId: u.id } });
+      await db.user.deleteMany({ where: { id: u.id } });
+    }
   });
 });

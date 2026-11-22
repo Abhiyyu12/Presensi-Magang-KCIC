@@ -6,6 +6,7 @@ import { DataTable, type Column } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
 import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { ImportUsersDialog } from './ImportUsersDialog';
 import { SuccessNotice } from '../../components/SuccessNotice';
 import { StatusBadge } from '../../components/StatusBadge';
 import { MasterCombobox } from '../../components/MasterCombobox';
@@ -126,6 +127,7 @@ export function UsersPanel() {
   const [rolesRow, setRolesRow] = useState<Row | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [resetToken, setResetToken] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -634,7 +636,10 @@ export function UsersPanel() {
         </select>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        <button type="button" className="btn-secondary" onClick={() => setImportOpen(true)}>
+          <span className="flex items-center gap-1.5"><Icon name="download" className="h-4 w-4" /> Import Excel</span>
+        </button>
         <button type="button" className="btn-primary" onClick={() => setCreateOpen(true)}>
           Tambah Pengguna
         </button>
@@ -886,6 +891,12 @@ export function UsersPanel() {
           )}
         </div>
       </ConfirmDialog>
+
+      <ImportUsersDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={(message) => setNotice(message)}
+      />
     </div>
   );
 }

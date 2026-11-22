@@ -10,6 +10,7 @@ import { authorize, requireCtx } from '../../app/auth.js';
 import { adminScopeCovers } from '../access/scope.js';
 import type { AccessContext } from '../access/context.js';
 import { hashPassword, passwordSchemaMin } from '../auth/password.js';
+import { registerUserImportRoutes } from './user-import.js';
 
 const idParams = z.object({ id: z.string().uuid() });
 const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal YYYY-MM-DD');
@@ -265,6 +266,7 @@ const USER_SAFE_SELECT = {
 
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
   const db = getDb();
+  registerUserImportRoutes(app);
 
   // ---------- Bureaus (GLOBAL scope only) ----------
 

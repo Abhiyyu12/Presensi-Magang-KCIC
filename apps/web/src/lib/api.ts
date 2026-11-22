@@ -222,11 +222,23 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
   return payload as T;
 }
 
+/** Download a binary endpoint (e.g. Excel template) with the auth cookie. */
+export async function apiDownload(path: string): Promise<{ blob: Blob; filename: string | null }> {
+  const res = await fetch(`${API_BASE}${path}`, { credentials: 'include' });
+  if (!res.ok) {
+    const contentType = res.headers.get('content-type') ?? '';
+    const payload = contentType.includes('application/json') ? await res.json().catch(() => null) : null;
+    throw toApiError(res.status, payload);
+  }
+  const dispo = res.headers.get('content-disposition') ?? '';
+  const match = /filename="?([^";]+)"?/.exec(dispo);
+  return { blob: await res.blob(), filename: match?.[1] ?? null };
+}
+
 export function fieldErrorMessage(
   fieldErrors: ApiFieldErrors | undefined,
   field: string,
-): string | undefined {
-  if (!fieldErrors) return undefined;
+): string | undefined {  if (!fieldErrors) return undefined;
   const value = fieldErrors[field];
   if (typeof value === 'string') return value;
   if (Array.isArray(value) && value.length > 0) return value[0];
