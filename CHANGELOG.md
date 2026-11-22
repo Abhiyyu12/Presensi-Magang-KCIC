@@ -4,6 +4,20 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: Data Master kini punya Hapus (D) di tab yang bisa dihapus + validasi nilai parameter di backend
+
+### Ditambahkan
+- **Tombol Hapus di Data Master** (keluhan user: "blom bisa crud cuma bisa edit aja" — penyelidikan live membuktikan Create sudah jalan di semua tab; yang memang belum ada adalah Delete). Kini **Biro, Divisi, Penempatan, Kalender, Kategori Izin, Cakupan (Scope)** punya tombol Hapus di kolom Aksi (`ResourcePanel`), dan **Jadwal** punya tombol Hapus sendiri (`SchedulesPanel`); Role sudah punya dari sebelumnya. Parameter sengaja tidak bisa dihapus (parameter operasional, cukup diubah). Hapus lewat dialog konfirmasi "Ya, Hapus"; error tampil di dalam dialog.
+- **7 endpoint DELETE backend dengan guard referensi**: `DELETE /admin/organizations/bureaus|divisions/:id`, `/admin/placements/:id`, `/admin/schedules/:id`, `/admin/calendar/:id`, `/admin/leave-categories/:id`, `/admin/scopes/:id`. Jika data masih dipakai (mis. Biro dipakai divisi/profil peserta, Jadwal dipakai snapshot hari kerja, Kategori Izin dipakai pengajuan), server **menolak dengan 422 + pesan Bahasa Indonesia "… masih dipakai N … Nonaktifkan bila tidak lagi digunakan."** — konsisten dengan aturan "jangan hapus data yang sudah berhubungan". Penghapusan berhasil ditulis ke audit (`ADMIN_*_DELETE`) dalam satu transaksi. Penempatan hierarki dihormati: Divisi hanya di bawah Biro yang dicakup, Scope/Parameter admin global.
+
+### Diperbaiki
+- **Bug nyata ketemu saat UAT**: nilai `business_parameters` belum tervalidasi di backend — nilai `default_workdays` `[0..6]` (terindeks 0) sempat tersimpan lewat UI dan membuat default dialog Jadwal salah (Sabtu ikut terhitung hari kerja; form jadi menuntut jam masuk/pulang Sabtu). Sekarang `validateBusinessParameterValue` memvalidasi **`default_workdays` = array integer 1–7 (1=Senin … 7=Minggu) tanpa duplikat** dan **`late_tolerance_default_minutes` = bilangan bulat 0–240**, berlaku di POST dan PATCH; data dev dipulihkan ke `[1,2,3,4,5]`.
+
+### Pembuktian (bukan klaim)
+- Gate: **api tsc+eslint bersih + test 97/97** (6 test baru: rantai Biro→Divisi→Penempatan create+delete + guard 422; Kategori Izin create+delete + guard via pengajuan asli; Scope create 200 + admin-hr 403 + delete; Jadwal + guard snapshot + delete; Kalender + guard snapshot + delete; Parameter invalid ditolak 422 tanpa mengubah data) — **web tsc+eslint bersih + test 48/48**.
+- UAT live Playwright (`uat_master_hapus.log`): guard terbukti di UI — Biro "masih dipakai 3 divisi dan 7 profil peserta", Penempatan "masih dipakai 5 profil peserta", Kategori Izin "masih dipakai 6 pengajuan izin", Jadwal "direferensikan oleh 1 snapshot hari kerja", Kalender menyebut tanggalnya; create+delete sukses di semua tab (Role & Cakupan lewat login dev-admin karena permission berbeda). DB dev diverifikasi kembali bersih dari baris uji.
+- 21 foto sampah 1.2KiB hasil run-test disapu dari MinIO (sisa: 8 bukti ber referensi DB — termasuk upload asli user `abhi` — dan 294 objek `_unlinked/` yang masih menunggu konfirmasi user).
+
 ## [2026-11-22] — UAT: jarak scrollbar dialog Data Master diperbaiki (tidak lagi menempel ke inputan)
 
 ### Diubah
