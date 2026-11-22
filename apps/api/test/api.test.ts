@@ -1130,6 +1130,14 @@ describe('Fase 3: profil lengkap + edit whitelist kontak', () => {
     });
     expect(assigned.statusCode).toBe(200);
 
+    // Backend menolak penugasan aktif ganda untuk pasangan peserta+pembimbing.
+    const duplicate = await post(app, '/api/v1/admin/assignments', admin, {
+      internProfileId: profile.id,
+      supervisorUserId: supervisorUser.id,
+      status: 'ACTIVE',
+    });
+    expect(duplicate.statusCode).toBe(409);
+
     const session = await login(app, internUsername, DEV_PASSWORD);
     const res = await get(app, '/api/v1/profile', session);
     expect(res.statusCode).toBe(200);
@@ -1137,7 +1145,7 @@ describe('Fase 3: profil lengkap + edit whitelist kontak', () => {
     expect(user.roles[0].code).toBe('INTERN');
     expect(user.internProfile.participantNumber).toBe(`UJI-PRF-${suffix}`);
     expect(user.internProfile.bureauName).toBe(bureauOps.name);
-    expect(user.internProfile.supervisors.length).toBeGreaterThan(0);
+    expect(user.internProfile.supervisors.length).toBe(1);
     expect(user.internProfile.supervisors[0].displayName).toBeTruthy();
     expect(user.schedule).not.toBeNull();
     expect(user.schedule.days.length).toBe(7);

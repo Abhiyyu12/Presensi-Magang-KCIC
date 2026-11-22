@@ -1118,6 +1118,18 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       requireScopeCovers(ctx, { bureauId: profile.bureauId, divisionId: profile.divisionId });
       const supervisor = await db.user.findUnique({ where: { id: body.supervisorUserId }, select: { id: true } });
       if (!supervisor) throw badRequest('User pembimbing tidak ditemukan.');
+      const activeDuplicate = await db.supervisorAssignment.findFirst({
+        where: {
+          supervisorUserId: body.supervisorUserId,
+          internProfileId: body.internProfileId,
+          status: 'ACTIVE',
+          OR: [{ validTo: null }, { validTo: { gte: new Date() } }],
+        },
+        select: { id: true },
+      });
+      if (activeDuplicate) {
+        throw conflict('Pembimbing tersebut masih memiliki penugasan aktif untuk peserta ini.');
+      }
       const assignment = await db.supervisorAssignment.create({
         data: {
           supervisorUserId: body.supervisorUserId,
@@ -1216,6 +1228,22 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         bureauId: before.internProfile.bureauId,
         divisionId: before.internProfile.divisionId,
       });
+      const resultingActive = body.status ? body.status === 'ACTIVE' : before.status === 'ACTIVE';
+      if (resultingActive) {
+        const activeDuplicate = await db.supervisorAssignment.findFirst({
+          where: {
+            id: { not: id },
+            supervisorUserId: before.supervisorUserId,
+            internProfileId: before.internProfileId,
+            status: 'ACTIVE',
+            OR: [{ validTo: null }, { validTo: { gte: new Date() } }],
+          },
+          select: { id: true },
+        });
+        if (activeDuplicate) {
+          throw conflict('Ada penugasan pembimbing lain yang masih aktif untuk peserta ini.');
+        }
+      }
       const ending = body.status === 'ENDED';
       const assignment = await db.supervisorAssignment.update({
         where: { id },

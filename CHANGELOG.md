@@ -4,6 +4,22 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: beranda peserta dilengkapi (identitas lengkap + elemen kehadiran)
+
+### Ditambahkan
+- **Kartu "Data peserta" di beranda intern** — info identitas lengkap dari backend (`GET /profile`, tanpa endpoint baru): Nomor peserta, Biro, Divisi, Penempatan, Pembimbing, Periode magang (mulai s.d. selesai), dan Status peserta (Aktif/Selesai/Mundur). Konsisten dengan label di halaman Profil.
+- **Kartu "Kehadiran bulan ini"** — ringkasan kehadiran bulan berjalan (rentang bulan dihitung dari tanggal bisnis server, bukan jam perangkat): tile Hadir (PRESENT + pulang-awal disetujui), Terlambat, Belum lengkap, Perlu review, plus keterangan "Dari N hari kerja terjadwal · M hari belum ada absen sama sekali" dan tombol ke Riwayat. Data dari endpoint list absensi milik sendiri (sudah ter-scope per peserta di backend), pageSize 100 (≤31 hari/bulan).
+- **Elemen kehadiran hari ini makin lengkap**: baris "Toleransi terlambat" (dari snapshot jadwal) dan badge merah **Terlambat** pada jam absen masuk bila `isLate`.
+- **Kartu izin aktif** kini menampilkan estimasi jam keluar/kembali (format WIB) bila ada.
+
+### Diperbaiki
+- **Backend menolak penugasan pembimbing ganda yang masih aktif** (bug data ditemukan saat UAT beranda: satu peserta tercatat punya pembimbing yang sama 9× karena POST/PATCH `/admin/assignments` belum memvalidasi pasangan peserta+pembimbing yang sudah ACTIVE — repeat klik "tambah pembimbing" diam-diam membuat baris duplikat). Kini POST maupun PATCH yang menghasilkan penugasan ACTIVE duplikat ditolak **409** dengan pesan Bahasa Indonesia. Pembacaan `/profile` juga mendedupe pembimbing per ID sehingga tampilan tetap benar meski ada baris duplikat lama (baris dev yang sudah ada tidak dihapus — menunggu konfirmasi).
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **83/83** (asersi baru: POST `/admin/assignments` duplikat → **409**, dan `/profile` tetap mengembalikan tepat 1 pembimbing); web tsc+eslint bersih + test **46/46**.
+- Playwright (peserta3, read-only): beranda menampilkan MG-2026-003, Biro Operasi, Divisi Operasi & Dengkel, Depo Tegalluar, Pembimbing Budi Santoso **(1×)**, Periode magang, Status Aktif; kartu absensi memuat jadwal 09:00–18:00 WIB, toleransi 15 menit, badge Terlambat; izin aktif dengan estimasi keluar/kembali; tile kehadiran bulan ini cocok dengan SQL (`NEEDS_REVIEW=1`, "Dari 1 hari kerja terjadwal"); tanpa scroll horizontal di 390 px; screenshot 390 px & desktop 1280 px.
+- Satu-satunya error console adalah `GET /auth/me` **401** saat halaman login sebelum sesi ada — perilaku bawaan yang sudah ada sebelumnya (bukan dari perubahan ini).
+
 ## [2026-11-22] — UAT: bukti selfie tidak tampil di detail absensi (bug preview)
 
 ### Diperbaiki

@@ -3,17 +3,86 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { formatTimeWib, formatDateWib, formatWib, formatMeters, leaveStatusLabel } from '../lib/format';
-import type { TodayResponse } from '../lib/types';
+import type { AttendanceDay, Paginated, Profile, TodayResponse } from '../lib/types';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { MapsLink } from '../components/MapsLink';
+
+const INTERN_STATUS_LABEL: Record<string, string> = {
+  ACTIVE: 'Aktif',
+  COMPLETED: 'Selesai',
+  WITHDRAWN: 'Mundur',
+};
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-2 border-b border-slate-100 py-1.5 last:border-b-0">
+      <dt className="shrink-0 text-slate-500">{label}</dt>
+      <dd className="text-right font-medium">{value}</dd>
+    </div>
+  );
+}
+
+function StatTile({ label, value, tone }: { label: string; value: number; tone: 'ok' | 'warn' | 'info' }) {
+  const tones: Record<'ok' | 'warn' | 'info', string> = {
+    ok: 'bg-emerald-50 text-emerald-800',
+    warn: 'bg-amber-50 text-amber-800',
+    info: 'bg-slate-100 text-slate-700',
+  };
+  return (
+    <div className={`rounded-lg p-2 text-center ${tones[tone]}`}>
+      <dt className="text-xs">{label}</dt>
+      <dd className="text-lg font-bold">{value}</dd>
+    </div>
+  );
+}
+
+/** Rentang bulan kalender dari tanggal bisnis server (YYYY-MM-DD), aman zona waktu. */
+function monthRange(workDate: string): { startDate: string; endDateExclusive: string; label: string } {
+  const year = Number(workDate.slice(0, 4));
+  const month = Number(workDate.slice(5, 7));
+  const firstOfNext = new Date(Date.UTC(year, month, 1));
+  const label = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('id-ID', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  return {
+    startDate: `${workDate.slice(0, 8)}01`,
+    endDateExclusive: firstOfNext.toISOString().slice(0, 10),
+    label,
+  };
+}
 
 export default function ParticipantDashboardPage() {
   const { user } = useAuth();
   const todayQuery = useQuery({
     queryKey: ['attendance', 'today'],
     queryFn: () => api<TodayResponse>('/attendance/today'),
+  });
+  const today = todayQuery.data;
+  const month = today ? monthRange(today.workDate) : null;
+
+  const profileQuery = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => api<{ user: Profile | null }>('/profile'),
+    staleTime: 5 * 60_000,
+  });
+
+  const monthQuery = useQuery({
+    queryKey: ['attendance', 'summary', month?.startDate ?? ''],
+    queryFn: () =>
+      api<Paginated<AttendanceDay>>('/attendance', {
+        query: {
+          page: 1,
+          pageSize: 100,
+          startDate: month!.startDate,
+          endDateExclusive: month!.endDateExclusive,
+        },
+      }),
+    enabled: Boolean(month),
+    staleTime: 60_000,
   });
 
   if (todayQuery.isLoading) return <LoadingState label="Memuat status hari ini…" />;
@@ -25,9 +94,8 @@ export default function ParticipantDashboardPage() {
       />
     );
   }
-
-  const today = todayQuery.data;
   if (!today) return <LoadingState label="Memuat status hari ini…" />;
+
   const day = today.attendanceDay;
   const events = day?.events ?? [];
   const checkIn = events.find((e) => e.eventType === 'CHECK_IN');
@@ -47,6 +115,15 @@ export default function ParticipantDashboardPage() {
         ? `Sudah absen masuk pukul ${formatTimeWib(checkIn.occurredAtServer)} WIB. Jangan lupa absen pulang.`
         : `Absensi lengkap: masuk ${formatTimeWib(checkIn.occurredAtServer)}, pulang ${formatTimeWib(checkOut.occurredAtServer)} WIB.`;
 
+  const intern = profileQuery.data?.user?.internProfile ?? null;
+  const supervisorNames = intern?.supervisors.map((s) => s.displayName).join(', ');
+
+  const monthItems = monthQuery.data?.items ?? [];
+  const countStatus = (status: string) => monthItems.filter((d) => d.dayStatus === status).length;
+  const hadirCount = countStatus('PRESENT') + countStatus('EARLY_DEPARTURE_APPROVED');
+  const scheduledCount = monthItems.filter((d) => d.dayStatus !== 'NOT_SCHEDULED').length;
+  const belumAbsenCount = countStatus('SCHEDULED');
+
   return (
     <div className="space-y-4">
       <header>
@@ -57,6 +134,32 @@ export default function ParticipantDashboardPage() {
           {formatDateWib(today.workDate)} · Waktu server: {formatWib(today.serverTime)}
         </p>
       </header>
+
+      <section className="card" aria-labelledby="identity-heading">
+        <h2 id="identity-heading" className="text-sm font-semibold text-slate-800">
+          Data peserta
+        </h2>
+        {profileQuery.isLoading ? (
+          <p className="mt-2 text-sm text-slate-500">Memuat data peserta…</p>
+        ) : profileQuery.isError || !intern ? (
+          <p className="mt-2 text-sm text-slate-500">
+            Data peserta tidak dapat dimuat. Coba muat ulang halaman.
+          </p>
+        ) : (
+          <dl className="mt-1 text-sm">
+            <DetailRow label="Nomor peserta" value={intern.participantNumber} />
+            <DetailRow label="Biro" value={intern.bureauName ?? '-'} />
+            <DetailRow label="Divisi" value={intern.divisionName ?? '-'} />
+            <DetailRow label="Penempatan" value={intern.placementName ?? '-'} />
+            <DetailRow label="Pembimbing" value={supervisorNames && supervisorNames.length > 0 ? supervisorNames : '-'} />
+            <DetailRow
+              label="Periode magang"
+              value={`${formatDateWib(intern.startDate)} s.d. ${intern.endDate ? formatDateWib(intern.endDate) : '-'}`}
+            />
+            <DetailRow label="Status peserta" value={INTERN_STATUS_LABEL[intern.status] ?? intern.status} />
+          </dl>
+        )}
+      </section>
 
       <section className="card space-y-3" aria-labelledby="today-heading">
         <div className="flex items-center justify-between gap-2">
@@ -70,17 +173,30 @@ export default function ParticipantDashboardPage() {
         {isWorkingDay ? (
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <dt className="text-slate-500">Jam masuk</dt>
+              <dt className="text-slate-500">Jam masuk jadwal</dt>
               <dd className="font-medium text-slate-800">{formatTimeWib(workday?.startTime)} WIB</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Jam pulang</dt>
+              <dt className="text-slate-500">Jam pulang jadwal</dt>
               <dd className="font-medium text-slate-800">{formatTimeWib(workday?.endTime)} WIB</dd>
             </div>
+            {workday?.lateToleranceMinutes != null ? (
+              <div>
+                <dt className="text-slate-500">Toleransi terlambat</dt>
+                <dd className="font-medium text-slate-800">{workday.lateToleranceMinutes} menit</dd>
+              </div>
+            ) : null}
             {checkIn ? (
               <div>
                 <dt className="text-slate-500">Absen masuk</dt>
-                <dd className="font-medium text-slate-800">{formatTimeWib(checkIn.occurredAtServer)} WIB</dd>
+                <dd className="font-medium text-slate-800">
+                  {formatTimeWib(checkIn.occurredAtServer)} WIB
+                  {checkIn.isLate ? (
+                    <span className="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">
+                      Terlambat
+                    </span>
+                  ) : null}
+                </dd>
               </div>
             ) : null}
             {checkOut ? (
@@ -157,6 +273,14 @@ export default function ParticipantDashboardPage() {
               : 'Pulang lebih awal'}{' '}
             · Status: <StatusBadge kind="leaveStatus" status={today.activeLeave.status} />
           </p>
+          {today.activeLeave.estimatedDepartureAt ? (
+            <p className="mt-1 text-sm text-brand-800">
+              Estimasi keluar: {formatWib(today.activeLeave.estimatedDepartureAt)}
+              {today.activeLeave.estimatedReturnAt
+                ? ` · Estimasi kembali: ${formatWib(today.activeLeave.estimatedReturnAt)}`
+                : ''}
+            </p>
+          ) : null}
           {today.activeLeave.status === 'PENDING' ? (
             <p className="mt-1 text-sm text-brand-800">Pengajuan izin menunggu persetujuan.</p>
           ) : null}
@@ -168,6 +292,36 @@ export default function ParticipantDashboardPage() {
           </Link>
         </section>
       ) : null}
+
+      <section className="card" aria-labelledby="summary-heading">
+        <div className="flex items-center justify-between gap-2">
+          <h2 id="summary-heading" className="text-sm font-semibold text-slate-800">
+            Kehadiran bulan ini
+          </h2>
+          <span className="text-xs text-slate-500">{month?.label}</span>
+        </div>
+        {monthQuery.isLoading ? (
+          <p className="mt-2 text-sm text-slate-500">Memuat ringkasan…</p>
+        ) : monthQuery.isError ? (
+          <p className="mt-2 text-sm text-slate-500">Ringkasan tidak dapat dimuat.</p>
+        ) : (
+          <>
+            <dl className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <StatTile label="Hadir" value={hadirCount} tone="ok" />
+              <StatTile label="Terlambat" value={countStatus('LATE')} tone="warn" />
+              <StatTile label="Belum lengkap" value={countStatus('INCOMPLETE')} tone="warn" />
+              <StatTile label="Perlu review" value={countStatus('NEEDS_REVIEW')} tone="info" />
+            </dl>
+            <p className="mt-2 text-xs text-slate-500">
+              Dari {scheduledCount} hari kerja terjadwal bulan ini · {belumAbsenCount} hari belum
+              ada absen sama sekali.
+            </p>
+            <Link to="/riwayat" className="btn-secondary mt-3 px-3 py-1.5 text-xs">
+              Lihat riwayat lengkap
+            </Link>
+          </>
+        )}
+      </section>
 
       <section className="card">
         <h2 className="text-sm font-semibold text-slate-800">Menu cepat</h2>

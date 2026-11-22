@@ -68,7 +68,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
             placement: { select: { name: true } },
             supervisorAssignments: {
               where: { status: 'ACTIVE', OR: [{ validTo: null }, { validTo: { gte: now } }] },
-              select: { supervisor: { select: { displayName: true, email: true } } },
+              select: { supervisor: { select: { id: true, displayName: true, email: true } } },
             },
           },
         },
@@ -79,6 +79,16 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
     const schedule = user.internProfile
       ? await getActiveScheduleForProfile(db, user.internProfile.id, businessDate())
       : null;
+
+    // Tampilkan tiap pembimbing sekali saja meski ada lebih dari satu baris
+    // penugasan aktif (mis. sisa data lama sebelum guard duplikat ada).
+    const uniqueSupervisors = new Map<string, { displayName: string; email: string | null }>();
+    for (const assignment of user.internProfile?.supervisorAssignments ?? []) {
+      uniqueSupervisors.set(assignment.supervisor.id, {
+        displayName: assignment.supervisor.displayName,
+        email: assignment.supervisor.email,
+      });
+    }
 
     return ok(
       {
@@ -94,7 +104,7 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
                 bureauName: user.internProfile.bureau?.name ?? null,
                 divisionName: user.internProfile.division?.name ?? null,
                 placementName: user.internProfile.placement?.name ?? null,
-                supervisors: user.internProfile.supervisorAssignments.map((s) => s.supervisor),
+                supervisors: [...uniqueSupervisors.values()],
               }
             : null,
           schedule,
