@@ -79,7 +79,7 @@ const FEATURE_NODES: { code: string; label: string; route: string | null; nodeTy
   { code: 'nav.approvals', label: 'Approval', route: '/approval', nodeType: 'PAGE', requiredPermissionCode: 'leave:approve', sortOrder: 7 },
   { code: 'nav.reports', label: 'Laporan', route: '/reports', nodeType: 'PAGE', requiredPermissionCode: 'report:view', sortOrder: 8 },
   { code: 'nav.master', label: 'Data Master', route: '/master', nodeType: 'PAGE', requiredPermissionCode: 'admin:users:manage', sortOrder: 9 },
-  { code: 'nav.access', label: 'Akses', route: '/access', nodeType: 'PAGE', requiredPermissionCode: 'access:roles:manage', sortOrder: 10 },
+  { code: 'nav.access', label: 'Pengguna & Hak Akses', route: '/access', nodeType: 'PAGE', requiredPermissionCode: 'access:roles:manage', sortOrder: 10 },
   { code: 'nav.audit', label: 'Audit', route: '/audit', nodeType: 'PAGE', requiredPermissionCode: 'admin:audit:view', sortOrder: 11 },
   { code: 'nav.help', label: 'Bantuan', route: '/bantuan', nodeType: 'PAGE', requiredPermissionCode: 'help:view', sortOrder: 12 },
   { code: 'nav.profile', label: 'Profil', route: '/profil', nodeType: 'PAGE', requiredPermissionCode: null, sortOrder: 13 },

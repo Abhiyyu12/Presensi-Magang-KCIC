@@ -18,9 +18,9 @@ export default function AccessPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Manajemen Akses</h1>
+        <h1 className="text-lg font-bold text-slate-900">Pengguna &amp; Hak Akses</h1>
         <p className="text-sm text-slate-600">
-          Konfigurasi role, permission, feature tree, dan policy. Semua perubahan diaudit server.
+          Atur role, pohon permission, policy, dan simulasi akses. Semua perubahan diaudit server.
         </p>
       </header>
       <div role="tablist" aria-label="Bagian manajemen akses" className="flex gap-1 overflow-x-auto border-b border-slate-200">

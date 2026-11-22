@@ -7,6 +7,7 @@ import { badRequest, forbidden, notFound, conflict, unprocessable } from '../../
 import { writeAudit } from '../../common/audit.js';
 import { authenticate, authorize, requireCtx } from '../../app/auth.js';
 import { hasPermission, loadAccessContext } from './context.js';
+import { PERMISSION_TAXONOMY, ROLE_TEMPLATES } from './permission-taxonomy.js';
 
 const idParams = z.object({ id: z.string().uuid() });
 const genericStatus = z.enum(['ACTIVE', 'INACTIVE']);
@@ -350,6 +351,115 @@ export async function accessRoutes(app: FastifyInstance): Promise<void> {
           requestId: req.id,
         });
         return { replaced: true, entries: body.entries };
+      });
+      return ok(result, req.id);
+    },
+  );
+
+  // ---------- Pohon permission & template role (Fase 1.6) ----------
+
+  // Pohon Menu → Submenu → Fitur/Aksi untuk UI. Permission dari DB dipetakan
+  // lewat taksonomi; kode yang tidak terpetakan masuk menu "Lainnya" agar
+  // tidak hilang saat ada permission baru.
+  app.get('/admin/access/permission-tree', { preHandler: authenticate }, async (req) => {
+    const ctx = requireCtx(req);
+    if (!hasPermission(ctx, 'access:roles:manage') && !hasPermission(ctx, 'access:permissions:view')) {
+      throw forbidden();
+    }
+    const permissions = await db.permission.findMany({
+      select: { code: true, description: true, action: true },
+      orderBy: { code: 'asc' },
+    });
+    const byCode = new Map(permissions.map((p) => [p.code, p]));
+    const mapped = new Set(PERMISSION_TAXONOMY.flatMap((m) => m.submenus.flatMap((s) => s.permissionCodes)));
+    const other = permissions.filter((p) => !mapped.has(p.code));
+
+    const menus = PERMISSION_TAXONOMY.map((menu) => ({
+      key: menu.key,
+      label: menu.label,
+      submenus: menu.submenus
+        .map((submenu) => ({
+          key: submenu.key,
+          label: submenu.label,
+          permissions: submenu.permissionCodes
+            .filter((code) => byCode.has(code))
+            .map((code) => {
+              const p = byCode.get(code)!;
+              return { code: p.code, description: p.description, action: p.action };
+            }),
+        }))
+        .filter((submenu) => submenu.permissions.length > 0),
+    })).filter((menu) => menu.submenus.length > 0);
+
+    if (other.length > 0) {
+      menus.push({
+        key: 'lainnya',
+        label: 'Lainnya',
+        submenus: [
+          {
+            key: 'lainnya',
+            label: 'Lainnya',
+            permissions: other.map((p) => ({ code: p.code, description: p.description, action: p.action })),
+          },
+        ],
+      });
+    }
+    return ok({ menus }, req.id);
+  });
+
+  app.get('/admin/access/role-templates', { preHandler: authorize('access:roles:manage') }, async (req) => {
+    const items = ROLE_TEMPLATES.map((t) => ({
+      key: t.key,
+      name: t.name,
+      description: t.description,
+      permissionCount: t.permissionCodes.length,
+    }));
+    return ok({ items }, req.id);
+  });
+
+  const applyTemplateBody = z.object({ templateKey: z.string().min(1).max(64) });
+
+  app.post(
+    '/admin/access/roles/:id/apply-template',
+    { schema: { params: idParams, body: applyTemplateBody }, preHandler: authorize('access:roles:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      const { id } = idParams.parse(req.params);
+      const { templateKey } = applyTemplateBody.parse(req.body);
+      const template = ROLE_TEMPLATES.find((t) => t.key === templateKey);
+      if (!template) throw badRequest('Template tidak ditemukan.');
+      const role = await db.role.findUnique({ where: { id } });
+      if (!role) throw notFound();
+
+      // Guard sama seperti replace manual: actor hanya boleh memberi
+      // permission yang sendiri punya.
+      const missing = template.permissionCodes.filter((code) => !ctx.permissions.has(code));
+      if (missing.length > 0) {
+        throw forbidden('Tidak dapat memberikan permission yang tidak Anda miliki');
+      }
+      const permissions = await db.permission.findMany({
+        where: { code: { in: template.permissionCodes } },
+        select: { id: true, code: true },
+      });
+      const result = await db.$transaction(async (tx) => {
+        const beforeEntries = await tx.rolePermission.findMany({
+          where: { roleId: id },
+          include: { permission: { select: { code: true } } },
+        });
+        await tx.rolePermission.deleteMany({ where: { roleId: id } });
+        await tx.rolePermission.createMany({
+          data: permissions.map((p) => ({ roleId: id, permissionId: p.id, effect: 'ALLOW' as const })),
+        });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ACCESS_ROLE_TEMPLATE_APPLY',
+          objectType: 'role',
+          objectId: id,
+          before: beforeEntries.map((rp) => rp.permission.code),
+          after: { templateKey: template.key, permissions: permissions.map((p) => p.code) },
+          requestId: req.id,
+        });
+        return { applied: true, templateKey: template.key, permissionCount: permissions.length };
       });
       return ok(result, req.id);
     },

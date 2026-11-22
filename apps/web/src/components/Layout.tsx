@@ -42,7 +42,7 @@ function fallbackNav(has: (perm: string) => boolean): NavItem[] {
   }
   if (has('leave:approve')) items.push({ label: 'Approval', route: '/approval' });
   if (has('admin:users:manage')) items.push({ label: 'Data Master', route: '/master' });
-  if (has('access:roles:manage')) items.push({ label: 'Akses', route: '/access' });
+  if (has('access:roles:manage')) items.push({ label: 'Pengguna & Hak Akses', route: '/access' });
   if (has('admin:audit:view')) items.push({ label: 'Audit', route: '/audit' });
   items.push({ label: 'Bantuan', route: '/bantuan' }, { label: 'Profil', route: '/profil' });
   return items.filter((item, idx, arr) => arr.findIndex((i) => i.route === item.route) === idx);

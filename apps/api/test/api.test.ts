@@ -978,3 +978,92 @@ describe('Fase 1.5f: import pengguna via Excel', () => {
     }
   });
 });
+
+describe('Fase 1.6: pohon permission + template role', () => {
+  const suffix = `${Date.now()}`;
+  let scratchRoleId = '';
+
+  it('pohon permission memuat seluruh permission DB tanpa kode asing', async () => {
+    const db = getDb();
+    const res = await get(app, '/api/v1/admin/access/permission-tree', bootstrap);
+    expect(res.statusCode).toBe(200);
+    const menus = envelope(res).data.menus;
+    expect(menus.length).toBeGreaterThan(0);
+
+    const treeCodes = menus.flatMap((m: { submenus: { permissions: { code: string }[] }[] }) =>
+      m.submenus.flatMap((s) => s.permissions.map((p) => p.code)),
+    );
+    const dbCodes = (await db.permission.findMany({ select: { code: true } })).map((p) => p.code);
+    expect(new Set(treeCodes).size).toBe(treeCodes.length);
+    expect([...treeCodes].sort()).toEqual([...dbCodes].sort());
+    expect(menus.some((m: { key: string }) => m.key === 'lainnya')).toBe(false);
+  });
+
+  it('daftar template berisi Administrator, Pembimbing, Peserta', async () => {
+    const res = await get(app, '/api/v1/admin/access/role-templates', bootstrap);
+    expect(res.statusCode).toBe(200);
+    const items = envelope(res).data.items;
+    expect(items.map((t: { key: string }) => t.key).sort()).toEqual(['administrator', 'pembimbing', 'peserta']);
+    const admin = items.find((t: { key: string }) => t.key === 'administrator');
+    const pembimbing = items.find((t: { key: string }) => t.key === 'pembimbing');
+    expect(admin.permissionCount).toBeGreaterThan(20);
+    expect(pembimbing.permissionCount).toBe(7);
+  });
+
+  it('apply-template mengganti permission role + audit, guard menolak permission yang tidak dimiliki actor', async () => {
+    const db = getDb();
+    const created = await post(app, '/api/v1/admin/access/roles', bootstrap, {
+      code: `ROLE_UJI_TEMPLATE_${suffix}`,
+      name: 'Role Uji Template',
+    });
+    expect(created.statusCode).toBe(200);
+    scratchRoleId = envelope(created).data.id;
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/admin/access/roles/${scratchRoleId}/apply-template`,
+      headers: authHeaders(bootstrap),
+      payload: { templateKey: 'pembimbing' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(envelope(res).data.permissionCount).toBe(7);
+
+    const detail = envelope(await get(app, `/api/v1/admin/access/roles/${scratchRoleId}`, bootstrap)).data;
+    const allowCodes = detail.permissions
+      .filter((p: { effect: string }) => p.effect === 'ALLOW')
+      .map((p: { permissionCode: string }) => p.permissionCode)
+      .sort();
+    expect(allowCodes).toEqual([
+      'attendance:evidence:view', 'attendance:view:scoped', 'dashboard:view',
+      'help:view', 'leave:view:scoped', 'report:export', 'report:view',
+    ]);
+
+    const audit = await db.auditEvent.findFirst({ where: { action: 'ACCESS_ROLE_TEMPLATE_APPLY', objectId: scratchRoleId } });
+    expect(audit).not.toBeNull();
+
+    const denied = await app.inject({
+      method: 'POST',
+      url: `/api/v1/admin/access/roles/${scratchRoleId}/apply-template`,
+      headers: authHeaders(bootstrap),
+      payload: { templateKey: 'administrator' },
+    });
+    expect(denied.statusCode).toBe(403);
+
+    const unknown = await app.inject({
+      method: 'POST',
+      url: `/api/v1/admin/access/roles/${scratchRoleId}/apply-template`,
+      headers: authHeaders(bootstrap),
+      payload: { templateKey: 'tidak_ada' },
+    });
+    expect(unknown.statusCode).toBe(400);
+  });
+
+  it('menghapus role uji template', async () => {
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/admin/access/roles/${scratchRoleId}`,
+      headers: authHeaders(bootstrap),
+    });
+    expect(res.statusCode).toBe(200);
+  });
+});
