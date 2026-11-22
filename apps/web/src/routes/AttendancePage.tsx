@@ -11,6 +11,7 @@ import { CameraCapture } from '../components/CameraCapture';
 import { LocationStatus, useGeolocation, type LocationFix } from '../components/LocationStatus';
 import { MapsLink } from '../components/MapsLink';
 import { useAttendanceSubmit } from '../hooks/useAttendanceSubmit';
+import { useReverseGeocode } from '../hooks/useReverseGeocode';
 
 type FlowStep = 'capture' | 'confirm' | 'done';
 
@@ -43,6 +44,7 @@ export default function AttendancePage() {
 
   const geolocation = useGeolocation();
   const [location, setLocation] = useState<LocationFix | null>(null);
+  const geocode = useReverseGeocode(location);
 
   const submitter = useAttendanceSubmit({
     eventType: action,
@@ -156,6 +158,12 @@ export default function AttendancePage() {
                 )}
               </dd>
             </div>
+            {submitter.result?.address ? (
+              <div className="flex justify-between gap-2">
+                <dt>Alamat</dt>
+                <dd className="max-w-[70%] text-right font-medium">{submitter.result.address}</dd>
+              </div>
+            ) : null}
           </dl>
           {photo ? (
             <img
@@ -215,6 +223,7 @@ export default function AttendancePage() {
           <LocationStatus
             state={geolocation.state}
             fix={geolocation.fix}
+            address={geocode.data?.address ?? null}
             onRetry={() => void geolocation.acquire().then(setLocation)}
           />
 

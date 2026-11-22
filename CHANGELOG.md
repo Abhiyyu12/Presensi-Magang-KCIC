@@ -4,6 +4,18 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: alamat terperinci di lokasi tercatat (reverse-geocoding)
+
+### Ditambahkan
+- **Koordinat kini diterjemahkan menjadi alamat terperinci** (prinsip "tercatat di mana" yang bisa dibaca, bukan sekadar angka): backend memanggil Nominatim (OpenStreetMap, gratis tanpa API key) best-effort saat absen/pergerakan izin dikirim dan **menyimpan hasilnya bersama event** (`address` baru di `attendance_events` & `leave_events` — migrasi `20261122130000_event_address`, nullable, rollback tercatat di komentarnya). Alamat beku saat kejadian, jadi bukti tidak berubah menurut waktu pembacaan.
+- Endpoint `GET /geocode/reverse?latitude=&longitude=` untuk panel Status lokasi; helper geocoding punya cache (bulat 4 desimal ≈ 11 m), timeout 5 detik, dan **tidak pernah menggagalkan absen** — bila layanan geocoding mati/offline, event tetap sah tanpa alamat (kolom NULL). Toggle `GEOCODE_ENABLED` (default aktif; otomatis nonaktif di test suite).
+- Tampilan alamat di semua titik lokasi: panel Status lokasi ("Alamat terperinci (© OpenStreetMap): …"), layar sukses absensi (baris Alamat dari respons submit), timeline detail riwayat & detail izin ("Alamat: …"), dan dashboard peserta. Tanpa dependensi baru.
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **83/83** (4 test baru: helper sukses+cache, jaringan gagal → null, respons 403 → null, display_name kosong → null; test suite utama membuktikan absen tanpa geocoding tetap jalan dengan `address` null); web tsc+eslint bersih + test **46/46**.
+- Migrasi terverifikasi di DB dev (`information_schema`: kolom `address` nullable di kedua tabel).
+- Playwright end-to-end (peserta1, geolocation uji -6.9147/107.6098): panel Status lokasi memuat "Alamat terperinci (© OpenStreetMap): …"; absen masuk sukses dan layar sukses menampilkan "Alamat: Perpustakaan Bank Indonesia, Jalan Merdeka, Babakan Ciamis, Sumur Bandung, Kota Bandung, Jawa Barat, 40111, Indonesia"; detail riwayat menampilkan alamat pada timeline event; screenshot 390 px aman. DB membuktikan baris `CHECK_IN` tersimpan dengan `address` tersebut; objek bukti MinIO + baris DB uji sendiri dihapus setelahnya.
+
 ## [2026-11-22] — UAT lanjutan: peringatan akurasi dihapus + koordinat bisa dilihat di Google Maps
 
 ### Diperbaiki

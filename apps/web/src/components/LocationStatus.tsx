@@ -69,10 +69,12 @@ export function useGeolocation() {
 interface LocationStatusProps {
   state: LocationState;
   fix: LocationFix | null;
+  /** Alamat terperinci hasil reverse-geocoding backend (bila berhasil). */
+  address?: string | null;
   onRetry?: () => void;
 }
 
-export function LocationStatus({ state, fix, onRetry }: LocationStatusProps) {
+export function LocationStatus({ state, fix, address, onRetry }: LocationStatusProps) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3" aria-live="polite">
       <p className="text-sm font-medium text-slate-800">Status lokasi</p>
@@ -94,10 +96,17 @@ export function LocationStatus({ state, fix, onRetry }: LocationStatusProps) {
       ) : null}
 
       {state === 'ready' && fix ? (
-        <p className="mt-2 text-sm text-green-700">
-          Lokasi tercatat. Akurasi ±{formatMeters(fix.accuracyMeters)} — akurasi tergantung
-          perangkat dan tidak membatasi absensi.
-        </p>
+        <div className="mt-2">
+          <p className="text-sm text-green-700">
+            Lokasi tercatat. Akurasi ±{formatMeters(fix.accuracyMeters)} — akurasi tergantung
+            perangkat dan tidak membatasi absensi.
+          </p>
+          {address ? (
+            <p className="mt-1 text-xs text-slate-600">
+              Alamat terperinci (© OpenStreetMap): {address}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {state === 'permission_denied' ? (

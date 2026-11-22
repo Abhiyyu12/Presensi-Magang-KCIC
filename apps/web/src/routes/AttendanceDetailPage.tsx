@@ -150,6 +150,9 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
                 ) : (
                   <p className="text-xs text-slate-500">Lokasi tidak tercatat pada event ini.</p>
                 )}
+                {event.address ? (
+                  <p className="text-xs text-slate-600">Alamat: {event.address}</p>
+                ) : null}
                 {canViewEvidence && event.evidenceId ? (
                   <div className="mt-2">
                     <EvidenceImage

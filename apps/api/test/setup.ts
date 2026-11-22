@@ -15,6 +15,8 @@ if (!devUrl) throw new Error('DATABASE_URL missing (run infra/scripts/gen-host-e
 const testUrl = devUrl.replace(/\/[^/?]+(\?|$)/, '/attendance_test$1');
 process.env.DATABASE_URL = testUrl;
 process.env.NODE_ENV = 'test';
+// Layanan geocoding eksternal tidak boleh menyentuh test suite (deterministik + cepat).
+process.env.GEOCODE_ENABLED = 'false';
 
 const run = (cmd: string, env?: NodeJS.ProcessEnv) =>
   execSync(cmd, { cwd: apiRoot, stdio: 'pipe', env: { ...process.env, ...env }, shell: true });

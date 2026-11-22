@@ -1363,6 +1363,7 @@ describe('lokasi absensi opsional (absen tetap sah tanpa GPS)', () => {
     });
     expect(ci.statusCode).toBe(201);
     const ciBody = envelope(ci);
+    expect(ciBody.data.address).toBeNull();
     const dayId = (ciBody.data.attendanceDayId ?? ciBody.data.day?.id) as string;
     expect(dayId).toBeTruthy();
 

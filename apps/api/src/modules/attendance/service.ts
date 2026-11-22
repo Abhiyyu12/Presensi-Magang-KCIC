@@ -6,6 +6,7 @@ import { badRequest, conflict, forbidden, notFound, unprocessable } from '../../
 import { writeAudit } from '../../common/audit.js';
 import { businessDate, businessWeekday, zonedTimeToUtc, parseDateOnly } from '../../common/time.js';
 import { findReplay, computeRequestHash, idempotencyRecordData } from '../../common/idempotency.js';
+import { reverseGeocode } from '../../common/geocode.js';
 import { getOrCreateSnapshot, type ResolvedWorkday } from '../schedules/service.js';
 import {
   validateAndProcessImage,
@@ -36,6 +37,7 @@ export interface SubmitResult {
   workDate: string;
   dayStatus: string;
   isLate: boolean | null;
+  address: string | null;
   scheduleSnapshot: ResolvedWorkday;
 }
 
@@ -150,6 +152,11 @@ export async function submitAttendance(ctx: AccessContext, input: SubmitInput, r
   await uploadEvidence(bucket, objectKey, img);
 
   // 7. Single transaction: evidence metadata + event + day + idempotency + audit.
+  // Alamat di-resolve di luar transaksi (panggilan jaringan best-effort).
+  const address =
+    input.latitude != null && input.longitude != null
+      ? await reverseGeocode(input.latitude, input.longitude)
+      : null;
   try {
     const result = await db.$transaction(async (tx) => {
       let day: { id: string } | null = existingDay ? { id: existingDay.id } : null;
@@ -185,6 +192,7 @@ export async function submitAttendance(ctx: AccessContext, input: SubmitInput, r
           latitude: input.latitude,
           longitude: input.longitude,
           accuracyMeters: input.accuracyMeters ?? null,
+          address,
           evidenceId: file.id,
           idempotencyKey: input.idempotencyKey,
           isLate,
@@ -206,6 +214,7 @@ export async function submitAttendance(ctx: AccessContext, input: SubmitInput, r
         workDate: dateStr,
         dayStatus: updatedDay.dayStatus,
         isLate,
+        address,
         scheduleSnapshot: snapshot,
       };
       await tx.idempotencyRecord.create({
@@ -266,6 +275,7 @@ export function eventView(e: AttendanceEvent) {
     latitude: e.latitude,
     longitude: e.longitude,
     accuracyMeters: e.accuracyMeters,
+    address: e.address,
     isLate: e.isLate,
     status: e.status,
     evidenceId: e.evidenceId,

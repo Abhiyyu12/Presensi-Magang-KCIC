@@ -18,6 +18,7 @@ import { CameraCapture } from '../components/CameraCapture';
 import { LocationStatus, useGeolocation, type LocationFix } from '../components/LocationStatus';
 import { MapsLink } from '../components/MapsLink';
 import { useAttendanceSubmit } from '../hooks/useAttendanceSubmit';
+import { useReverseGeocode } from '../hooks/useReverseGeocode';
 
 type Movement = 'departure' | 'return' | 'early-checkout';
 
@@ -44,6 +45,7 @@ export default function LeaveDetailPage() {
   });
 
   const geolocation = useGeolocation();
+  const geocode = useReverseGeocode(location);
   const submitter = useAttendanceSubmit({
     eventType: 'DEPARTURE',
     onSuccess: () => {
@@ -184,6 +186,9 @@ export default function LeaveDetailPage() {
                 ) : (
                   <p className="text-xs text-slate-500">Lokasi tidak tercatat saat pergerakan ini.</p>
                 )}
+                {event.address ? (
+                  <p className="text-xs text-slate-600">Alamat: {event.address}</p>
+                ) : null}
               </li>
             ))}
           </ol>
@@ -240,6 +245,7 @@ export default function LeaveDetailPage() {
           <LocationStatus
             state={geolocation.state}
             fix={geolocation.fix}
+            address={geocode.data?.address ?? null}
             onRetry={() => void geolocation.acquire().then(setLocation)}
           />
           {photo ? (

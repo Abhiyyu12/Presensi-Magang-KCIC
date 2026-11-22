@@ -26,6 +26,8 @@ const envSchema = z.object({
   MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(8 * 1024 * 1024),
   SIGNED_URL_TTL_SECONDS: z.coerce.number().int().positive().default(120),
   BUSINESS_TIMEZONE: z.string().default('Asia/Jakarta'),
+  GEOCODE_ENABLED: booleanish.default(true),
+  GEOCODE_BASE_URL: z.string().url().default('https://nominatim.openstreetmap.org'),
 });
 
 export type Env = z.infer<typeof envSchema>;

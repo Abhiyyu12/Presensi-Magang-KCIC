@@ -503,6 +503,7 @@ model AttendanceEvent {
   latitude          Float?                @map("latitude")
   longitude         Float?                @map("longitude")
   accuracyMeters    Float?                @map("accuracy_meters")
+  address           String?               @map("address")
   evidenceId        String                @map("evidence_id") @db.Uuid
   idempotencyKey    String?               @map("idempotency_key")
   status            AttendanceEventStatus @default(VALID)
@@ -589,6 +590,7 @@ model LeaveEvent {
   latitude         Float?         @map("latitude")
   longitude        Float?         @map("longitude")
   accuracyMeters   Float?         @map("accuracy_meters")
+  address          String?        @map("address")
   evidenceId       String         @map("evidence_id") @db.Uuid
   idempotencyKey   String?        @map("idempotency_key")
   createdAt        DateTime       @default(now()) @map("created_at")

@@ -23,6 +23,7 @@ import { scheduleRoutes } from '../modules/schedules/routes.js';
 import { accessRoutes } from '../modules/access/routes.js';
 import { auditRoutes } from '../modules/audit/routes.js';
 import { helpRoutes } from '../modules/help/routes.js';
+import { geocodeRoutes } from '../modules/geocode/routes.js';
 import { dashboardRoutes } from '../modules/dashboard/routes.js';
 import { profileRoutes } from '../modules/users/profileRoutes.js';
 import { ensureBuckets, getMinio } from '../infrastructure/minio.js';
@@ -204,6 +205,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await v1.register(accessRoutes);
     await v1.register(auditRoutes);
     await v1.register(helpRoutes);
+    await v1.register(geocodeRoutes);
   }, { prefix: '/api/v1' });
 
   app.setNotFoundHandler((req, reply) => {

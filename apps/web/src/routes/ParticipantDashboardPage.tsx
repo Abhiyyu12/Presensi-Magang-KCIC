@@ -96,6 +96,9 @@ export default function ParticipantDashboardPage() {
                   ±{formatMeters(lastEvent.accuracyMeters)} dari titik absen ·{' '}
                   <MapsLink latitude={lastEvent.latitude} longitude={lastEvent.longitude} />
                 </dd>
+                {lastEvent.address ? (
+                  <dd className="mt-1 text-xs text-slate-600">Alamat: {lastEvent.address}</dd>
+                ) : null}
               </div>
             ) : null}
           </dl>

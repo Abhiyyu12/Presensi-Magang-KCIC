@@ -5,6 +5,7 @@ import { badRequest, conflict, forbidden, notFound, unprocessable } from '../../
 import { writeAudit } from '../../common/audit.js';
 import { businessDate, parseDateOnly } from '../../common/time.js';
 import { findReplay, computeRequestHash, idempotencyRecordData } from '../../common/idempotency.js';
+import { reverseGeocode } from '../../common/geocode.js';
 import { validateAndProcessImage, generateObjectKey, uploadEvidence, compensateRemove } from '../files/service.js';
 import type { AccessContext } from '../access/context.js';
 import { requirePermission, internScopeWhere, internAccessKind, adminScopeCovers } from '../access/scope.js';
@@ -241,6 +242,12 @@ export async function submitMovement(
   const objectKey = generateObjectKey();
   await uploadEvidence(bucket, objectKey, img);
 
+  // Alamat di-resolve di luar transaksi (panggilan jaringan best-effort).
+  const address =
+    input.latitude != null && input.longitude != null
+      ? await reverseGeocode(input.latitude, input.longitude)
+      : null;
+
   try {
     return await db.$transaction(async (tx) => {
       const nextStatus = movementType === 'DEPARTURE' ? 'DEPARTED' : movementType === 'RETURN' ? 'RETURNED' : 'COMPLETED';
@@ -271,6 +278,7 @@ export async function submitMovement(
           latitude: input.latitude,
           longitude: input.longitude,
           accuracyMeters: input.accuracyMeters ?? null,
+          address,
           evidenceId: file.id,
           idempotencyKey: input.idempotencyKey,
         },
@@ -292,6 +300,7 @@ export async function submitMovement(
             latitude: input.latitude,
             longitude: input.longitude,
             accuracyMeters: input.accuracyMeters ?? null,
+            address,
             evidenceId: file.id,
             idempotencyKey: input.idempotencyKey,
             createdBy: ctx.user.id,
@@ -310,6 +319,7 @@ export async function submitMovement(
         leaveEventId: event.id,
         occurredAtServer: now.toISOString(),
         leaveStatus: nextStatus,
+        address,
         attendance: attendanceInfo,
       };
       await tx.idempotencyRecord.create({
@@ -352,7 +362,7 @@ export async function submitMovement(
   }
 }
 
-export function leaveView(l: LeaveRequest & { category?: { name: string }; events?: { eventType: string; occurredAtServer: Date }[] }) {
+export function leaveView(l: LeaveRequest & { category?: { name: string }; events?: { eventType: string; occurredAtServer: Date; address?: string | null }[] }) {
   return {
     id: l.id,
     internProfileId: l.internProfileId,
@@ -366,7 +376,7 @@ export function leaveView(l: LeaveRequest & { category?: { name: string }; event
     requestedAt: l.requestedAt.toISOString(),
     decidedAt: l.decidedAt?.toISOString() ?? null,
     decisionNote: l.decisionNote ?? null,
-    events: (l.events ?? []).map((e) => ({ eventType: e.eventType, occurredAtServer: e.occurredAtServer.toISOString() })),
+    events: (l.events ?? []).map((e) => ({ eventType: e.eventType, occurredAtServer: e.occurredAtServer.toISOString(), address: e.address })),
   };
 }
 
@@ -429,6 +439,7 @@ export async function getLeaveDetail(ctx: AccessContext, leaveId: string) {
       latitude: kind === 'self' ? e.latitude : e.latitude,
       longitude: e.longitude,
       accuracyMeters: e.accuracyMeters,
+      address: e.address,
       evidenceId: e.evidenceId,
     })),
   };

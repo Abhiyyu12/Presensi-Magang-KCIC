@@ -54,6 +54,7 @@ export interface AttendanceEvent {
   latitude?: number | null;
   longitude?: number | null;
   accuracyMeters?: number | null;
+  address?: string | null;
   isLate?: boolean | null;
   status?: string | null;
   evidenceId?: string | null;
@@ -93,6 +94,7 @@ export interface LeaveEvent {
   latitude?: number | null;
   longitude?: number | null;
   accuracyMeters?: number | null;
+  address?: string | null;
   evidenceId?: string | null;
   note?: string | null;
 }
@@ -133,6 +135,7 @@ export interface CheckResult {
   workDate: string;
   dayStatus: string;
   isLate: boolean;
+  address?: string | null;
 }
 
 export interface LeaveCategory {
