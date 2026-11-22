@@ -248,17 +248,33 @@ export function Layout() {
           }`}
         >
           <div className={collapsed ? 'px-2' : 'px-3'}>{sidebarNav}</div>
-          <button
-            type="button"
-            className={`mx-3 flex min-h-touch items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 ${
-              collapsed ? 'justify-center px-2' : ''
-            }`}
-            aria-pressed={collapsed}
-            onClick={() => setCollapsed((v) => !v)}
-          >
-            <span aria-hidden="true">{collapsed ? '»' : '«'}</span>
-            {!collapsed ? <span>Ciutkan menu</span> : <span className="sr-only">Perluas menu</span>}
-          </button>
+          <div className="border-t border-slate-100 px-2 pt-2">
+            <button
+              type="button"
+              className={`flex min-h-touch w-full items-center rounded-lg px-2 text-slate-500 transition-colors hover:bg-brand-50 hover:text-brand-700 ${
+                collapsed ? 'justify-center' : 'gap-2'
+              }`}
+              aria-pressed={collapsed}
+              title={collapsed ? 'Perluas menu' : 'Ciutkan menu'}
+              onClick={() => setCollapsed((v) => !v)}
+            >
+              <span aria-hidden="true" className={`shrink-0 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M11 17l-5-5 5-5" />
+                  <path d="M18 17l-5-5 5-5" />
+                </svg>
+              </span>
+              {!collapsed ? <span className="text-xs font-semibold">Ciutkan menu</span> : <span className="sr-only">Perluas menu</span>}
+            </button>
+          </div>
         </nav>
 
         <main className="w-full min-w-0 flex-1 px-4 pb-10 pt-4">

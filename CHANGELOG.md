@@ -4,6 +4,15 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: tombol ciutkan sidebar didesain ulang (clean & futuristik)
+
+### Diubah
+- **Tombol "« Ciutkan menu" di sidebar desktop diganti kontrol ikon-ghost minimalis**: kotak ber-border yang terlihat kaku diganti tombol polos dengan ikon chevron ganda SVG + label kecil, dipisah garis hairline dari menu di atasnya. Ikon **berputar 180° dengan transisi halus 300 ms** saat menu diciutkan (menjadi menunjuk kanan) dan kembali saat diperluas; hover memberi latar maroon lembut; saat ciut hanya ikon yang tampil (tinggi & sentuh tetap memenuhi standar `min-h-touch`) dengan tooltip "Perluas menu". Perilaku tidak berubah: `aria-pressed`, persistensi di localStorage, dan tooltip `title` tetap ada.
+
+### Pembuktian (bukan klaim)
+- Gate: web tsc+eslint bersih + test **48/48**.
+- Playwright (peserta1, desktop 1280 px): keadaan terbuka — `aria-pressed=false`, label "Ciutkan menu", tooltip benar, ikon tidak diputar, tanpa kelas border kotak; setelah klik — `aria-pressed=true`, ikon berkelas `rotate-180`, sidebar menyempit menjadi 68 px; **reload halaman: keadaan ciut tetap tersimpan** (localStorage), klik lagi memulihkan keadaan terbuka. Screenshot kedua keadaan.
+
 ## [2026-11-22] — UAT: halaman Profil didesain ulang (clean, elegan, profesional)
 
 ### Diubah
