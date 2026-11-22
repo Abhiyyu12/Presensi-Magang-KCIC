@@ -136,7 +136,7 @@ Screenshot bukti: `ux-audit/f3_*.png`, `f4_*.png`, `f6_*.png`.
 
 | Item | Status | Alasan |
 |---|---|---|
-| Swagger UI | belum ada (JSON di `/api/v1/docs/json`) | Bukan bagian brief bug-fix; sejak baseline. |
+| Swagger UI | ~~belum ada~~ **selesai 2026-11-22**: UI di `/api/v1/docs`, spec JSON di `/api/v1/docs/json` (paket `@fastify/swagger-ui` yang sudah ter-install kini diregistrasi). | — |
 | E2E Playwright otomatis di repo/CI | skrip ad-hoc di luar repo | Skrip memuat kredensial dev & path lokal; formalisasi ke CI di luar lingkup arc ini. |
 | Isolasi bucket MinIO untuk DB test | direncanakan | DB test di-DROP tiap run sehingga objek bukti yatim di bucket dev (privat, lokal); tercatat di CHANGELOG Fase 6. |
 | Halaman UI reset-password (pakai token admin) | belum ada | Alur recovery berjalan via UI Pengguna + API `POST /auth/reset-password`; tercatat `docs/DATA_FLOW.md` §7. |

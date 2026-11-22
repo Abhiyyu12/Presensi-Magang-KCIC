@@ -6,6 +6,9 @@ Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
 ## [2026-11-22] — UAT: fix layar abu-abu tab Kalender + tab Parameter tanpa JSON
 
+### Ditambahkan
+- **Swagger UI aktif** di `http://localhost:3002/api/v1/docs` (spec JSON di `/api/v1/docs/json`) — paket `@fastify/swagger-ui` sudah ter-install sejak baseline, kini diregistrasi; rute `/docs/json` manual digantikan otomatis oleh plugin. Terbukti render 110 endpoint tanpa error console.
+
 ### Diperbaiki
 - **Critical (bug UAT)**: buka tab Kalender di Data Master membuat seluruh aplikasi blank (layar abu-abu) — `GET /admin/calendar` mengembalikan `{items}` tanpa objek `pagination`, sedangkan panel generik selalu merender paginasi (destructure `undefined` → crash React tanpa error boundary). Kontrak list kini diselaraskan dengan resource master lain: query `page/pageSize` + filter tanggal tetap, respons `{items, pagination}`. 2 test regresi baru (API 75/75).
 - Sidebar kini mentok kiri di layar lebar (kerangka `max-w-7xl mx-auto` dilepas; header full-width agar logo sejajar) — terbukti 1920/1280/390 px.

@@ -5,6 +5,7 @@ import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
 import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import { serializerCompiler, validatorCompiler, jsonSchemaTransform } from 'fastify-type-provider-zod';
 import { randomUUID } from 'node:crypto';
 import { ZodError } from 'zod';
@@ -154,6 +155,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
     transform: jsonSchemaTransform,
   });
+  await app.register(swaggerUi, { routePrefix: '/api/v1/docs' });
 
   await app.register(helmet, { global: true });
   await app.register(cors, {
@@ -202,7 +204,6 @@ export async function buildApp(): Promise<FastifyInstance> {
     await v1.register(accessRoutes);
     await v1.register(auditRoutes);
     await v1.register(helpRoutes);
-    v1.get('/docs/json', { schema: { hide: true } }, async () => v1.swagger());
   }, { prefix: '/api/v1' });
 
   app.setNotFoundHandler((req, reply) => {

@@ -20,7 +20,7 @@ setup.sh: preflight → generate `.env` host (127.0.0.1 + port remap) → `docke
 Akses:
 - Web: http://localhost:5174
 - API: http://localhost:3002/api/v1 (health: `/health/live`, `/health/ready`)
-- OpenAPI (JSON saja): http://localhost:3002/api/v1/docs/json — Swagger UI belum diregistrasi
+- Swagger UI: http://localhost:3002/api/v1/docs (spec JSON: http://localhost:3002/api/v1/docs/json)
 - MinIO console: http://localhost:9003
 
 ## Akun seed (dummy — password sama untuk semua kecuali bootstrap)
