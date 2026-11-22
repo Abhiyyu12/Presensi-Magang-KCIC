@@ -1,0 +1,687 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum GenericStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Effect {
+  ALLOW
+  DENY
+}
+
+enum ScheduleScopeType {
+  GLOBAL
+  BUREAU
+  DIVISION
+  INDIVIDUAL
+}
+
+enum AdminScopeType {
+  GLOBAL
+  BUREAU
+  DIVISION
+}
+
+enum CalendarDayType {
+  NORMAL
+  HOLIDAY
+  WORKING_EXCEPTION
+}
+
+enum ResolutionSource {
+  GLOBAL
+  BUREAU
+  DIVISION
+  INDIVIDUAL
+  CALENDAR_OVERRIDE
+  NONE
+}
+
+enum DayStatus {
+  NOT_SCHEDULED
+  SCHEDULED
+  PRESENT
+  LATE
+  INCOMPLETE
+  NEEDS_REVIEW
+  EARLY_DEPARTURE_APPROVED
+}
+
+enum AttendanceEventType {
+  CHECK_IN
+  CHECK_OUT
+}
+
+enum AttendanceEventStatus {
+  VALID
+  CORRECTED
+  VOIDED
+}
+
+enum InternStatus {
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  ENDED
+}
+
+enum FileStatus {
+  ACTIVE
+  ORPHANED
+  DELETED
+}
+
+enum LeaveType {
+  TEMPORARY
+  EARLY_DEPARTURE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  DEPARTED
+  RETURNED
+  COMPLETED
+  NEEDS_REVIEW
+}
+
+enum LeaveEventType {
+  DEPARTURE
+  RETURN
+  EARLY_CHECKOUT
+}
+
+enum HelpArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum FeatureNodeType {
+  GROUP
+  PAGE
+  ACTION
+}
+
+// ---------- Identity and access ----------
+
+model User {
+  id                 String   @id @default(uuid()) @db.Uuid
+  username           String   @unique @db.VarChar(64)
+  passwordHash       String   @map("password_hash")
+  displayName        String   @map("display_name") @db.VarChar(128)
+  email              String?  @db.VarChar(255)
+  phone              String?  @db.VarChar(32)
+  accountStatus      AccountStatus @default(ACTIVE) @map("account_status")
+  mustChangePassword Boolean  @default(false) @map("must_change_password")
+  lastLoginAt        DateTime? @map("last_login_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  sessions             Session[]
+  roleAssignments      UserRoleAssignment[]
+  permissionOverrides  UserPermissionOverride[]
+  passwordResetTokens  PasswordResetToken[]
+  internProfile        InternProfile?
+  supervisorAssignments SupervisorAssignment[]
+  adminScopes          AdminScope[]
+  auditEvents          AuditEvent[]
+  uploadedFiles        FileObject[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String        @id @default(uuid()) @db.Uuid
+  code        String        @unique @db.VarChar(64)
+  name        String        @db.VarChar(128)
+  description String?
+  isSystem    Boolean       @default(false) @map("is_system")
+  status      GenericStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  rolePermissions RolePermission[]
+  userAssignments UserRoleAssignment[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique @db.VarChar(128)
+  module      String  @db.VarChar(64)
+  action      String  @db.VarChar(64)
+  description String?
+
+  rolePermissions    RolePermission[]
+  userOverrides      UserPermissionOverride[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String   @id @default(uuid()) @db.Uuid
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  effect       Effect   @default(ALLOW)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRoleAssignment {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  roleId     String    @map("role_id") @db.Uuid
+  validFrom  DateTime  @default(now()) @map("valid_from")
+  validTo    DateTime? @map("valid_to")
+  assignedBy String?   @map("assigned_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, validFrom, validTo])
+  @@map("user_role_assignments")
+}
+
+model FeatureNode {
+  id                     String          @id @default(uuid()) @db.Uuid
+  parentId               String?         @map("parent_id") @db.Uuid
+  code                   String          @unique @db.VarChar(128)
+  label                  String          @db.VarChar(128)
+  route                  String?         @db.VarChar(255)
+  nodeType               FeatureNodeType @default(PAGE) @map("node_type")
+  requiredPermissionCode String?         @map("required_permission_code") @db.VarChar(128)
+  sortOrder              Int             @default(0) @map("sort_order")
+
+  parent   FeatureNode?  @relation("FeatureTree", fields: [parentId], references: [id])
+  children FeatureNode[] @relation("FeatureTree")
+
+  @@map("feature_nodes")
+}
+
+model UserPermissionOverride {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  permissionId String    @map("permission_id") @db.Uuid
+  effect       Effect
+  scopeJson    Json?     @map("scope_json")
+  validFrom    DateTime  @default(now()) @map("valid_from")
+  validTo      DateTime? @map("valid_to")
+  reason       String
+  grantedBy    String?   @map("granted_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@map("user_permission_overrides")
+}
+
+model AbacPolicy {
+  id            String        @id @default(uuid()) @db.Uuid
+  code          String        @unique @db.VarChar(128)
+  description   String?
+  permissionCode String       @map("permission_code") @db.VarChar(128)
+  effect        Effect        @default(ALLOW)
+  conditionJson Json          @map("condition_json")
+  status        GenericStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@map("abac_policies")
+}
+
+model Session {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  tokenHash     String    @unique @map("token_hash")
+  expiresAt     DateTime  @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+  lastSeenAt    DateTime? @map("last_seen_at")
+  userAgentHash String?   @map("user_agent_hash")
+  ipHash        String?   @map("ip_hash")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  tokenHash  String    @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ---------- Organization and relationship ----------
+
+model Bureau {
+  id        String        @id @default(uuid()) @db.Uuid
+  code      String        @unique @db.VarChar(32)
+  name      String        @db.VarChar(128)
+  status    GenericStatus @default(ACTIVE)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  divisions     Division[]
+  internProfiles InternProfile[]
+
+  @@map("bureaus")
+}
+
+model Division {
+  id        String        @id @default(uuid()) @db.Uuid
+  bureauId  String        @map("bureau_id") @db.Uuid
+  code      String        @db.VarChar(32)
+  name      String        @db.VarChar(128)
+  status    GenericStatus @default(ACTIVE)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  bureau        Bureau          @relation(fields: [bureauId], references: [id])
+  internProfiles InternProfile[]
+
+  @@unique([bureauId, code])
+  @@map("divisions")
+}
+
+model Placement {
+  id          String        @id @default(uuid()) @db.Uuid
+  code        String        @unique @db.VarChar(32)
+  name        String        @db.VarChar(128)
+  description String?
+  status      GenericStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  internProfiles InternProfile[]
+
+  @@map("placements")
+}
+
+model InternProfile {
+  id                String       @id @default(uuid()) @db.Uuid
+  userId            String       @unique @map("user_id") @db.Uuid
+  participantNumber String       @unique @map("participant_number") @db.VarChar(64)
+  bureauId          String       @map("bureau_id") @db.Uuid
+  divisionId        String?      @map("division_id") @db.Uuid
+  placementId       String?      @map("placement_id") @db.Uuid
+  startDate         DateTime     @map("start_date") @db.Date
+  endDate           DateTime?    @map("end_date") @db.Date
+  status            InternStatus @default(ACTIVE)
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  user                 User                   @relation(fields: [userId], references: [id])
+  bureau               Bureau                 @relation(fields: [bureauId], references: [id])
+  division             Division?              @relation(fields: [divisionId], references: [id])
+  placement            Placement?             @relation(fields: [placementId], references: [id])
+  supervisorAssignments SupervisorAssignment[]
+  attendanceDays       AttendanceDay[]
+  leaveRequests        LeaveRequest[]
+  workdaySnapshots     WorkdaySnapshot[]
+
+  @@index([bureauId, divisionId])
+  @@index([status])
+  @@map("intern_profiles")
+}
+
+model SupervisorAssignment {
+  id               String           @id @default(uuid()) @db.Uuid
+  supervisorUserId String           @map("supervisor_user_id") @db.Uuid
+  internProfileId  String           @map("intern_profile_id") @db.Uuid
+  validFrom        DateTime         @default(now()) @map("valid_from")
+  validTo          DateTime?        @map("valid_to")
+  status           AssignmentStatus @default(ACTIVE)
+  createdBy        String?          @map("created_by")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  supervisor    User          @relation(fields: [supervisorUserId], references: [id])
+  internProfile InternProfile @relation(fields: [internProfileId], references: [id])
+
+  @@index([supervisorUserId, validFrom, validTo])
+  @@index([internProfileId])
+  @@map("supervisor_assignments")
+}
+
+model AdminScope {
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  scopeType AdminScopeType @map("scope_type")
+  scopeId   String?        @map("scope_id") @db.Uuid
+  validFrom DateTime       @default(now()) @map("valid_from")
+  validTo   DateTime?      @map("valid_to")
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("admin_scopes")
+}
+
+// ---------- Scheduling ----------
+
+model WorkSchedule {
+  id         String            @id @default(uuid()) @db.Uuid
+  name       String            @db.VarChar(128)
+  scopeType  ScheduleScopeType @map("scope_type")
+  scopeId    String?           @map("scope_id") @db.Uuid
+  validFrom  DateTime          @map("valid_from") @db.Date
+  validTo    DateTime?         @map("valid_to") @db.Date
+  timezone   String            @default("Asia/Jakarta")
+  status     GenericStatus     @default(ACTIVE)
+  version    Int               @default(1)
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  days WorkScheduleDay[]
+
+  @@index([scopeType, scopeId, validFrom])
+  @@map("work_schedules")
+}
+
+model WorkScheduleDay {
+  id                   String   @id @default(uuid()) @db.Uuid
+  scheduleId           String   @map("schedule_id") @db.Uuid
+  weekday              Int      @db.SmallInt
+  isWorkingDay         Boolean  @map("is_working_day")
+  startTime            String?  @map("start_time") @db.VarChar(5)
+  endTime              String?  @map("end_time") @db.VarChar(5)
+  lateToleranceMinutes Int      @default(15) @map("late_tolerance_minutes")
+
+  schedule WorkSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, weekday])
+  @@map("work_schedule_days")
+}
+
+model CalendarDay {
+  id           String          @id @default(uuid()) @db.Uuid
+  calendarDate DateTime        @unique @map("calendar_date") @db.Date
+  dayType      CalendarDayType @map("day_type")
+  name         String?         @db.VarChar(128)
+  source       String?         @db.VarChar(64)
+  status       GenericStatus   @default(ACTIVE)
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  @@map("calendar_days")
+}
+
+model WorkdaySnapshot {
+  id                   String           @id @default(uuid()) @db.Uuid
+  internProfileId      String           @map("intern_profile_id") @db.Uuid
+  workDate             DateTime         @map("work_date") @db.Date
+  isWorkingDay         Boolean          @map("is_working_day")
+  scheduleId           String?          @map("schedule_id") @db.Uuid
+  scheduleName         String?          @map("schedule_name")
+  startTime            String?          @map("start_time") @db.VarChar(5)
+  endTime              String?          @map("end_time") @db.VarChar(5)
+  lateToleranceMinutes Int?             @map("late_tolerance_minutes")
+  resolutionSource     ResolutionSource @default(NONE) @map("resolution_source")
+  calendarDayType      CalendarDayType? @map("calendar_day_type")
+  computedAt           DateTime         @default(now()) @map("computed_at")
+
+  internProfile InternProfile @relation(fields: [internProfileId], references: [id])
+
+  @@unique([internProfileId, workDate])
+  @@index([workDate])
+  @@map("workday_snapshots")
+}
+
+// ---------- Attendance and evidence ----------
+
+model AttendanceDay {
+  id              String      @id @default(uuid()) @db.Uuid
+  internProfileId String      @map("intern_profile_id") @db.Uuid
+  workDate        DateTime    @map("work_date") @db.Date
+  dayStatus       DayStatus   @default(SCHEDULED) @map("day_status")
+  checkInEventId  String?     @unique @map("check_in_event_id") @db.Uuid
+  checkOutEventId String?     @unique @map("check_out_event_id") @db.Uuid
+  scheduleSnapshotJson Json   @map("schedule_snapshot_json")
+  leaveRequestId  String?     @map("leave_request_id") @db.Uuid
+  correctionFlag  Boolean     @default(false) @map("correction_flag")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  internProfile InternProfile     @relation(fields: [internProfileId], references: [id])
+  events        AttendanceEvent[]
+
+  @@unique([internProfileId, workDate])
+  @@index([workDate, dayStatus])
+  @@map("attendance_days")
+}
+
+model AttendanceEvent {
+  id                String                @id @default(uuid()) @db.Uuid
+  attendanceDayId   String                @map("attendance_day_id") @db.Uuid
+  eventType         AttendanceEventType   @map("event_type")
+  occurredAtServer  DateTime              @map("occurred_at_server")
+  clientSubmittedAt DateTime?             @map("client_submitted_at")
+  latitude          Float                 @map("latitude")
+  longitude         Float                 @map("longitude")
+  accuracyMeters    Float?                @map("accuracy_meters")
+  evidenceId        String                @map("evidence_id") @db.Uuid
+  idempotencyKey    String?               @map("idempotency_key")
+  status            AttendanceEventStatus @default(VALID)
+  isLate            Boolean?              @map("is_late")
+  createdBy         String?               @map("created_by")
+  createdAt         DateTime              @default(now()) @map("created_at")
+
+  attendanceDay AttendanceDay @relation(fields: [attendanceDayId], references: [id])
+  evidence      FileObject    @relation("AttendanceEvidence", fields: [evidenceId], references: [id])
+
+  @@unique([attendanceDayId, eventType])
+  @@index([occurredAtServer])
+  @@map("attendance_events")
+}
+
+model FileObject {
+  id             String     @id @default(uuid()) @db.Uuid
+  bucket         String     @db.VarChar(64)
+  objectKey      String     @unique @map("object_key") @db.VarChar(255)
+  mimeType       String     @map("mime_type") @db.VarChar(64)
+  sizeBytes      Int        @map("size_bytes")
+  checksumSha256 String?    @map("checksum_sha256") @db.Char(64)
+  width          Int?
+  height         Int?
+  uploadedById   String?    @map("uploaded_by_id") @db.Uuid
+  status         FileStatus @default(ACTIVE)
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  uploadedBy        User?                @relation(fields: [uploadedById], references: [id])
+  attendanceEvents  AttendanceEvent[]    @relation("AttendanceEvidence")
+  leaveEvents       LeaveEvent[]         @relation("LeaveEvidence")
+
+  @@map("file_objects")
+}
+
+// ---------- Leave ----------
+
+model LeaveCategory {
+  id        String        @id @default(uuid()) @db.Uuid
+  code      String        @unique @db.VarChar(32)
+  name      String        @db.VarChar(128)
+  sortOrder Int           @default(0) @map("sort_order")
+  status    GenericStatus @default(ACTIVE)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  leaveRequests LeaveRequest[]
+
+  @@map("leave_categories")
+}
+
+model LeaveRequest {
+  id                    String      @id @default(uuid()) @db.Uuid
+  internProfileId       String      @map("intern_profile_id") @db.Uuid
+  leaveType             LeaveType   @map("leave_type")
+  categoryId            String      @map("category_id") @db.Uuid
+  reason                String
+  estimatedDepartureAt  DateTime    @map("estimated_departure_at")
+  estimatedReturnAt     DateTime?   @map("estimated_return_at")
+  workDate              DateTime    @map("work_date") @db.Date
+  status                LeaveStatus @default(PENDING)
+  requestedAt           DateTime    @default(now()) @map("requested_at")
+  decidedById           String?     @map("decided_by_id") @db.Uuid
+  decidedAt             DateTime?   @map("decided_at")
+  decisionNote          String?     @map("decision_note")
+  version               Int         @default(1)
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @updatedAt @map("updated_at")
+
+  internProfile InternProfile @relation(fields: [internProfileId], references: [id])
+  category      LeaveCategory @relation(fields: [categoryId], references: [id])
+  events        LeaveEvent[]
+
+  @@index([status, requestedAt])
+  @@index([internProfileId, workDate])
+  @@map("leave_requests")
+}
+
+model LeaveEvent {
+  id               String         @id @default(uuid()) @db.Uuid
+  leaveRequestId   String         @map("leave_request_id") @db.Uuid
+  eventType        LeaveEventType @map("event_type")
+  occurredAtServer DateTime       @map("occurred_at_server")
+  latitude         Float          @map("latitude")
+  longitude        Float          @map("longitude")
+  accuracyMeters   Float?         @map("accuracy_meters")
+  evidenceId       String         @map("evidence_id") @db.Uuid
+  idempotencyKey   String?        @map("idempotency_key")
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  leaveRequest LeaveRequest @relation(fields: [leaveRequestId], references: [id])
+  evidence     FileObject   @relation("LeaveEvidence", fields: [evidenceId], references: [id])
+
+  @@index([leaveRequestId, eventType])
+  @@map("leave_events")
+}
+
+// ---------- Audit, help, configuration ----------
+
+model AuditEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  action      String   @db.VarChar(128)
+  objectType  String   @map("object_type") @db.VarChar(64)
+  objectId    String?  @map("object_id") @db.VarChar(64)
+  beforeJson  Json?    @map("before_json")
+  afterJson   Json?    @map("after_json")
+  reason      String?
+  outcome     String   @default("SUCCESS") @db.VarChar(32)
+  requestId   String?  @map("request_id")
+  occurredAt  DateTime @default(now()) @map("occurred_at")
+
+  actor User? @relation(fields: [actorUserId], references: [id])
+
+  @@index([objectType, objectId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@map("audit_events")
+}
+
+model BusinessParameter {
+  id           String    @id @default(uuid()) @db.Uuid
+  key          String    @unique @db.VarChar(128)
+  valueJson    Json      @map("value_json")
+  description  String?
+  validFrom    DateTime? @map("valid_from")
+  validTo      DateTime? @map("valid_to")
+  version      Int       @default(1)
+  updatedById  String?   @map("updated_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("business_parameters")
+}
+
+model HelpCategory {
+  id        String        @id @default(uuid()) @db.Uuid
+  code      String        @unique @db.VarChar(32)
+  name      String        @db.VarChar(128)
+  sortOrder Int           @default(0) @map("sort_order")
+  status    GenericStatus @default(ACTIVE)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  articles HelpArticle[]
+
+  @@map("help_categories")
+}
+
+model HelpArticle {
+  id             String            @id @default(uuid()) @db.Uuid
+  categoryId     String            @map("category_id") @db.Uuid
+  slug           String            @unique @db.VarChar(160)
+  title          String            @db.VarChar(200)
+  body           String
+  targetRolesJson Json?            @map("target_roles_json")
+  status         HelpArticleStatus @default(DRAFT)
+  publishedAt    DateTime?         @map("published_at")
+  createdById    String?           @map("created_by_id")
+  updatedById    String?           @map("updated_by_id")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  category HelpCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([status])
+  @@map("help_articles")
+}
+
+model IdempotencyRecord {
+  id               String   @id @default(uuid()) @db.Uuid
+  actorUserId      String   @map("actor_user_id") @db.Uuid
+  operation        String   @db.VarChar(64)
+  idempotencyKey   String   @map("idempotency_key") @db.VarChar(128)
+  requestHash      String   @map("request_hash") @db.Char(64)
+  responseStatus   Int      @map("response_status")
+  responseBodyJson Json     @map("response_body_json")
+  createdAt        DateTime @default(now()) @map("created_at")
+  expiresAt        DateTime @map("expires_at")
+
+  @@unique([actorUserId, operation, idempotencyKey])
+  @@map("idempotency_records")
+}

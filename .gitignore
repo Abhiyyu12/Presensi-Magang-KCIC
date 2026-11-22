@@ -1,0 +1,18 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.pnpm-store/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Large host-downloaded binary (see infra/scripts/minio-init.mjs for source + sha256)
+infra/bin/mc

@@ -1,0 +1,28 @@
+{
+  "name": "presensi-magang-kcic",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:integration": "pnpm --filter api test",
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm --filter web dev",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:seed": "pnpm --filter api db:seed",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f --tail=100",
+    "setup": "bash infra/scripts/setup.sh",
+    "doctor": "bash infra/scripts/doctor.sh",
+    "reset": "bash infra/scripts/reset.sh",
+    "backup": "bash infra/scripts/backup.sh",
+    "restore": "bash infra/scripts/restore.sh"
+  }
+}

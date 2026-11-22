@@ -1,0 +1,104 @@
+name: presensi-kcic
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-attendance_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-attendance_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-attendance_app} -d ${POSTGRES_DB:-attendance_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio:
+    image: minio/minio:RELEASE.2025-05-24T17-08-30Z
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${MINIO_HOST_PORT:-9002}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9003}:9001"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: node:22.14.0-alpine3.21
+    depends_on:
+      - minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?}
+      MINIO_BUCKET_ATTENDANCE: ${MINIO_BUCKET_ATTENDANCE:-attendance-evidence}
+      MINIO_BUCKET_HELP: ${MINIO_BUCKET_HELP:-help-media}
+    volumes:
+      - ./infra/scripts/minio-init.mjs:/init.mjs:ro
+      - ./infra/bin:/bin-mc:ro
+    restart: "no"
+    command: ["node", "/init.mjs"]
+
+  api-migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: presensi-api:local
+    env_file: .env
+    environment:
+      TZ: Asia/Jakarta
+    depends_on:
+      db:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    command: sh -c "cd apps/api && node node_modules/prisma/build/index.js migrate deploy && node dist/prisma/seed.js"
+    restart: "no"
+
+  api:
+    image: presensi-api:local
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      TZ: Asia/Jakarta
+    depends_on:
+      db:
+        condition: service_healthy
+      api-migrate:
+        condition: service_completed_successfully
+    command: node apps/api/dist/src/server.js
+    ports:
+      - "127.0.0.1:${API_PORT:-3000}:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5173}:80"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  minio_data:

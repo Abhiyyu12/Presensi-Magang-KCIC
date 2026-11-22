@@ -1,0 +1,16 @@
+**/node_modules
+**/.pnpm-store
+.git
+**/.env
+**/.env.*
+**/coverage
+**/dist
+**/build
+**/playwright-report
+**/test-results
+*.log
+**/*.log
+infra/bin
+infra/pipeline.log
+infra/test.log
+infra/typecheck.log
