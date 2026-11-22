@@ -68,12 +68,14 @@ export async function validateAndProcessImage(buf: Buffer, declaredMime: string)
 /** Segment username yang aman dipakai sebagai folder objek MinIO. */
 const USERNAME_KEY_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-/** Key per-user: `{username}/{uuid}.jpg` — folder per intern sesuai keputusan produk. */
-export function generateObjectKey(username: string): string {
+export type EvidenceCategory = 'datang' | 'pulang' | 'izin';
+
+/** Key per-user: `{username}/{kategori}/{uuid}.jpg` — kategori datang/pulang/izin. */
+export function generateObjectKey(username: string, category: EvidenceCategory): string {
   if (!USERNAME_KEY_SEGMENT.test(username)) {
     throw badRequest('Username tidak valid untuk menyimpan bukti.');
   }
-  return `${username}/${randomUUID()}.jpg`;
+  return `${username}/${category}/${randomUUID()}.jpg`;
 }
 
 export async function uploadEvidence(bucket: string, key: string, img: ProcessedImage): Promise<void> {

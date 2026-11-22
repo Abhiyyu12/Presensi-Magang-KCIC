@@ -4,6 +4,19 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: bukti MinIO dipisah per kategori (datang/pulang/izin)
+
+### Diubah
+- **Folder bukti selfie kini dipisah per jenis absensi**: object key berkembang dari `{username}/{uuid}.jpg` menjadi `{username}/{kategori}/{uuid}.jpg` — kategori `datang` (absen masuk), `pulang` (absen pulang), dan `izin` (pergerakan izin; asumsi yang dicatat: foto pergerakan izin dimasukkan ke folder `izin` karena satu-satunya jalur upload foto di modul izin adalah pergerakan — kalau dianggap kurang pas, tinggal ganti satu parameter). Nama file tetap UUID acak; kategori dilewatkan sebagai tipe compile-time (`EvidenceCategory`), username tetap divalidasi saat penyusunan key. Dokumen ARCHITECTURE.md §8 dan SECURITY.md §6 ikut di-update.
+
+### Diubah (data dev)
+- Migrasi lanjutan isi bucket: **9 foto sah** dipindah dari `username/uuid.jpg` ke subfolder kategori sesuai jenis event di DB (`abhi/` datang+pulang, `bayu.pratama/`, `fajar.nugroho/`, `maya.sari/`, `peserta3/` datang+pulang, `putri.maharani/` datang+pulang) dan kolom `object_key` di-update; 30 objek sampah 1.2KiB buatan run test suite terbaru (folder peserta1/2/3 dengan subfolder baru) dihapus — artefak uji saya sendiri.
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **87/87** (3 test unit format key di-update ke format `username/kategori/uuid.jpg`).
+- Migrasi terverifikasi: listing bucket akhir menampilkan struktur `abhi/datang/… + abhi/pulang/…`, `peserta3/datang/… + peserta3/pulang/…`, dst. — tidak ada lagi foto langsung di root folder username; 9 baris `file_objects.object_key` sesuai kategori event masing-masing (7 datang, 2 pulang; foto izin belum ada di dev).
+- Playwright (peserta3, detail riwayat): kedua foto bukti hari ini (datang & pulang) termuat dari folder terpisah (`naturalWidth > 0`).
+
 ## [2026-11-22] — UAT: struktur bukti MinIO per-user (folder username)
 
 ### Ditambahkan

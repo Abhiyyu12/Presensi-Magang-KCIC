@@ -143,7 +143,7 @@ Shared components must not contain hidden domain rules. Navigation derives from 
 PostgreSQL and MinIO do not share a distributed transaction. Implement a safe staged workflow:
 1. Authenticate and authorize actor.
 2. Validate request and image metadata.
-3. Generate server-side object key: `{username}/{uuid}.jpg` — folder per-user (username divalidasi charset aman di boundary; UUID tetap acak untuk nama file).
+3. Generate server-side object key: `{username}/{kategori}/{uuid}.jpg` — kategori `datang` (absen masuk), `pulang` (absen pulang), `izin` (pergerakan izin); username divalidasi charset aman di boundary, UUID tetap acak untuk nama file.
 4. Upload object to a private MinIO bucket.
 5. In a PostgreSQL transaction, insert attendance event, evidence metadata, idempotency record, and audit record.
 6. If DB transaction fails, attempt compensating deletion of uploaded object.
