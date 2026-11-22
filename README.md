@@ -1,6 +1,35 @@
-# Presensi Magang KCIC — RUNBOOK lokal
+# Presensi Magang KCIC
 
-Aplikasi presensi magang (modular monolith): Fastify 5 + Prisma 5 + PostgreSQL 17 + MinIO, frontend React 18 + Vite. **Hanya untuk lingkungan lokal/development. Bukan untuk production. Seluruh data adalah dummy.**
+Aplikasi presensi peserta magang untuk KCIC (Kereta Cepat Indonesia China): absen masuk/pulang dengan selfie, pengajuan izin, monitoring, approval, laporan, dan pengelolaan data master — dalam satu modular monolith.
+
+**Hanya untuk lingkungan lokal/development. Bukan untuk production. Seluruh data adalah dummy.**
+
+## Fitur utama
+
+- **Absensi ber-bukti**: selfie + lokasi (opsional — tetap sah tanpa GPS, koordinat & alamat tercatat bila tersedia), anti-duplikat via `Idempotency-Key`, deteksi terlambat sesuai jadwal.
+- **Bukti tersimpan rapi & hemat**: foto dikompres dua lapis (frontend ≤1280px q0.85, backend re-encode JPEG q82 mozjpeg, EXIF dibuang), disimpan di MinIO privat per pengguna per kategori `{username}/{datang|pulang|izin}/{uuid}.jpg`.
+- **Izin full siklus**: state machine PENDING → APPROVED/REJECTED → DEPARTED/RETURNED → COMPLETED, izin sementara & pulang awal membuat event absensi otomatis, sweep izin basi.
+- **Import Excel dua langkah** (validate → confirm): template dinamis dengan dropdown dari data master, kolom tanggal bertipe tanggal (validasi rentang, tampil `yyyy-mm-dd`), kolom No. HP bertipe teks (Excel tidak memakan 0 di depan; kode negara `+` semua negara diterima), password awal acak tampil sekali.
+- **Laporan & ekspor**: rekap dari snapshot hari kerja, 13 metrik, export CSV/XLSX ≤20.000 baris tanpa foto/koordinat, plus unduh CSV riwayat pribadi untuk peserta.
+- **Keamanan berlapis**: Argon2id, sesi opaque HttpOnly, CSRF double-submit, RBAC + ABAC + ReBAC (deny mengalahkan allow), audit trail, IDOR → 404.
+- **API terdokumentasi**: Swagger UI aktif di `/api/v1/docs`.
+
+## Teknologi
+
+| Lapisan | Teknologi |
+|---|---|
+| API | Fastify 5, zod, Prisma 5, PostgreSQL 17, MinIO (sharp, ExcelJS) |
+| Web | React 18, Vite 5, Tailwind CSS 3, TanStack Query 5, react-hook-form + zod |
+| Infra | Docker Compose, pnpm workspace monorepo |
+
+## Struktur proyek
+
+```
+apps/api      # API Fastify + Prisma (modul: auth, attendance, leaves, admin, access, files, ...)
+apps/web      # SPA React (routes per role, komponen bersama)
+docs/         # panduan pengguna, admin, RBAC, aliran data, audit UX, laporan akhir
+infra/        # docker compose + script setup/pipeline/backup/reset
+```
 
 ## Prasyarat
 
@@ -37,7 +66,7 @@ Akses:
 
 | Role | Menu utama | Kemampuan kunci |
 |---|---|---|
-| Peserta (INTERN) | Beranda, Absen, Izin, Riwayat, Bantuan, Profil | absen masuk/pulang dengan selfie+GPS (anti-duplikat via Idempotency-Key), ajukan izin (izin sementara/pulang awal) + pergerakan keluar-kembali, riwayat + unduh CSV pribadi, profil menampilkan penugasan/jadwal/pembimbing dan mengubah kontak sendiri |
+| Peserta (INTERN) | Beranda, Absen, Izin, Riwayat, Bantuan, Profil | absen masuk/pulang dengan selfie (lokasi opsional), ajukan izin (izin sementara/pulang awal) + pergerakan keluar-kembali, riwayat + unduh CSV pribadi, profil menampilkan penugasan/jadwal/pembimbing dan mengubah kontak sendiri |
 | Pembimbing (SUPERVISOR) | Beranda, Monitoring, Izin Peserta, Laporan | pantau absensi peserta binaan (filter biro/divisi/pencarian), lihat pengajuan izin (baca saja), rekap + ekspor CSV/XLSX sesuai scope |
 | Admin HR (ADMIN_HR) | Beranda, Monitoring, Approval, Laporan, Data Master, Audit | setujui/tolak izin dengan catatan wajib, koreksi absensi ber-alasan, kelola pengguna + import Excel, seluruh data master (organisasi, jadwal, kalender, kategori izin, parameter operasional) |
 | Admin IT (ADMIN_IT) | Pengguna & Hak Akses, Audit | role/permission (pohon 7 menu + template Administrator/Pembimbing/Peserta), feature tree, policy ABAC, simulasi izin |
@@ -52,6 +81,8 @@ Menu dan tombol mengikuti permission efektif (lihat [docs/RBAC.md](docs/RBAC.md)
 | [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) | panduan singkat admin: pengguna, import Excel, role, data master, koreksi |
 | [docs/RBAC.md](docs/RBAC.md) | pohon permission, template role, aturan guard |
 | [docs/DATA_FLOW.md](docs/DATA_FLOW.md) | peta halaman → API → tabel DB + konvensi error |
+| [docs/AUDIT.md](docs/AUDIT.md) | temuan & keputusan audit UX |
+| [docs/LAPORAN_AKHIR.md](docs/LAPORAN_AKHIR.md) | laporan akhir proyek: matriks CRUD, asumsi, gap tersisa |
 | [CHANGELOG.md](CHANGELOG.md) | riwayat perubahan per fase |
 
 ## Perintah penting
@@ -74,6 +105,8 @@ docker compose down              # stop (data tetap)
 bash infra/scripts/reset.sh      # HAPUS volume (ketik RESET untuk konfirmasi)
 bash infra/scripts/backup.sh     # pg_dump + mirror MinIO ke backups/
 ```
+
+Kondisi gate terakhir: **API 91/91 test, Web 48/48 test**, tsc + eslint bersih.
 
 ## Variabel environment
 
@@ -113,17 +146,18 @@ Peta lengkap halaman → API → tabel DB dan daftar pengaturan yang bisa diubah
 - **Waktu:** server otoritatif. Disimpan UTC; hari/jam bisnis Asia/Jakarta (`src/common/time.ts`).
 - **Auth:** sesi opaque (cookie HttpOnly `sid`, hash sha256), CSRF double-submit + Origin allowlist, Argon2id, rate-limit login.
 - **Authorization:** RBAC + ABAC (policy JSON) + ReBAC (assignment pembimbing, admin scope). Deny mengalahkan allow; role baru nol permission; default-deny pada filter query; IDOR → 404.
-- **Absensi:** Idempotency-Key wajib; bukti selfie → validasi magic bytes → re-encode JPEG (EXIF dihapus) → MinIO privat → satu transaksi PG → compensating delete + marker ORPHANED bila gagal; presigned URL 120s + audit akses.
+- **Absensi:** Idempotency-Key wajib; bukti selfie → validasi magic bytes → kompres (resize sisi terpanjang ≤1280px, JPEG q82, EXIF dihapus) → MinIO privat per pengguna per kategori → satu transaksi PG → compensating delete + marker ORPHANED bila gagal; akses gambar via endpoint ber-authorisasi + audit.
+- **Lokasi:** opsional. Absen tetap sah tanpa GPS; bila koordinat ada, disimpan beserta alamat terperinci hasil reverse-geocoding (best-effort, gagal = absen tetap jalan).
 - **Izin:** state machine (PENDING/APPROVED/REJECTED/CANCELLED/DEPARTED/RETURNED/COMPLETED/NEEDS_REVIEW), early-checkout membuat event CHECK_OUT, sweep 15 menit untuk DEPARTED basi → NEEDS_REVIEW (tidak pernah auto-checkout).
 - **Laporan:** baris dari WorkdaySnapshot; 13 metrik eksklusif; export CSV/XLSX ≤20.000 baris, tanpa foto/koordinat, diaudit.
 
-## Navigasi & UX (hasil upgrade Fase 4)
+## Navigasi & UX
 
-- Mobile-first: bottom nav 4 item utama + tombol **Menu** (sheet berisi seluruh menu role); desktop sidebar ≤6 item utama + grup "Lainnya". Ikon SVG, label pendek satu sumber.
+- Mobile-first: bottom nav 4 item utama + tombol **Menu** (sheet berisi seluruh menu role); desktop sidebar ≤6 item utama + grup "Lainnya", bisa diciutkan. Ikon SVG, label pendek satu sumber.
 - Menu per role: Peserta = Beranda, Absen, Izin, Riwayat (+Bantuan, Profil); Pembimbing = Beranda, Monitoring, Izin Peserta, Laporan (+Bantuan, Profil); Admin HR = Beranda, Monitoring, Approval, Laporan, Data Master, Audit (+Bantuan, Profil); Admin IT = Beranda, Akses, Audit (+Bantuan, Profil).
 - Beranda peserta menonjolkan status hari ini + tombol Absen Masuk/Pulang; hari non-kerja dijelaskan di muka; pengingat in-app bila belum absen pulang lewat jam jadwal.
 - Riwayat: chip preset 7 hari / 30 hari / Bulan ini + unduh CSV riwayat pribadi.
-- Panduan pengguna sederhana: [docs/USER_GUIDE.md](docs/USER_GUIDE.md). Temuan & keputusan audit UX: [docs/AUDIT.md](docs/AUDIT.md). Riwayat perubahan: [CHANGELOG.md](CHANGELOG.md).
+- Dialog form panjang (Tambah/Ubah Pengguna) lebar 672px, auto-scroll ke inputan peserta saat "Jadikan peserta magang" dicentang, scrollbar tipis.
 
 ## Keputusan KCIC yang masih PENDING (jangan dikarang)
 
