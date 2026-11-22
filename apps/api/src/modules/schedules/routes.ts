@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { getDb } from '../../infrastructure/db.js';
 import { ok, paginationQuery, paginationMeta, skipTake } from '../../common/http.js';
@@ -63,10 +63,23 @@ const calendarListQuery = paginationQuery.extend({
   endDateExclusive: dateOnly.optional(),
 });
 
-function validateScopeId(scopeType: z.infer<typeof scopeTypeSchema>, scopeId: string | undefined): void {
-  if (scopeType !== 'GLOBAL' && !scopeId) {
+async function validateScopeId(db: PrismaClient, scopeType: z.infer<typeof scopeTypeSchema>, scopeId: string | undefined): Promise<void> {
+  if (scopeType === 'GLOBAL') return;
+  if (!scopeId) {
     throw badRequest('scopeId wajib diisi untuk scope BUREAU, DIVISION, atau INDIVIDUAL.');
   }
+  if (scopeType === 'BUREAU') {
+    const bureau = await db.bureau.findUnique({ where: { id: scopeId } });
+    if (!bureau) throw unprocessable('Biro untuk scope jadwal tidak ditemukan.');
+    return;
+  }
+  if (scopeType === 'DIVISION') {
+    const division = await db.division.findUnique({ where: { id: scopeId } });
+    if (!division) throw unprocessable('Divisi untuk scope jadwal tidak ditemukan.');
+    return;
+  }
+  const profile = await db.internProfile.findUnique({ where: { id: scopeId } });
+  if (!profile) throw unprocessable('Profil peserta untuk scope INDIVIDUAL tidak ditemukan.');
 }
 
 function validateDays(days: z.infer<typeof scheduleDaySchema>[]): void {
@@ -101,7 +114,7 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
     async (req) => {
       const ctx = requireCtx(req);
       const body = scheduleCreateBody.parse(req.body);
-      validateScopeId(body.scopeType, body.scopeId);
+      await validateScopeId(db, body.scopeType, body.scopeId);
       validateDays(body.days);
       const validFrom = parseDateOnly(body.validFrom);
       const validTo = body.validTo ? parseDateOnly(body.validTo) : null;

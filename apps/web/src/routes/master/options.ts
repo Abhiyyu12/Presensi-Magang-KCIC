@@ -72,10 +72,10 @@ export function fetchScopeIdOptions(search: string, scopeType: string): Promise<
   return Promise.resolve([]);
 }
 
-/** scopeId untuk jadwal kerja: BUREAU/DIVISION/INDIVIDUAL. */
+/** scopeId untuk jadwal kerja: BUREAU/DIVISION/INDIVIDUAL. INDIVIDUAL memakai ID profil peserta (bukan ID user) — backend mencocokkan jadwal per intern profile. */
 export function fetchScheduleScopeOptions(search: string, scopeType: string): Promise<ComboboxOption[]> {
   if (scopeType === 'BUREAU') return fetchBureauOptions(search);
   if (scopeType === 'DIVISION') return fetchDivisionOptions(search, '');
-  if (scopeType === 'INDIVIDUAL') return fetchUserOptions()(search);
+  if (scopeType === 'INDIVIDUAL') return fetchInternProfileOptions(search);
   return Promise.resolve([]);
 }

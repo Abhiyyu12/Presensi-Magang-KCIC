@@ -4,6 +4,15 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: fix jadwal INDIVIDUAL tidak berlaku (bug selfie abhi)
+
+### Diperbaiki
+- **Critical (bug UAT)**: jadwal dengan scope INDIVIDUAL tidak pernah berlaku ke peserta — combobox "Objek scope" mengisi **ID user**, padahal pencocokan jadwal di backend memakai **ID profil peserta** (`intern_profiles.id`), sehingga jadwal yang dibuat admin tidak pernah cocok dan peserta jatuh ke jadwal GLOBAL (Minggu libur → tombol absen mati). Combobox kini mengambil opsi dari daftar profil peserta (nama tampilan + nomor peserta), label scope diperjelas "Peserta (individu)", dan backend kini memvalidasi keberadaan scopeId saat create (422 berbahasa Indonesia jika biro/divisi/profil tidak ditemukan). Data jadwal milik pengguna di dev diperbaiki via SQL (scope_id diarahkan ke profil peserta) dan snapshot harian beku miliknya dihapus agar ter-regenerasi.
+
+### Pembuktian (bukan klaim)
+- Browser (admin): Tambah Jadwal → scope INDIVIDUAL menampilkan profil peserta ("abi 08129333", "Putri Maharani MG-2026-104", …); buat jadwal uji via UI → DB memastikan `scope_id` adalah `intern_profiles.id` (bukan `users.id`); baris uji dihapus setelahnya.
+- Gate: api test **76/76** (termasuk regresi baru: scopeId INDIVIDUAL yang bukan profil peserta ditolak 422), web test **46/46**.
+
 ## [2026-11-22] — UAT: fix layar abu-abu tab Kalender + tab Parameter tanpa JSON
 
 ### Ditambahkan

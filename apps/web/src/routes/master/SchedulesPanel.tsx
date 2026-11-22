@@ -29,7 +29,7 @@ const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu
 const SCOPE_LABELS: Record<string, string> = {
   BUREAU: 'Biro',
   DIVISION: 'Divisi',
-  INDIVIDUAL: 'Pengguna (individu)',
+  INDIVIDUAL: 'Peserta (individu)',
 };
 
 // Empty times/tolerance = "not filled"; the server applies the business-parameter

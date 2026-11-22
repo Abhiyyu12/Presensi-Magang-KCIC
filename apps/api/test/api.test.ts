@@ -1269,4 +1269,21 @@ describe('Fase UAT: kontrak list Data Master konsisten (pagination wajib)', () =
       expect(item.calendarDate < '2027-01-01').toBe(true);
     }
   });
+
+  it('jadwal INDIVIDUAL dengan scopeId bukan profil peserta ditolak 422', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/schedules',
+      headers: authHeaders(admin),
+      payload: {
+        name: 'Uji Scope Invalid',
+        scopeType: 'INDIVIDUAL',
+        scopeId: randomUUID(),
+        validFrom: '2027-03-01',
+        days: [{ weekday: 1, isWorkingDay: true, startTime: '09:00', endTime: '17:00' }],
+      },
+    });
+    expect(res.statusCode).toBe(422);
+    expect(envelope(res).error.message).toContain('Profil peserta');
+  });
 });
