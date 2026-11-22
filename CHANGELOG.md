@@ -15,6 +15,9 @@ Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 - Pembersihan data uji sendiri: 16 biro scratch `QA-F6-*` dihapus (DELETE 16), SUPERVISOR kembali tepat 7 permission (diverifikasi SQL), nama jadwal sisa uji dirapikan.
 - Catatan jujur: `POST /auth/login` memang tidak memeriksa Origin (belum ada sesi/cookie); Origin+CSRF tetap ketat pada semua mutasi ber-sesi. Login-CSRF dicatat sebagai saran lanjutan, bukan bug baru.
 
+### Diperbaiki
+- **Sidebar tidak mentok kiri di layar lebar**: kerangka layout `max-w-7xl mx-auto` membuat menu terapung di tengah (ruang kosong di kiri pada laptop/monitor lebar). Sidebar kini menempel ke tepi kiri, header full-width agar logo sejajar dengan menu; konten halaman tetap di tengah container masing-masing. Terbukti di 1920/1280/390 px + collapse tetap berfungsi.
+
 ## [2026-11-22] — Fase 0–5: perbaikan bug, RBAC penuh, profil lengkap, feedback error (branch `feat/uji-manual-integrasi`)
 
 ### Diperbaiki

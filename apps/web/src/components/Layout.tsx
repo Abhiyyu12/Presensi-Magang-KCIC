@@ -156,7 +156,7 @@ export function Layout() {
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4">
+        <div className="flex h-14 items-center justify-between gap-2 px-4">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
@@ -239,7 +239,7 @@ export function Layout() {
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-7xl">
+      <div className="flex">
         {/* Desktop sidebar: collapsible. */}
         <nav
           aria-label="Navigasi utama"
