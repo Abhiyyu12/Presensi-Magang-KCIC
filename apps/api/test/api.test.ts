@@ -256,6 +256,15 @@ describe('leave workflow (temporary departure + early checkout)', () => {
   let temporaryLeaveId: string;
   let earlyLeaveId: string;
 
+  it('lists active categories for peserta and denies accounts without leave:request', async () => {
+    const res = await get(app, '/api/v1/leaves/categories', p1);
+    expect(res.statusCode).toBe(200);
+    const body = envelope(res);
+    expect(body.data.items.length).toBeGreaterThan(0);
+    const denied = await get(app, '/api/v1/leaves/categories', admin);
+    expect(denied.statusCode).toBe(403);
+  });
+
   it('rejects leave creation before check-in for peserta2 (already checked in, so use validation path)', async () => {
     const res = await post(app, '/api/v1/leaves', p1, {
       leaveType: 'TEMPORARY',
@@ -392,6 +401,13 @@ describe('reports and export', () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it('lists own history rows for peserta (personal scope)', async () => {
+    const res = await get(app, `/api/v1/attendance?scope=mine&startDate=${today}&endDateExclusive=${tomorrow}`, p1);
+    expect(res.statusCode).toBe(200);
+    const body = envelope(res);
+    expect(body.data.items.some((r: { id: string }) => r.id === p1DayId)).toBe(true);
+  });
+
   it('exports own history CSV for peserta without coordinates', async () => {
     const res = await app.inject({
       method: 'GET',
@@ -402,6 +418,8 @@ describe('reports and export', () => {
     expect(res.headers['content-type']).toContain('text/csv');
     expect(res.headers['content-disposition']).toContain('attachment');
     expect(res.body).toContain('Tanggal,Status');
+    expect(res.body).toContain(today);
+    expect(res.body.trim().split('\n').length).toBeGreaterThan(1);
     expect(res.body).not.toContain('latitude');
   });
 

@@ -328,7 +328,7 @@ export async function listAttendance(ctx: AccessContext, query: {
 }) {
   const db = getDb();
   const scoped = ctx.internProfileId && !ctx.permissions.has('attendance:view:scoped')
-    ? { id: ctx.internProfileId }
+    ? { internProfileId: ctx.internProfileId }
     : { internProfile: await internScopeWhere(db, ctx) };
 
   if (query.internProfileId) {

@@ -19,6 +19,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   calls = [];
   clearCsrfCache();
+  document.cookie = 'csrf_token=; Max-Age=0; path=/';
   fetchMock = vi.fn(async (input: unknown, init?: RequestInit) => {
     const url = String(input);
     calls.push({ url, init: init ?? {} });
@@ -101,6 +102,17 @@ describe('api request shaping', () => {
       expect(headers['x-csrf-token']).toBe('csrf-test-token');
       expect(headers['Content-Type']).toBe('application/json');
     }
+  });
+
+  it('prefers the rotated csrf_token cookie over a stale in-memory token', async () => {
+    await api<unknown>('/ok', { method: 'POST', body: { a: 1 } });
+    document.cookie = 'csrf_token=rotated-token-after-login; path=/';
+    await api<unknown>('/ok', { method: 'POST', body: { a: 2 } });
+    const csrfCalls = calls.filter((c) => c.url.endsWith('/auth/csrf'));
+    expect(csrfCalls).toHaveLength(1);
+    const posts = calls.filter((c) => c.url.endsWith('/ok'));
+    const headers = (posts[1]?.init.headers ?? {}) as Record<string, string>;
+    expect(headers['x-csrf-token']).toBe('rotated-token-after-login');
   });
 
   it('sends the Idempotency-Key header when provided', async () => {

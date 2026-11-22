@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { ok, paginationQuery, dateRangeQuery } from '../../common/http.js';
 import { badRequest } from '../../common/errors.js';
+import { getDb } from '../../infrastructure/db.js';
 import { authenticate, authorize, requireCtx } from '../../app/auth.js';
 import { readMultipart, requireIdempotencyKey, parseCoords } from '../../common/multipart.js';
 import {
@@ -57,6 +58,16 @@ export async function leaveRoutes(app: FastifyInstance): Promise<void> {
     const leave = await createLeave(ctx, body, req.id);
     reply.code(201);
     return ok({ id: leave.id, status: leave.status }, req.id);
+  });
+
+  // Applicant-facing read list: the admin CRUD endpoint is not readable by peserta.
+  app.get('/leaves/categories', { preHandler: authorize('leave:request') }, async (req) => {
+    const items = await getDb().leaveCategory.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, code: true, name: true },
+    });
+    return ok({ items }, req.id);
   });
 
   app.get('/leaves/:leaveId', { schema: { params: idParams }, preHandler: authenticate }, async (req) => {

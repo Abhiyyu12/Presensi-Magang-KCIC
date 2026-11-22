@@ -58,7 +58,7 @@ export default function LeavesPage() {
 
   const categoriesQuery = useQuery({
     queryKey: ['leave-categories'],
-    queryFn: () => api<Paginated<LeaveCategory>>('/admin/leave-categories', { query: { pageSize: 100 } }),
+    queryFn: () => api<{ items: LeaveCategory[] }>('/leaves/categories'),
     enabled: formOpen,
     retry: false,
   });

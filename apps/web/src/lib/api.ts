@@ -54,7 +54,20 @@ function readToken(data: unknown): string | null {
   return null;
 }
 
+function readCsrfCookie(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+  return match?.[1] ?? null;
+}
+
 export async function ensureCsrfToken(): Promise<string | null> {
+  // The cookie is the source of truth: login and change-password rotate it
+  // server-side, so a token cached in memory can be stale after those calls.
+  const cookieToken = readCsrfCookie();
+  if (cookieToken) {
+    cachedCsrfToken = cookieToken;
+    return cookieToken;
+  }
   if (cachedCsrfToken) return cachedCsrfToken;
   if (!csrfRequest) {
     csrfRequest = fetch(`${API_BASE}/auth/csrf`, {
