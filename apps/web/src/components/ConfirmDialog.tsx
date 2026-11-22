@@ -7,6 +7,8 @@ interface ConfirmDialogProps {
   description?: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** Sembunyikan tombol batal (untuk dialog detail tanpa keputusan). */
+  hideCancel?: boolean;
   danger?: boolean;
   busy?: boolean;
   children?: ReactNode;
@@ -24,6 +26,7 @@ export function ConfirmDialog({
   description,
   confirmLabel = 'Konfirmasi',
   cancelLabel = 'Batal',
+  hideCancel = false,
   danger = false,
   busy = false,
   children,
@@ -97,9 +100,11 @@ export function ConfirmDialog({
         {description ? <p className="mt-2 text-sm text-slate-600">{description}</p> : null}
         {children}
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
-            {cancelLabel}
-          </button>
+          {hideCancel ? null : (
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
+              {cancelLabel}
+            </button>
+          )}
           <button
             type="button"
             className={danger ? 'btn-danger' : 'btn-primary'}

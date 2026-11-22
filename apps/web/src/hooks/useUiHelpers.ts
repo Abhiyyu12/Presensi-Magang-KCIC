@@ -20,14 +20,19 @@ export function usePrevious<T>(value: T): T | undefined {
 }
 
 /** Reset page to 1 whenever the given filter key changes. */
-export function usePagedFilters<T extends object>(filters: T) {
+export function usePagedFilters<T extends object>(filters: T, initialPageSize = 15) {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSizeState] = useState(initialPageSize);
   const serialized = JSON.stringify(filters);
   const prev = usePrevious(serialized);
   useEffect(() => {
     if (prev !== undefined && prev !== serialized) setPage(1);
   }, [prev, serialized]);
-  return { page, setPage };
+  const setPageSize = (size: number) => {
+    setPageSizeState(size);
+    setPage(1);
+  };
+  return { page, setPage, pageSize, setPageSize };
 }
 
 export function useMemoizedObject<T extends object>(value: T): T {

@@ -31,7 +31,7 @@ export interface ReportRow {
   checkOut: string | null;
   dayStatus: string;
   correctionFlag: boolean;
-  leaves: { leaveType: string; status: string; durationMinutes: number | null }[];
+  leaves: { leaveType: string; status: string; reason: string | null; durationMinutes: number | null }[];
 }
 
 const MAX_RANGE_DAYS = 62;
@@ -147,12 +147,22 @@ export async function buildReportRows(ctx: AccessContext, q: ReportQuery): Promi
           return {
             leaveType: l.leaveType,
             status: l.status,
+            reason: l.reason,
             durationMinutes: dep && ret ? Math.round((ret.occurredAtServer.getTime() - dep.occurredAtServer.getTime()) / 60000) : null,
           };
         }),
       });
     }
   }
+
+  // Terbaru di atas (brief Fase 1.4); nama sebagai urutan sekunder agar paginasi stabil.
+  rows.sort((a, b) =>
+    a.workDate === b.workDate
+      ? a.participantNumber.localeCompare(b.participantNumber)
+      : a.workDate < b.workDate
+        ? 1
+        : -1,
+  );
 
   if (q.dayStatus) return rows.filter((r) => r.dayStatus === q.dayStatus);
   return rows;

@@ -373,7 +373,7 @@ export async function listAttendance(ctx: AccessContext, query: {
         events: { orderBy: { occurredAtServer: 'asc' } },
         internProfile: { include: { user: { select: { displayName: true } }, bureau: true, division: true } },
       },
-      orderBy: { workDate: 'desc' },
+      orderBy: [{ workDate: 'desc' }, { internProfile: { user: { displayName: 'asc' } } }],
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),

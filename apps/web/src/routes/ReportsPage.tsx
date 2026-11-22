@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, API_BASE, buildQuery } from '../lib/api';
 import { DAY_STATUS_LABELS, formatDateWib, formatTimeWib, nextDay, todayWibDateString } from '../lib/format';
+import { LEAVE_TYPE_LABELS } from '../lib/format';
 import type { NamedEntity, Paginated, ReportMetrics, ReportRow } from '../lib/types';
 import { DataTable, type Column } from '../components/DataTable';
 import { StatusBadge } from '../components/StatusBadge';
 import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Icon } from '../components/Icon';
 import { FormField } from '../components/FormField';
 import { usePagedFilters, useMemoizedObject } from '../hooks/useUiHelpers';
 
@@ -45,7 +48,8 @@ export default function ReportsPage() {
   });
   const [applied, setApplied] = useState(filters);
   const queryFilters = useMemoizedObject(applied);
-  const { page, setPage } = usePagedFilters(queryFilters);
+  const { page, setPage, pageSize, setPageSize } = usePagedFilters(queryFilters, 10);
+  const [detailRow, setDetailRow] = useState<ReportRow | null>(null);
 
   const commonQuery = {
     startDate: queryFilters.startDate,
@@ -56,11 +60,11 @@ export default function ReportsPage() {
   };
 
   const reportQuery = useQuery({
-    queryKey: ['reports', 'attendance', page, queryFilters],
+    queryKey: ['reports', 'attendance', page, pageSize, queryFilters],
     queryFn: () =>
       api<{ items: ReportRow[]; metrics: ReportMetrics; pagination: Paginated<never>['pagination'] }>(
         '/reports/attendance',
-        { query: { ...commonQuery, page, pageSize: 15 } },
+        { query: { ...commonQuery, page, pageSize } },
       ),
     placeholderData: (previous) => previous,
   });
@@ -108,6 +112,20 @@ export default function ReportsPage() {
         row.leaves && row.leaves.length > 0
           ? row.leaves.map((l) => l.leaveType === 'TEMPORARY' ? 'Sementara' : 'Pulang awal').join(', ')
           : '-',
+    },
+    {
+      header: 'Aksi',
+      cell: (row) => (
+        <button
+          type="button"
+          className="btn-icon"
+          aria-label={`Detail laporan ${row.participantName}`}
+          title="Lihat detail"
+          onClick={() => setDetailRow(row)}
+        >
+          <Icon name="eye" />
+        </button>
+      ),
     },
   ];
 
@@ -258,10 +276,56 @@ export default function ReportsPage() {
             caption="Laporan absensi"
           />
           {reportQuery.data ? (
-            <ServerPagination pagination={reportQuery.data.pagination} onPageChange={setPage} />
+            <ServerPagination
+              pagination={reportQuery.data.pagination}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
           ) : null}
         </>
       )}
+
+      <ConfirmDialog
+        open={detailRow !== null}
+        title="Detail baris laporan"
+        confirmLabel="Tutup"
+        hideCancel
+        onConfirm={() => setDetailRow(null)}
+        onClose={() => setDetailRow(null)}
+      >
+        {detailRow ? (
+          <div className="mt-3 space-y-1 text-sm text-slate-700">
+            <p>
+              <strong>{detailRow.participantName}</strong>
+              {detailRow.participantNumber ? ` · ${detailRow.participantNumber}` : ''}
+            </p>
+            <p>{[detailRow.bureau, detailRow.division].filter(Boolean).join(' / ') || '-'}</p>
+            <p>Tanggal: {formatDateWib(detailRow.workDate)}</p>
+            <p>Masuk: {formatTimeWib(detailRow.checkIn)}</p>
+            <p>Pulang: {formatTimeWib(detailRow.checkOut)}</p>
+            <p>
+              Status: <StatusBadge status={detailRow.dayStatus} />
+              {detailRow.correctionFlag ? ' (koreksi)' : ''}
+            </p>
+            {detailRow.leaves && detailRow.leaves.length > 0 ? (
+              <div className="mt-2 space-y-2 border-t border-slate-100 pt-2">
+                {detailRow.leaves.map((l, i) => (
+                  <div key={i}>
+                    <p className="font-semibold">
+                      {LEAVE_TYPE_LABELS[l.leaveType] ?? l.leaveType} · {l.status}
+                      {l.durationMinutes !== null && l.durationMinutes !== undefined
+                        ? ` · ${l.durationMinutes} menit`
+                        : ''}
+                    </p>
+                    <p>Alasan: {l.reason ?? '-'}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

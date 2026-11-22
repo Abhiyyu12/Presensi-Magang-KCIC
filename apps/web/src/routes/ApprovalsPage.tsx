@@ -8,24 +8,26 @@ import { StatusBadge } from '../components/StatusBadge';
 import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Icon } from '../components/Icon';
 import { FormField } from '../components/FormField';
+import { usePagedFilters } from '../hooks/useUiHelpers';
 
 type Decision = 'approve' | 'reject';
 
 export default function ApprovalsPage() {
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('PENDING');
+  const { page, setPage, pageSize, setPageSize } = usePagedFilters({ status: statusFilter }, 10);
   const [selected, setSelected] = useState<Leave | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [note, setNote] = useState('');
   const [decisionError, setDecisionError] = useState<string | null>(null);
 
   const leavesQuery = useQuery({
-    queryKey: ['leaves', 'all', statusFilter, page],
+    queryKey: ['leaves', 'all', statusFilter, page, pageSize],
     queryFn: () =>
       api<Paginated<Leave>>('/leaves', {
-        query: { scope: 'all', status: statusFilter, page, pageSize: 15 },
+        query: { scope: 'all', status: statusFilter, page, pageSize },
       }),
     placeholderData: (previous) => previous,
   });
@@ -63,6 +65,55 @@ export default function ApprovalsPage() {
       cell: (row) => formatWib(row.estimatedDepartureAt),
     },
     { header: 'Status', cell: (row) => <StatusBadge kind="leaveStatus" status={row.status} /> },
+    {
+      header: 'Aksi',
+      cell: (row) => (
+        <span className="flex items-center gap-1">
+          <button
+            type="button"
+            className="btn-icon"
+            aria-label={`Detail pengajuan ${row.participantName ?? ''}`}
+            title="Detail"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelected(row);
+            }}
+          >
+            <Icon name="eye" />
+          </button>
+          {row.status === 'PENDING' ? (
+            <>
+              <button
+                type="button"
+                className="btn-icon"
+                aria-label={`Setujui pengajuan ${row.participantName ?? ''}`}
+                title="Setujui"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelected(row);
+                  setDecision('approve');
+                }}
+              >
+                <Icon name="check" />
+              </button>
+              <button
+                type="button"
+                className="btn-icon-danger"
+                aria-label={`Tolak pengajuan ${row.participantName ?? ''}`}
+                title="Tolak"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelected(row);
+                  setDecision('reject');
+                }}
+              >
+                <Icon name="x" />
+              </button>
+            </>
+          ) : null}
+        </span>
+      ),
+    },
   ];
 
   return (
@@ -84,7 +135,6 @@ export default function ApprovalsPage() {
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
-              setPage(1);
             }}
           >
             <option value="PENDING">Menunggu</option>
@@ -113,7 +163,12 @@ export default function ApprovalsPage() {
             caption="Antrean approval izin"
           />
           {leavesQuery.data ? (
-            <ServerPagination pagination={leavesQuery.data.pagination} onPageChange={setPage} />
+            <ServerPagination
+              pagination={leavesQuery.data.pagination}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
           ) : null}
         </>
       )}

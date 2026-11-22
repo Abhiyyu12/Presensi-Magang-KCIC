@@ -112,6 +112,8 @@ export interface Leave {
   division?: string;
   createdAt?: string;
   decisionNote?: string | null;
+  /** Hanya pada baris laporan: durasi izin (menit) saat sudah pulang-pagi. */
+  durationMinutes?: number | null;
   events?: LeaveEvent[];
 }
 

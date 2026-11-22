@@ -675,3 +675,59 @@ describe('admin dashboard filters (Fase 1.1)', () => {
     expect(inverted.statusCode).toBe(400);
   });
 });
+
+describe('Fase 1.2-1.4: pagination server-side, urutan terbaru, alasan izin', () => {
+  it('attendance list honors pageSize and returns descending dates', async () => {
+    const res = await get(
+      app,
+      `/api/v1/attendance?page=1&pageSize=10&startDate=${yesterday}&endDateExclusive=${addDays(today, 2)}`,
+      admin,
+    );
+    expect(res.statusCode).toBe(200);
+    const body = envelope(res);
+    expect(body.data.pagination.pageSize).toBe(10);
+    expect(body.data.items.length).toBeLessThanOrEqual(10);
+    const dates = body.data.items.map((r: { workDate: string }) => r.workDate);
+    for (let i = 1; i < dates.length; i += 1) {
+      expect(dates[i - 1] >= dates[i]).toBe(true);
+    }
+  });
+
+  it('report rows are newest-first across multiple days', async () => {
+    const res = await get(
+      app,
+      `/api/v1/reports/attendance?startDate=${yesterday}&endDateExclusive=${addDays(today, 2)}&pageSize=100`,
+      admin,
+    );
+    expect(res.statusCode).toBe(200);
+    const items = envelope(res).data.items;
+    expect(items.length).toBeGreaterThan(1);
+    expect(new Set(items.map((r: { workDate: string }) => r.workDate)).size).toBeGreaterThanOrEqual(2);
+    const dates = items.map((r: { workDate: string }) => r.workDate);
+    for (let i = 1; i < dates.length; i += 1) {
+      expect(dates[i - 1] >= dates[i]).toBe(true);
+    }
+  });
+
+  it('report rows carry leave reason for the detail dialog', async () => {
+    const res = await get(
+      app,
+      `/api/v1/reports/attendance?startDate=${today}&endDateExclusive=${tomorrow}&pageSize=100`,
+      admin,
+    );
+    expect(res.statusCode).toBe(200);
+    const items = envelope(res).data.items;
+    const withLeave = items.find((r: { leaves: { reason: unknown }[] }) => r.leaves.length > 0);
+    expect(withLeave).toBeTruthy();
+    expect(withLeave.leaves[0]).toHaveProperty('reason');
+    expect(withLeave.leaves[0].reason === null || typeof withLeave.leaves[0].reason === 'string').toBe(true);
+  });
+
+  it('leaves list supports the pageSize selector range', async () => {
+    const res = await get(app, '/api/v1/leaves?scope=all&status=PENDING&page=1&pageSize=25', admin);
+    expect(res.statusCode).toBe(200);
+    const body = envelope(res);
+    expect(body.data.pagination.pageSize).toBe(25);
+    expect(Array.isArray(body.data.items)).toBe(true);
+  });
+});

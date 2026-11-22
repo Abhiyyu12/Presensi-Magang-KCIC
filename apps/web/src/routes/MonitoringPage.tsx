@@ -8,6 +8,7 @@ import { DataTable, type Column } from '../components/DataTable';
 import { StatusBadge } from '../components/StatusBadge';
 import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
+import { Icon } from '../components/Icon';
 import { FormField } from '../components/FormField';
 import { useDebouncedValue, usePagedFilters } from '../hooks/useUiHelpers';
 import { useMemoizedObject } from '../hooks/useUiHelpers';
@@ -35,15 +36,15 @@ export default function MonitoringPage() {
   const [applied, setApplied] = useState(filters);
   const debouncedSearch = useDebouncedValue(applied.search, 400);
   const queryFilters = useMemoizedObject({ ...applied, search: debouncedSearch.slice(0, 100) });
-  const { page, setPage } = usePagedFilters(queryFilters);
+  const { page, setPage, pageSize, setPageSize } = usePagedFilters(queryFilters, 10);
 
   const listQuery = useQuery({
-    queryKey: ['attendance', 'monitoring', page, queryFilters],
+    queryKey: ['attendance', 'monitoring', page, pageSize, queryFilters],
     queryFn: () =>
       api<Paginated<AttendanceDay>>('/attendance', {
         query: {
           page,
-          pageSize: 15,
+          pageSize,
           startDate: queryFilters.startDate,
           endDateExclusive: nextDay(queryFilters.endDate),
           dayStatus: queryFilters.dayStatus || undefined,
@@ -83,15 +84,23 @@ export default function MonitoringPage() {
     },
     {
       header: 'Status',
+      cell: (row) => <StatusBadge status={row.dayStatus} />,
+    },
+    {
+      header: 'Aksi',
       cell: (row) => (
-        <span className="flex items-center gap-1">
-          <StatusBadge status={row.dayStatus} />
-          {row.correctionFlag ? (
-            <span className="rounded bg-amber-100 px-1 py-0.5 text-[10px] font-semibold text-amber-800">
-              KOREKSI
-            </span>
-          ) : null}
-        </span>
+        <button
+          type="button"
+          className="btn-icon"
+          aria-label={`Detail absensi ${row.participantName ?? ''}`}
+          title="Lihat detail"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/monitoring/${row.id}`);
+          }}
+        >
+          <Icon name="eye" />
+        </button>
       ),
     },
   ];
@@ -246,7 +255,12 @@ export default function MonitoringPage() {
             caption="Monitoring absensi peserta"
           />
           {listQuery.data ? (
-            <ServerPagination pagination={listQuery.data.pagination} onPageChange={setPage} />
+            <ServerPagination
+              pagination={listQuery.data.pagination}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+            />
           ) : null}
         </>
       )}
