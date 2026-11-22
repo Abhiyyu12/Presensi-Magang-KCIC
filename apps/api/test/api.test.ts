@@ -1067,3 +1067,113 @@ describe('Fase 1.6: pohon permission + template role', () => {
     expect(res.statusCode).toBe(200);
   });
 });
+
+describe('Fase 3: profil lengkap + edit whitelist kontak', () => {
+  const suffix = `${Date.now()}`;
+  const internUsername = `uji.profile.${suffix}`;
+  let internUserId = '';
+  let originalPhone: string | null = null;
+
+  it('GET /profile peserta memuat role, biro, jadwal, dan pembimbing', async () => {
+    const db = getDb();
+    const bureauOps = await db.bureau.findFirstOrThrow({ where: { code: 'BIO-OPS' } });
+    const internRole = await db.role.findFirstOrThrow({ where: { code: 'INTERN' } });
+    const supervisorUser = await db.user.findFirstOrThrow({
+      where: { username: 'supervisor1' },
+      select: { id: true },
+    });
+    const created = await post(app, '/api/v1/admin/users', admin, {
+      username: internUsername,
+      displayName: 'Peserta Uji Profil',
+      password: DEV_PASSWORD,
+      email: `${internUsername}@kcic.test`,
+      roleIds: [internRole.id],
+      internProfile: {
+        participantNumber: `UJI-PRF-${suffix}`,
+        bureauId: bureauOps.id,
+        startDate: today,
+      },
+    });
+    expect(created.statusCode).toBe(200);
+    internUserId = envelope(created).data.id;
+
+    const profile = await db.internProfile.findFirstOrThrow({
+      where: { userId: internUserId },
+      select: { id: true },
+    });
+    const assigned = await post(app, '/api/v1/admin/assignments', admin, {
+      internProfileId: profile.id,
+      supervisorUserId: supervisorUser.id,
+      status: 'ACTIVE',
+    });
+    expect(assigned.statusCode).toBe(200);
+
+    const session = await login(app, internUsername, DEV_PASSWORD);
+    const res = await get(app, '/api/v1/profile', session);
+    expect(res.statusCode).toBe(200);
+    const user = envelope(res).data.user;
+    expect(user.roles[0].code).toBe('INTERN');
+    expect(user.internProfile.participantNumber).toBe(`UJI-PRF-${suffix}`);
+    expect(user.internProfile.bureauName).toBe(bureauOps.name);
+    expect(user.internProfile.supervisors.length).toBeGreaterThan(0);
+    expect(user.internProfile.supervisors[0].displayName).toBeTruthy();
+    expect(user.schedule).not.toBeNull();
+    expect(user.schedule.days.length).toBe(7);
+  });
+
+  it('PATCH /profile menolak field di luar whitelist (strict)', async () => {
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/profile',
+      headers: authHeaders(admin),
+      payload: { displayName: 'Admin HR', accountStatus: 'SUSPENDED' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('PATCH /profile menolak email yang dipakai pengguna lain dan telepon tak valid', async () => {
+    const db = getDb();
+    const adminUser = await db.user.findFirstOrThrow({
+      where: { username: 'admin-hr' },
+      select: { id: true },
+    });
+    const other = await db.user.findFirstOrThrow({
+      where: { email: { not: null }, id: { not: adminUser.id } },
+      select: { email: true },
+    });
+    const takenEmail = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/profile',
+      headers: authHeaders(admin),
+      payload: { email: other.email },
+    });
+    expect(takenEmail.statusCode).toBe(409);
+
+    const badPhone = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/profile',
+      headers: authHeaders(admin),
+      payload: { phone: '0812-abc' },
+    });
+    expect(badPhone.statusCode).toBe(400);
+
+    const goodPhone = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/profile',
+      headers: authHeaders(admin),
+      payload: { phone: '081999999999' },
+    });
+    expect(goodPhone.statusCode).toBe(200);
+    originalPhone = envelope(goodPhone).data.user.phone;
+    expect(originalPhone).toBe('081999999999');
+
+    const restore = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/profile',
+      headers: authHeaders(admin),
+      payload: { phone: null },
+    });
+    expect(restore.statusCode).toBe(200);
+    expect(envelope(restore).data.user.phone).toBeNull();
+  });
+});

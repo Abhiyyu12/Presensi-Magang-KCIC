@@ -132,6 +132,66 @@ export async function resolveWorkday(
   return base;
 }
 
+export interface ActiveSchedule {
+  id: string;
+  name: string;
+  days: {
+    weekday: number;
+    isWorkingDay: boolean;
+    startTime: string | null;
+    endTime: string | null;
+  }[];
+}
+
+/** Schedule berlaku hari ini untuk sebuah profil peserta (prioritas sama dengan resolveWorkday). */
+export async function getActiveScheduleForProfile(
+  db: PrismaClient,
+  internProfileId: string,
+  dateStr: string,
+): Promise<ActiveSchedule | null> {
+  const profile = await db.internProfile.findUnique({
+    where: { id: internProfileId },
+    select: { bureauId: true, divisionId: true },
+  });
+  if (!profile) return null;
+
+  const date = parseDateOnly(dateStr);
+  const candidates = await db.workSchedule.findMany({
+    where: {
+      status: 'ACTIVE',
+      validFrom: { lte: date },
+      OR: [{ validTo: null }, { validTo: { gt: date } }],
+    },
+    include: { days: { orderBy: { weekday: 'asc' } } },
+  });
+
+  const matching = candidates.filter((c) => {
+    switch (c.scopeType) {
+      case 'GLOBAL': return c.scopeId === null;
+      case 'BUREAU': return c.scopeId === profile.bureauId;
+      case 'DIVISION': return profile.divisionId !== null && c.scopeId === profile.divisionId;
+      case 'INDIVIDUAL': return c.scopeId === internProfileId;
+    }
+  });
+
+  matching.sort(
+    (a, b) => PRIORITY[b.scopeType] - PRIORITY[a.scopeType] || a.validFrom.getTime() - b.validFrom.getTime(),
+  );
+  const chosen = matching[0];
+  if (!chosen) return null;
+
+  return {
+    id: chosen.id,
+    name: chosen.name,
+    days: chosen.days.map((d) => ({
+      weekday: d.weekday,
+      isWorkingDay: d.isWorkingDay,
+      startTime: d.startTime,
+      endTime: d.endTime,
+    })),
+  };
+}
+
 /** Get or create the immutable snapshot for an intern+date (historical stability). */
 export async function getOrCreateSnapshot(
   db: PrismaClient,

@@ -8,6 +8,7 @@ import { writeAudit, redactForAudit } from '../../common/audit.js';
 import { parseDateOnly } from '../../common/time.js';
 import { authorize, requireCtx } from '../../app/auth.js';
 import { adminScopeCovers } from '../access/scope.js';
+import { phoneIdSchema } from '../users/profileRoutes.js';
 import type { AccessContext } from '../access/context.js';
 import { hashPassword, passwordSchemaMin } from '../auth/password.js';
 import { registerUserImportRoutes } from './user-import.js';
@@ -164,14 +165,14 @@ const userCreateBody = z.object({
   displayName: z.string().min(1).max(128),
   password: z.string().min(passwordSchemaMin).max(256),
   email: z.string().email().max(255).optional(),
-  phone: z.string().max(32).optional(),
+  phone: phoneIdSchema.optional(),
   roleIds: z.array(z.string().uuid()).min(1),
   internProfile: internProfileEmbedCreate.optional(),
 });
 const userPatchBody = z.object({
   displayName: z.string().min(1).max(128).optional(),
   email: z.string().email().max(255).nullable().optional(),
-  phone: z.string().max(32).nullable().optional(),
+  phone: phoneIdSchema.nullable().optional(),
   accountStatus: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
   mustChangePassword: z.boolean().optional(),
   internProfile: internProfilePatchBody.optional(),

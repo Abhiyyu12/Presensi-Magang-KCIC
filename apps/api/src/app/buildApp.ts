@@ -64,6 +64,29 @@ export async function buildApp(): Promise<FastifyInstance> {
       });
       return;
     }
+    // Schema validation failures from the Fastify validator (zod provider) are
+    // re-wrapped so clients always get the same Indonesian envelope + per-field
+    // messages instead of the raw English FST_ERR_VALIDATION text.
+    const maybeValidation = (error as { validation?: unknown }).validation;
+    if (Array.isArray(maybeValidation) && maybeValidation.length > 0) {
+      const fieldErrors: Record<string, string[]> = {};
+      for (const item of maybeValidation as Array<{
+        instancePath?: string;
+        message?: string;
+        params?: { issue?: { path?: Array<string | number> } };
+      }>) {
+        const issuePath = item.params?.issue?.path;
+        const path =
+          (Array.isArray(issuePath) && issuePath.length > 0 ? issuePath.join('.') : undefined) ??
+          ((item.instancePath ?? '').split('/').filter(Boolean).join('.') || '_');
+        const msg = typeof item.message === 'string' ? item.message : 'Isian tidak valid.';
+        fieldErrors[path] = [...(fieldErrors[path] ?? []), msg];
+      }
+      reply.code(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Permintaan tidak valid.', fieldErrors, requestId },
+      });
+      return;
+    }
     if ((error as { statusCode?: number }).statusCode === 429) {
       const mapped = errorEnvelope(tooManyRequests(), requestId);
       reply.code(429).send(mapped.body);

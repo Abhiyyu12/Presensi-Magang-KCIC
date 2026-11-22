@@ -200,6 +200,18 @@ export interface HelpArticle {
   updatedAt?: string;
 }
 
+export interface ProfileSupervisor {
+  displayName: string;
+  email: string | null;
+}
+
+export interface ProfileScheduleDay {
+  weekday: number;
+  isWorkingDay: boolean;
+  startTime: string | null;
+  endTime: string | null;
+}
+
 export interface Profile {
   id: string;
   username: string;
@@ -207,6 +219,18 @@ export interface Profile {
   email?: string | null;
   phone?: string | null;
   accountStatus?: string;
+  roles?: { code: string; name: string }[];
+  internProfile?: {
+    participantNumber: string;
+    startDate: string;
+    endDate: string | null;
+    status: string;
+    bureauName: string | null;
+    divisionName: string | null;
+    placementName: string | null;
+    supervisors: ProfileSupervisor[];
+  } | null;
+  schedule?: { id: string; name: string; days: ProfileScheduleDay[] } | null;
 }
 
 export interface NamedEntity {

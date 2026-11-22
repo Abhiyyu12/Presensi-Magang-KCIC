@@ -152,7 +152,7 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
     '3. Kode Role, Biro, Divisi, Penempatan, dan Status Peserta memiliki dropdown dari data master terkini.',
     '4. Peserta magang (role INTERN) wajib mengisi Nomor Peserta, Biro, dan Tanggal Mulai.',
     '5. Jika Divisi diisi, kolom Biro juga wajib diisi dan divisi harus milik biro tersebut.',
-    '6. Format tanggal: YYYY-MM-DD, contoh 2026-01-15.',
+    '6. Format tanggal: YYYY-MM-DD, contoh 2026-01-15. Format No. HP: 08xxxxxxxxxx tanpa spasi atau tanda hubung.',
     '7. Setiap pengguna baru mendapat password sementara yang tampil sekali pada laporan setelah import.',
     `8. Maksimal ${MAX_IMPORT_ROWS} baris per file, ukuran file maksimal 2 MB.`,
     '9. Contoh baris berikut hanya ilustrasi — jangan ikut mengimpornya.',
@@ -167,7 +167,7 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
   const exampleRow = guide.addRow(exampleHeader);
   exampleRow.font = { bold: true };
   guide.addRow([
-    'rina.wijaya', 'Rina Wijaya', 'rina.wijaya@kcic.co.id', '0812-3456-7890', 'INTERN',
+    'rina.wijaya', 'Rina Wijaya', 'rina.wijaya@kcic.co.id', '081234567890', 'INTERN',
     'MG-2026-001', 'Biro Operasi', '', '', '2026-01-15', '', 'AKTIF',
   ]);
   guide.addRow([
@@ -394,7 +394,9 @@ async function validateImportRows(
         errors.push('Email sudah dipakai pengguna lain.');
       }
     }
-    if (row.phone.length > 32) errors.push('No. HP maksimal 32 karakter.');
+    if (row.phone && !/^(?:\+62|62|0)8\d{7,12}$/.test(row.phone)) {
+      errors.push('No. HP wajib format nomor Indonesia (mis. 081234567890).');
+    }
 
     const role = roles.find((r) => r.code.toLowerCase() === row.roleCode.toLowerCase());
     if (!row.roleCode) errors.push('Kode Role wajib diisi.');
