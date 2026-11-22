@@ -1,4 +1,5 @@
 import { z, type ZodTypeAny } from 'zod';
+import { ApiError } from '../../lib/api';
 
 export interface FieldConfig {
   name: string;
@@ -27,6 +28,10 @@ export interface ResourceConfig {
   hasActiveToggle?: boolean;
   /** Row field used as display name for select references. */
   nameLabel?: string;
+  /** Map an API row onto form field values (e.g. JSON columns). */
+  toForm?: (row: Record<string, unknown>) => Record<string, unknown>;
+  /** Map the parsed form payload onto the API body; may throw ApiError. */
+  toPayload?: (payload: Record<string, unknown>, mode: 'create' | 'edit') => Record<string, unknown>;
 }
 
 export function buildSchema(fields: FieldConfig[], mode: 'create' | 'edit'): z.ZodObject<z.ZodRawShape> {
@@ -189,13 +194,25 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
     path: '/admin/business-parameters',
     columns: [
       { header: 'Kunci', field: 'key' },
-      { header: 'Nilai', field: 'value' },
+      { header: 'Nilai', render: (row) => JSON.stringify(row['valueJson'] ?? null) },
       { header: 'Keterangan', field: 'description' },
     ],
     fields: [
       { name: 'key', label: 'Kunci parameter', type: 'text', required: true, createOnly: true },
-      { name: 'value', label: 'Nilai', type: 'text', required: true },
+      { name: 'value', label: 'Nilai (JSON, contoh {"value":15})', type: 'textarea', required: true },
       { name: 'description', label: 'Keterangan', type: 'textarea' },
     ],
+    toForm: (row) => ({ ...row, value: JSON.stringify(row['valueJson'] ?? null) }),
+    toPayload: (payload) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(String(payload['value'] ?? ''));
+      } catch {
+        throw new ApiError('VALIDATION', 'Nilai harus JSON yang valid, contoh {"value":15}.', 400);
+      }
+      const next: Record<string, unknown> = { ...payload, valueJson: parsed };
+      delete next['value'];
+      return next;
+    },
   },
 ];

@@ -26,7 +26,7 @@ function parseDashboard(raw: unknown): DashboardData {
         .slice(0, 25)
         .map((row) => ({
           name: asString(row['name']),
-          dayStatus: asString(row['dayStatus'], 'SCHEDULED'),
+          dayStatus: asString(row['dayStatus'], ''),
         }))
     : [];
   return {
@@ -94,7 +94,7 @@ export default function SupervisorDashboardPage() {
             {data.todayStatus.map((row, index) => (
               <li key={`${row.name}-${index}`} className="flex items-center justify-between gap-2 py-2">
                 <span className="truncate text-sm text-slate-700">{row.name}</span>
-                <StatusBadge status={row.dayStatus} />
+                {row.dayStatus ? <StatusBadge status={row.dayStatus} /> : <span className="text-xs text-slate-400">-</span>}
               </li>
             ))}
           </ul>

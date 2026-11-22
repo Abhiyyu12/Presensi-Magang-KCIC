@@ -192,6 +192,10 @@ const businessParameterBody = z.object({
 });
 const businessParameterListQuery = paginationQuery.extend({ key: z.string().max(128).optional() });
 const businessParameterKeyParams = z.object({ key: z.string().min(1).max(128) });
+const businessParameterPatchBody = z.object({
+  valueJson: z.any().refine((v) => v !== undefined, { message: 'valueJson wajib diisi.' }).optional(),
+  description: z.string().max(2000).optional(),
+});
 
 /** Data Master must never accept executable code. */
 const FORBIDDEN_VALUE_KEYS = new Set(['script', 'sql', 'code']);
@@ -1243,6 +1247,40 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         objectType: 'businessParameter',
         objectId: param.id,
         before: existing ?? undefined,
+        after: param,
+        requestId: req.id,
+      });
+      return ok(param, req.id);
+    },
+  );
+
+  app.patch(
+    '/admin/business-parameters/:id',
+    { schema: { params: idParams, body: businessParameterPatchBody }, preHandler: authorize('admin:params:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      const { id } = idParams.parse(req.params);
+      const body = businessParameterPatchBody.parse(req.body);
+      const before = await db.businessParameter.findUnique({ where: { id } });
+      if (!before) throw notFound();
+      if (body.valueJson !== undefined && containsForbiddenKey(body.valueJson)) {
+        throw unprocessable('Data Master tidak boleh menerima nilai dengan key script/sql/code.');
+      }
+      const param = await db.businessParameter.update({
+        where: { id },
+        data: {
+          ...(body.valueJson !== undefined ? { valueJson: body.valueJson as Prisma.InputJsonValue } : {}),
+          ...(body.description !== undefined ? { description: body.description } : {}),
+          updatedById: ctx.user.id,
+          version: { increment: 1 },
+        },
+      });
+      await writeAudit(db, {
+        actorUserId: ctx.user.id,
+        action: 'ADMIN_BUSINESS_PARAMETER_UPDATE',
+        objectType: 'businessParameter',
+        objectId: id,
+        before,
         after: param,
         requestId: req.id,
       });

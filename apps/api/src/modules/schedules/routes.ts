@@ -8,6 +8,7 @@ import { writeAudit } from '../../common/audit.js';
 import { parseDateOnly } from '../../common/time.js';
 import { authenticate, authorize, requireCtx } from '../../app/auth.js';
 import { hasPermission } from '../access/context.js';
+import { getNumberParam, getNumberArrayParam } from '../../common/params.js';
 import { assertNoScheduleConflict } from './service.js';
 
 const idParams = z.object({ id: z.string().uuid() });
@@ -106,6 +107,7 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
       const validTo = body.validTo ? parseDateOnly(body.validTo) : null;
       if (validTo && validTo <= validFrom) throw unprocessable('validTo harus setelah validFrom.');
       await assertNoScheduleConflict(db, body.scopeType, body.scopeId ?? null, validFrom, validTo);
+      const defaultTolerance = await getNumberParam(db, 'late_tolerance_default_minutes');
       const schedule = await db.$transaction(async (tx) => {
         const created = await tx.workSchedule.create({
           data: {
@@ -117,14 +119,18 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
           },
         });
         await tx.workScheduleDay.createMany({
-          data: body.days.map((d) => ({
-            scheduleId: created.id,
-            weekday: d.weekday,
-            isWorkingDay: d.isWorkingDay,
-            startTime: d.startTime ?? null,
-            endTime: d.endTime ?? null,
-            lateToleranceMinutes: d.lateToleranceMinutes ?? 15,
-          })),
+          data: body.days.map((d) => {
+            const tolerance = d.lateToleranceMinutes ?? defaultTolerance;
+            return {
+              scheduleId: created.id,
+              weekday: d.weekday,
+              isWorkingDay: d.isWorkingDay,
+              startTime: d.startTime ?? null,
+              endTime: d.endTime ?? null,
+              // Without a value, the DB column default applies (last resort).
+              ...(tolerance != null ? { lateToleranceMinutes: tolerance } : {}),
+            };
+          }),
         });
         await writeAudit(tx as never, {
           actorUserId: ctx.user.id,
@@ -153,6 +159,19 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
         db.workSchedule.findMany({ where, orderBy: { validFrom: 'desc' }, ...skipTake(query) }),
       ]);
       return ok({ items, pagination: paginationMeta(query, total) }, req.id);
+    },
+  );
+
+  // Form defaults from business parameters (no hardcoded policy in clients).
+  app.get(
+    '/admin/schedules/form-defaults',
+    { preHandler: authorize('admin:schedules:manage') },
+    async (req) => {
+      const [defaultWorkdays, lateToleranceDefaultMinutes] = await Promise.all([
+        getNumberArrayParam(db, 'default_workdays'),
+        getNumberParam(db, 'late_tolerance_default_minutes'),
+      ]);
+      return ok({ defaultWorkdays, lateToleranceDefaultMinutes }, req.id);
     },
   );
 
@@ -199,16 +218,20 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
           },
         });
         if (body.days) {
+          const defaultTolerance = await getNumberParam(tx, 'late_tolerance_default_minutes');
           await tx.workScheduleDay.deleteMany({ where: { scheduleId: id } });
           await tx.workScheduleDay.createMany({
-            data: body.days.map((d) => ({
-              scheduleId: id,
-              weekday: d.weekday,
-              isWorkingDay: d.isWorkingDay,
-              startTime: d.startTime ?? null,
-              endTime: d.endTime ?? null,
-              lateToleranceMinutes: d.lateToleranceMinutes ?? 15,
-            })),
+            data: body.days.map((d) => {
+              const tolerance = d.lateToleranceMinutes ?? defaultTolerance;
+              return {
+                scheduleId: id,
+                weekday: d.weekday,
+                isWorkingDay: d.isWorkingDay,
+                startTime: d.startTime ?? null,
+                endTime: d.endTime ?? null,
+                ...(tolerance != null ? { lateToleranceMinutes: tolerance } : {}),
+              };
+            }),
           });
         }
         const after = await tx.workSchedule.findUnique({ where: { id }, include: { days: true } });

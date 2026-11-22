@@ -1,4 +1,8 @@
-const TZ = 'Asia/Jakarta';
+import { loadEnv } from '../config/env.js';
+
+function defaultTz(): string {
+  return loadEnv().BUSINESS_TIMEZONE;
+}
 
 interface ZonedParts {
   year: number;
@@ -9,7 +13,7 @@ interface ZonedParts {
   second: number;
 }
 
-function zonedParts(instant: Date, tz: string = TZ): ZonedParts {
+function zonedParts(instant: Date, tz: string = defaultTz()): ZonedParts {
   const fmt = new Intl.DateTimeFormat('en-US', {
     timeZone: tz,
     year: 'numeric',
@@ -34,20 +38,20 @@ function zonedParts(instant: Date, tz: string = TZ): ZonedParts {
   };
 }
 
-function tzOffsetMinutes(instantMs: number, tz: string = TZ): number {
+function tzOffsetMinutes(instantMs: number, tz: string = defaultTz()): number {
   const p = zonedParts(new Date(instantMs), tz);
   const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
   return Math.round((asUtc - Math.floor(instantMs / 1000) * 1000) / 60000);
 }
 
 /** Business date (YYYY-MM-DD) in Asia/Jakarta for a given instant. */
-export function businessDate(instant: Date = new Date(), tz: string = TZ): string {
+export function businessDate(instant: Date = new Date(), tz: string = defaultTz()): string {
   const p = zonedParts(instant, tz);
   return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
 }
 
 /** UTC instant for a wall-clock date+time in the business timezone. */
-export function zonedTimeToUtc(dateStr: string, timeStr: string, tz: string = TZ): Date {
+export function zonedTimeToUtc(dateStr: string, timeStr: string, tz: string = defaultTz()): Date {
   const [y, m, d] = dateStr.split('-').map(Number) as [number, number, number];
   const [hh, mm] = timeStr.split(':').map(Number) as [number, number];
   const guess = Date.UTC(y, m - 1, d, hh, mm);
@@ -58,13 +62,13 @@ export function zonedTimeToUtc(dateStr: string, timeStr: string, tz: string = TZ
 }
 
 /** Wall clock HH:mm:ss in business timezone. */
-export function businessTime(instant: Date, tz: string = TZ): string {
+export function businessTime(instant: Date, tz: string = defaultTz()): string {
   const p = zonedParts(instant, tz);
   return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}:${String(p.second).padStart(2, '0')}`;
 }
 
 /** "HH:mm" wall clock in business timezone. */
-export function businessHHmm(instant: Date, tz: string = TZ): string {
+export function businessHHmm(instant: Date, tz: string = defaultTz()): string {
   const p = zonedParts(instant, tz);
   return `${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}`;
 }
@@ -74,7 +78,7 @@ export function formatWib(instant: Date): string {
 }
 
 /** Weekday 1=Monday..7=Sunday in business timezone. */
-export function businessWeekday(instant: Date, tz: string = TZ): number {
+export function businessWeekday(instant: Date, tz: string = defaultTz()): number {
   const p = zonedParts(instant, tz);
   const dow = new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay();
   return dow === 0 ? 7 : dow;

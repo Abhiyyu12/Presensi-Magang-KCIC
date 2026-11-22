@@ -274,6 +274,11 @@ async function seedHelp() {
 }
 
 async function main() {
+  // Dummy data must never land in production silently; explicit opt-in required.
+  if (process.env.NODE_ENV === 'production' && process.env.SEED_DEV_DATA !== 'true') {
+    console.log('Seed dilewati: NODE_ENV=production dan SEED_DEV_DATA bukan "true".');
+    return;
+  }
   await upsertPermissions();
   await upsertRoles();
   await upsertFeatureNodes();

@@ -237,7 +237,7 @@ export default function ReportsPage() {
               {METRIC_LABELS.map((metric) => (
                 <div key={metric.key} className="card p-3">
                   <p className="text-xl font-bold text-slate-900">
-                    {reportQuery.data?.metrics ? (reportQuery.data.metrics[metric.key] ?? 0) : '-'}
+                    {reportQuery.data?.metrics ? (reportQuery.data.metrics[metric.key] ?? '-') : '-'}
                   </p>
                   <p className="mt-0.5 text-[11px] text-slate-500">{metric.label}</p>
                 </div>

@@ -325,6 +325,9 @@ export async function listAttendance(ctx: AccessContext, query: {
   endDateExclusive?: string;
   internProfileId?: string;
   dayStatus?: string;
+  bureauId?: string;
+  divisionId?: string;
+  search?: string;
 }) {
   const db = getDb();
   const scoped = ctx.internProfileId && !ctx.permissions.has('attendance:view:scoped')
@@ -336,8 +339,21 @@ export async function listAttendance(ctx: AccessContext, query: {
     if (!kind) throw forbidden();
   }
 
+  const profileFilter = {
+    ...('internProfile' in scoped ? scoped.internProfile : {}),
+    ...(query.bureauId ? { bureauId: query.bureauId } : {}),
+    ...(query.divisionId ? { divisionId: query.divisionId } : {}),
+    ...(query.search ? { user: { displayName: { contains: query.search, mode: 'insensitive' as const } } } : {}),
+  };
   const where = {
-    ...(query.internProfileId ? { internProfileId: query.internProfileId } : scoped),
+    ...(query.internProfileId
+      ? { internProfileId: query.internProfileId }
+      : 'internProfileId' in scoped
+        ? { internProfileId: scoped.internProfileId }
+        : {}),
+    ...('internProfile' in scoped || query.bureauId || query.divisionId || query.search
+      ? { internProfile: profileFilter }
+      : {}),
     ...(query.startDate || query.endDateExclusive
       ? {
           workDate: {

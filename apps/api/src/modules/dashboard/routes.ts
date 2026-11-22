@@ -3,9 +3,10 @@ import type { Prisma } from '@prisma/client';
 import { getDb } from '../../infrastructure/db.js';
 import { ok } from '../../common/http.js';
 import { forbidden } from '../../common/errors.js';
-import { businessDate, parseDateOnly } from '../../common/time.js';
+import { businessDate, businessWeekday, parseDateOnly } from '../../common/time.js';
 import { authenticate, requireCtx } from '../../app/auth.js';
 import { hasPermission, type AccessContext } from '../access/context.js';
+import { resolveWorkday } from '../schedules/service.js';
 
 function requirePermissionCode(ctx: AccessContext, code: string): void {
   if (!hasPermission(ctx, code)) throw forbidden();
@@ -157,10 +158,18 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
     const todayDate = parseDateOnly(today);
 
     const snapshotCount = await db.workdaySnapshot.count({ where: { workDate: todayDate, isWorkingDay: true } });
-    const scheduled =
-      snapshotCount > 0
-        ? snapshotCount
-        : await db.internProfile.count({ where: { status: 'ACTIVE' } });
+    let scheduled = snapshotCount;
+    if (snapshotCount === 0) {
+      // No snapshots yet today: resolve schedules instead of assuming all interns are scheduled.
+      const interns = await db.internProfile.findMany({ where: { status: 'ACTIVE' }, select: { id: true }, take: 500 });
+      const weekday = businessWeekday(new Date());
+      let resolvedCount = 0;
+      for (const intern of interns) {
+        const resolved = await resolveWorkday(db, intern.id, today, weekday);
+        if (resolved.isWorkingDay) resolvedCount += 1;
+      }
+      scheduled = resolvedCount;
+    }
 
     const [checkedIn, late, needsReview, pendingLeaves, staleLeaves] = await Promise.all([
       db.attendanceDay.count({

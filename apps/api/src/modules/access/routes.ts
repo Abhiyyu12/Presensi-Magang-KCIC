@@ -182,6 +182,27 @@ export async function accessRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  app.get(
+    '/admin/access/roles/:id',
+    { schema: { params: idParams }, preHandler: authorize('access:roles:manage') },
+    async (req) => {
+      const { id } = idParams.parse(req.params);
+      const role = await db.role.findUnique({
+        where: { id },
+        include: { rolePermissions: { include: { permission: true } } },
+      });
+      if (!role) throw notFound();
+      const { rolePermissions, ...rest } = role;
+      return ok(
+        {
+          ...rest,
+          permissions: rolePermissions.map((rp) => ({ permissionCode: rp.permission.code, effect: rp.effect })),
+        },
+        req.id,
+      );
+    },
+  );
+
   app.post(
     '/admin/access/roles',
     { schema: { body: roleCreateBody }, preHandler: authorize('access:roles:manage') },

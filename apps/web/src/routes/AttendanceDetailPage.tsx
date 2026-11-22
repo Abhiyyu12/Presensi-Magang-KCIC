@@ -110,7 +110,7 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
           </h2>
           <p className="mt-1 text-slate-600">
             {snapshot.isWorkingDay
-              ? `${formatTimeWib(snapshot.startTime)}–${formatTimeWib(snapshot.endTime)} WIB · toleransi ${snapshot.lateToleranceMinutes ?? 0} menit`
+              ? `${formatTimeWib(snapshot.startTime)}–${formatTimeWib(snapshot.endTime)} WIB · toleransi ${snapshot.lateToleranceMinutes != null ? `${snapshot.lateToleranceMinutes} menit` : 'tidak tercatat'}`
               : 'Tidak terjadwal'}
           </p>
         </section>

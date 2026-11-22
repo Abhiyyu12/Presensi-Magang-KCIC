@@ -14,32 +14,40 @@ interface DayRow {
   isWorkingDay: boolean;
   startTime: string;
   endTime: string;
-  lateToleranceMinutes: number;
+  lateToleranceMinutes: number | null;
+}
+
+interface FormDefaults {
+  defaultWorkdays: number[] | null;
+  lateToleranceDefaultMinutes: number | null;
 }
 
 const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
-function defaultDays(): DayRow[] {
+// Empty times/tolerance = "not filled"; the server applies the business-parameter
+// default for tolerance. No policy values are invented in the client.
+function defaultDays(defaults?: FormDefaults): DayRow[] {
   return DAY_NAMES.map((_, index) => ({
     weekday: index + 1,
-    isWorkingDay: index < 5,
-    startTime: '08:00',
-    endTime: '17:00',
-    lateToleranceMinutes: 15,
+    isWorkingDay: defaults?.defaultWorkdays?.includes(index + 1) ?? false,
+    startTime: '',
+    endTime: '',
+    lateToleranceMinutes: null,
   }));
 }
 
 function parseDays(raw: unknown): DayRow[] {
-  if (!Array.isArray(raw)) return defaultDays();
   const days = defaultDays();
+  if (!Array.isArray(raw)) return days;
   for (const item of raw.filter(isRecord)) {
     const weekday = Number(item['weekday']);
     const target = days.find((d) => d.weekday === weekday);
     if (!target) continue;
-    target.isWorkingDay = item['isWorkingDay'] !== false;
-    target.startTime = asString(item['startTime'], '08:00').slice(0, 5);
-    target.endTime = asString(item['endTime'], '17:00').slice(0, 5);
-    target.lateToleranceMinutes = Number(item['lateToleranceMinutes'] ?? 15);
+    target.isWorkingDay = item['isWorkingDay'] === true;
+    target.startTime = asString(item['startTime'], '').slice(0, 5);
+    target.endTime = asString(item['endTime'], '').slice(0, 5);
+    target.lateToleranceMinutes =
+      typeof item['lateToleranceMinutes'] === 'number' ? item['lateToleranceMinutes'] : null;
   }
   return days;
 }
@@ -57,7 +65,12 @@ export function SchedulesPanel() {
     validFrom: '',
     validTo: '',
   });
-  const [days, setDays] = useState<DayRow[]>(defaultDays);
+  const [days, setDays] = useState<DayRow[]>(() => defaultDays());
+
+  const defaultsQuery = useQuery({
+    queryKey: ['master', 'schedules', 'form-defaults'],
+    queryFn: () => api<FormDefaults>('/admin/schedules/form-defaults'),
+  });
 
   const listQuery = useQuery({
     queryKey: ['master', 'schedules', page],
@@ -70,7 +83,7 @@ export function SchedulesPanel() {
   const openCreate = () => {
     setEditingId(null);
     setForm({ name: '', scopeType: 'GLOBAL', scopeId: '', validFrom: '', validTo: '' });
-    setDays(defaultDays());
+    setDays(defaultDays(defaultsQuery.data));
     setFormError(null);
     setDialogOpen(true);
   };
@@ -99,13 +112,23 @@ export function SchedulesPanel() {
       if (!form.name || !form.validFrom) {
         throw new ApiError('VALIDATION', 'Nama dan tanggal berlaku wajib diisi.', 400);
       }
+      for (const day of days) {
+        if (day.isWorkingDay && (!day.startTime || !day.endTime)) {
+          throw new ApiError('VALIDATION', 'Jam masuk dan jam pulang wajib diisi untuk hari kerja.', 400);
+        }
+      }
       const payload = {
         name: form.name,
         scopeType: form.scopeType,
         ...(form.scopeId ? { scopeId: form.scopeId } : {}),
         validFrom: form.validFrom,
         ...(form.validTo ? { validTo: form.validTo } : {}),
-        days,
+        days: days.map((d) => ({
+          weekday: d.weekday,
+          isWorkingDay: d.isWorkingDay,
+          ...(d.isWorkingDay ? { startTime: d.startTime, endTime: d.endTime } : {}),
+          ...(d.lateToleranceMinutes != null ? { lateToleranceMinutes: d.lateToleranceMinutes } : {}),
+        })),
       };
       return editingId
         ? api<Row>(`/admin/schedules/${editingId}`, { method: 'PATCH', body: payload })
@@ -205,7 +228,7 @@ export function SchedulesPanel() {
                 <option value="GLOBAL">GLOBAL</option>
                 <option value="BUREAU">BUREAU</option>
                 <option value="DIVISION">DIVISION</option>
-                <option value="PLACEMENT">PLACEMENT</option>
+                <option value="INDIVIDUAL">INDIVIDUAL</option>
               </select>
             </div>
             <div>
@@ -293,14 +316,17 @@ export function SchedulesPanel() {
                     type="number"
                     min={0}
                     className="input w-16 px-2 py-1"
-                    value={day.lateToleranceMinutes}
+                    value={day.lateToleranceMinutes ?? ''}
                     disabled={!day.isWorkingDay}
                     aria-label={`Toleransi terlambat (menit) ${DAY_NAMES[index] ?? day.weekday}`}
                     onChange={(e) =>
                       setDays((d) =>
                         d.map((item) =>
                           item.weekday === day.weekday
-                            ? { ...item, lateToleranceMinutes: Number(e.target.value) }
+                            ? {
+                                ...item,
+                                lateToleranceMinutes: e.target.value === '' ? null : Number(e.target.value),
+                              }
                             : item,
                         ),
                       )
@@ -310,8 +336,8 @@ export function SchedulesPanel() {
               ))}
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Kolom terakhir adalah toleransi keterlambatan dalam menit. Perhitungan terlambat
-              tetap dilakukan server.
+              Kolom terakhir adalah toleransi keterlambatan dalam menit. Kosongkan untuk memakai
+              default dari Parameter bisnis (tab Parameter). Perhitungan terlambat tetap dilakukan server.
             </p>
           </fieldset>
         </div>

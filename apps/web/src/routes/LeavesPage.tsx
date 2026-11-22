@@ -45,7 +45,7 @@ export default function LeavesPage() {
   const queryClient = useQueryClient();
   const { has } = useAuth();
   const canRequest = has('leave:request');
-  const scope = canRequest ? 'mine' : 'scoped';
+  const scope = canRequest ? 'mine' : 'all';
   const [page, setPage] = useState(1);
   const [formError, setFormError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);

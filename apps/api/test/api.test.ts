@@ -429,6 +429,158 @@ describe('reports and export', () => {
   });
 });
 
+describe('dynamic business parameters (no hardcoded policy)', () => {
+  it('serves schedule form defaults from business parameters and denies peserta', async () => {
+    const res = await get(app, '/api/v1/admin/schedules/form-defaults', admin);
+    expect(res.statusCode).toBe(200);
+    const data = envelope(res).data;
+    expect(Array.isArray(data.defaultWorkdays)).toBe(true);
+    expect(data.lateToleranceDefaultMinutes).toBe(15);
+    const denied = await get(app, '/api/v1/admin/schedules/form-defaults', p1);
+    expect(denied.statusCode).toBe(403);
+  });
+
+  it('schedule tolerance follows the DB parameter when omitted, including after the parameter changes', async () => {
+    const db = getDb();
+    const profile = await db.internProfile.findUniqueOrThrow({ where: { id: p1ProfileId } });
+    const days = [{ weekday: 1, isWorkingDay: true, startTime: '09:00', endTime: '18:00' }];
+    const created = await post(app, '/api/v1/admin/schedules', admin, {
+      name: `Jadwal Divisi Uji Param ${Date.now()}`,
+      scopeType: 'DIVISION',
+      scopeId: profile.divisionId,
+      validFrom: yesterday,
+      days,
+    });
+    expect(created.statusCode).toBe(200);
+    const scheduleId = envelope(created).data.id as string;
+    expect((envelope(created).data.days as { lateToleranceMinutes: number }[])[0]!.lateToleranceMinutes).toBe(15);
+
+    const upd = await post(app, '/api/v1/admin/business-parameters', admin, {
+      key: 'late_tolerance_default_minutes',
+      valueJson: { value: 25 },
+    });
+    expect(upd.statusCode).toBe(200);
+
+    const patched = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/admin/schedules/${scheduleId}`,
+      headers: authHeaders(admin),
+      payload: { days },
+    });
+    expect(patched.statusCode).toBe(200);
+    expect((envelope(patched).data.days as { lateToleranceMinutes: number }[])[0]!.lateToleranceMinutes).toBe(25);
+
+    const restored = await post(app, '/api/v1/admin/business-parameters', admin, {
+      key: 'late_tolerance_default_minutes',
+      valueJson: { value: 15, status: 'PENDING_KCIC_CONFIRMATION' },
+    });
+    expect(restored.statusCode).toBe(200);
+    const deactivated = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/admin/schedules/${scheduleId}`,
+      headers: authHeaders(admin),
+      payload: { status: 'INACTIVE' },
+    });
+    expect(deactivated.statusCode).toBe(200);
+  });
+
+  it('rejects invalid clientSubmittedAt with 400 instead of a server error', async () => {
+    const mp = buildMultipart(
+      { latitude: '-6.9147', longitude: '107.6098', accuracyMeters: '10', clientSubmittedAt: 'bukan-tanggal' },
+      { field: 'image', filename: 'x.jpg', contentType: 'image/jpeg', content: jpeg },
+    );
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/attendance/check-in',
+      headers: authHeaders(p1, { 'content-type': mp.contentType, 'idempotency-key': `badts-${Date.now()}` }),
+      payload: mp.body,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(envelope(res).error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('rejects leave movement with invalid location accuracy', async () => {
+    const cats = envelope(await get(app, '/api/v1/leaves/categories', p2));
+    const created = await post(app, '/api/v1/leaves', p2, {
+      leaveType: 'TEMPORARY',
+      categoryId: cats.data.items[0].id,
+      reason: 'Uji akurasi lokasi pergerakan izin (data dummy).',
+      estimatedDepartureAt: new Date().toISOString(),
+      estimatedReturnAt: new Date(Date.now() + 3600_000).toISOString(),
+    });
+    expect(created.statusCode).toBe(201);
+    const leaveId = envelope(created).data.id as string;
+    const approved = await post(app, `/api/v1/leaves/${leaveId}/approve`, admin, { note: 'Disetujui (uji akurasi).' });
+    expect(approved.statusCode).toBe(200);
+
+    const mp = buildMultipart(
+      { latitude: '-6.9147', longitude: '107.6098', accuracyMeters: '0' },
+      { field: 'image', filename: 'd.jpg', contentType: 'image/jpeg', content: jpeg },
+    );
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/leaves/${leaveId}/departure`,
+      headers: authHeaders(p2, { 'content-type': mp.contentType, 'idempotency-key': `acc-${Date.now()}` }),
+      payload: mp.body,
+    });
+    expect(res.statusCode).toBe(400);
+
+    const cancelled = await post(app, `/api/v1/leaves/${leaveId}/cancel`, admin, {});
+    expect(cancelled.statusCode).toBe(200);
+  });
+});
+
+describe('frontend-backend contract fixes', () => {
+  it('returns role detail with permission entries for the access panel', async () => {
+    const roles = envelope(await get(app, '/api/v1/admin/access/roles', bootstrap));
+    const internRole = roles.data.items.find((r: any) => r.code === 'INTERN');
+    const detail = await get(app, `/api/v1/admin/access/roles/${internRole.id}`, bootstrap);
+    expect(detail.statusCode).toBe(200);
+    const perms = envelope(detail).data.permissions as { permissionCode: string; effect: string }[];
+    expect(perms.some((p) => p.permissionCode === 'attendance:submit' && p.effect === 'ALLOW')).toBe(true);
+    const denied = await get(app, `/api/v1/admin/access/roles/${internRole.id}`, admin);
+    expect(denied.statusCode).toBe(403);
+  });
+
+  it('updates a business parameter by id via PATCH (Parameter tab) and still rejects executable keys', async () => {
+    const list = envelope(await get(app, '/api/v1/admin/business-parameters?key=late_tolerance_default_minutes', admin));
+    const param = list.data.items[0];
+    const patched = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/admin/business-parameters/${param.id}`,
+      headers: authHeaders(admin),
+      payload: { valueJson: { value: 15, status: 'PENDING_KCIC_CONFIRMATION' }, description: 'Usulan default; dapat dioverride per jadwal' },
+    });
+    expect(patched.statusCode).toBe(200);
+    expect(envelope(patched).data.valueJson.value).toBe(15);
+    const bad = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/admin/business-parameters/${param.id}`,
+      headers: authHeaders(admin),
+      payload: { valueJson: { sql: 'DROP TABLE users' } },
+    });
+    expect(bad.statusCode).toBe(422);
+  });
+
+  it('accepts scope=all for scoped leave viewers (Izin Peserta page)', async () => {
+    const res = await get(app, '/api/v1/leaves?scope=all&page=1&pageSize=15', admin);
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('applies monitoring search and bureau filters server-side', async () => {
+    const db = getDb();
+    const u1 = await db.user.findUniqueOrThrow({ where: { username: 'peserta1' } });
+    const bySearch = envelope(await get(app, `/api/v1/attendance?search=${encodeURIComponent(u1.displayName)}&page=1&pageSize=100`, admin));
+    expect(bySearch.data.pagination.total).toBeGreaterThan(0);
+    for (const item of bySearch.data.items) expect(item.internProfileId).toBe(p1ProfileId);
+
+    const profile = await db.internProfile.findUniqueOrThrow({ where: { id: p1ProfileId }, include: { bureau: true } });
+    const byBureau = envelope(await get(app, `/api/v1/attendance?bureauId=${profile.bureauId}&page=1&pageSize=100`, admin));
+    expect(byBureau.data.pagination.total).toBeGreaterThan(0);
+    for (const item of byBureau.data.items) expect(item.bureau).toBe(profile.bureau.name);
+  });
+});
+
 describe('access administration', () => {
   it('creates new role with zero permissions and simulate denies by default', async () => {
     const code = `ROLE_UJI_${Date.now()}`;

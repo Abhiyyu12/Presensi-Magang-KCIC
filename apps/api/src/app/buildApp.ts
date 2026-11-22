@@ -8,7 +8,7 @@ import swagger from '@fastify/swagger';
 import { serializerCompiler, validatorCompiler, jsonSchemaTransform } from 'fastify-type-provider-zod';
 import { randomUUID } from 'node:crypto';
 import { ZodError } from 'zod';
-import { loadEnv } from '../config/env.js';
+import { loadEnv, isDev } from '../config/env.js';
 import { getDb } from '../infrastructure/db.js';
 import { AppError, errorEnvelope, tooManyRequests } from '../common/errors.js';
 import { registerAuthDecorators } from './auth.js';
@@ -99,7 +99,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(helmet, { global: true });
   await app.register(cors, {
-    origin: [env.CORS_ORIGIN, env.APP_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: [env.CORS_ORIGIN, env.APP_URL, ...(isDev(env) ? ['http://localhost:5173', 'http://127.0.0.1:5173'] : [])],
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Idempotency-Key', 'x-csrf-token'],

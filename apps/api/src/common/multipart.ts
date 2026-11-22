@@ -41,6 +41,18 @@ export function requireIdempotencyKey(req: FastifyRequest): string {
   return key;
 }
 
+export function parseClientSubmittedAt(fields: Record<string, string>): string | null {
+  const raw = fields.clientSubmittedAt;
+  if (raw == null || raw === '') return null;
+  const ms = Date.parse(raw);
+  if (!Number.isFinite(ms)) {
+    throw badRequest('clientSubmittedAt tidak valid (harus tanggal-waktu ISO-8601).', {
+      clientSubmittedAt: ['Format tanggal-waktu tidak valid'],
+    });
+  }
+  return new Date(ms).toISOString();
+}
+
 export function parseCoords(fields: Record<string, string>): { latitude: number; longitude: number; accuracyMeters: number | null } {
   const lat = Number(fields.latitude);
   const lng = Number(fields.longitude);

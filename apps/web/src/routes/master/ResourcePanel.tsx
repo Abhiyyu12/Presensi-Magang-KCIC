@@ -16,9 +16,10 @@ interface ResourcePanelProps {
 }
 
 function toFormValues(row: Row | null, config: ResourceConfig): Record<string, string> {
+  const source = row && config.toForm ? config.toForm(row) : row;
   const values: Record<string, string> = {};
   for (const field of config.fields) {
-    const raw = row ? row[field.name] : undefined;
+    const raw = source ? source[field.name] : undefined;
     values[field.name] = raw === null || raw === undefined ? '' : String(raw);
   }
   return values;
@@ -89,7 +90,8 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
         throw new ApiError('VALIDATION', 'Periksa kembali isian yang ditandai merah.', 400);
       }
       setErrors({});
-      const payload = parsePayload(values, config, mode);
+      const parsedPayload = parsePayload(values, config, mode);
+      const payload = config.toPayload ? config.toPayload(parsedPayload, mode) : parsedPayload;
       if (editing) {
         await api<Row>(`${config.path}/${asString(editing['id'])}`, { method: 'PATCH', body: payload });
       } else {

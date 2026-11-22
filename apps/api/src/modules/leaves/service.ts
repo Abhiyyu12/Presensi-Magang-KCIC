@@ -227,6 +227,9 @@ export async function submitMovement(
   if (input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
     throw badRequest('Koordinat tidak valid.');
   }
+  if (input.accuracyMeters != null && (input.accuracyMeters <= 0 || input.accuracyMeters > 100000)) {
+    throw badRequest('Akurasi lokasi tidak valid.');
+  }
 
   const img = await validateAndProcessImage(input.imageBuffer, input.imageMime);
   const now = new Date();

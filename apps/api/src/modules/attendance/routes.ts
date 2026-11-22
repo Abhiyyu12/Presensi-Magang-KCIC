@@ -7,7 +7,7 @@ import { forbidden } from '../../common/errors.js';
 import { writeAudit } from '../../common/audit.js';
 import { businessDate, businessHHmm } from '../../common/time.js';
 import { getDb } from '../../infrastructure/db.js';
-import { readMultipart, requireIdempotencyKey, parseCoords } from '../../common/multipart.js';
+import { readMultipart, requireIdempotencyKey, parseCoords, parseClientSubmittedAt } from '../../common/multipart.js';
 import {
   submitAttendance, getToday, listAttendance, getAttendanceDetail, getEvidenceUrl, correctAttendance,
 } from './service.js';
@@ -25,7 +25,7 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
     const { latitude, longitude, accuracyMeters } = parseCoords(fields);
     const result = await submitAttendance(ctx, {
       eventType: 'CHECK_IN', latitude, longitude, accuracyMeters, idempotencyKey,
-      clientSubmittedAt: fields.clientSubmittedAt ?? null,
+      clientSubmittedAt: parseClientSubmittedAt(fields),
       imageBuffer: file!.buffer, imageMime: file!.mimetype,
     }, req.id);
     reply.code(201);
@@ -39,7 +39,7 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
     const { latitude, longitude, accuracyMeters } = parseCoords(fields);
     const result = await submitAttendance(ctx, {
       eventType: 'CHECK_OUT', latitude, longitude, accuracyMeters, idempotencyKey,
-      clientSubmittedAt: fields.clientSubmittedAt ?? null,
+      clientSubmittedAt: parseClientSubmittedAt(fields),
       imageBuffer: file!.buffer, imageMime: file!.mimetype,
     }, req.id);
     reply.code(201);
@@ -49,6 +49,9 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
   const listQuery = paginationQuery.merge(dateRangeQuery).extend({
     internProfileId: z.string().uuid().optional(),
     dayStatus: z.enum(['NOT_SCHEDULED', 'SCHEDULED', 'PRESENT', 'LATE', 'INCOMPLETE', 'NEEDS_REVIEW', 'EARLY_DEPARTURE_APPROVED']).optional(),
+    bureauId: z.string().uuid().optional(),
+    divisionId: z.string().uuid().optional(),
+    search: z.string().max(100).optional(),
   });
 
   app.get('/attendance', { schema: { querystring: listQuery }, preHandler: authenticate }, async (req) => {
