@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,18 +39,44 @@ type PasswordForm = z.infer<typeof passwordSchema>;
 
 const WEEKDAY_LABELS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'] as const;
 
+const INTERN_STATUS_LABEL: Record<string, string> = {
+  ACTIVE: 'Aktif',
+  COMPLETED: 'Selesai',
+  WITHDRAWN: 'Mundur',
+};
+
 function scheduleRowLabel(day: ProfileScheduleDay): string {
   if (!day.isWorkingDay) return 'Libur';
   if (day.startTime && day.endTime) return `${day.startTime} – ${day.endTime}`;
   return 'Hari kerja (jam bebas)';
 }
 
+function initialsOf(name: string | undefined, fallback: string): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return fallback.slice(0, 2).toUpperCase();
+  return parts
+    .slice(0, 2)
+    .map((p) => p.charAt(0).toUpperCase())
+    .join('');
+}
+
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-2 border-b border-slate-100 py-1.5 last:border-b-0">
-      <dt className="shrink-0 text-slate-500">{label}</dt>
-      <dd className="text-right font-medium">{value}</dd>
+    <div className="flex justify-between gap-2 border-b border-slate-100 py-2">
+      <dt className="shrink-0 text-sm text-slate-500">{label}</dt>
+      <dd className="text-right text-sm font-medium text-slate-800">{value}</dd>
     </div>
+  );
+}
+
+function SectionCard({ title, headingId, children }: { title: string; headingId: string; children: ReactNode }) {
+  return (
+    <section className="card space-y-3" aria-labelledby={headingId}>
+      <h2 id={headingId} className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+        {title}
+      </h2>
+      {children}
+    </section>
   );
 }
 
@@ -162,20 +189,14 @@ export default function ProfilePage() {
 
   const profile = profileQuery.data?.user ?? null;
   const intern = profile?.internProfile ?? null;
-  const rolesLabel =
-    (profile?.roles ?? []).map((r) => r.name || r.code).join(', ') ||
-    (user?.roles ?? []).map((r) => r.name || r.code).join(', ') ||
-    '-';
+  const roles = (profile?.roles ?? user?.roles ?? []).map((r) => r.name || r.code).filter(Boolean);
   const schedule = profile?.schedule ?? null;
+  const accountStatusLabel = profile?.accountStatus === 'ACTIVE' ? 'Aktif' : (profile?.accountStatus ?? '-');
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Profil / Akun</h1>
-        <p className="text-sm text-slate-600">
-          Masuk sebagai <strong>{user?.username}</strong>
-          {profile?.accountStatus ? ` · status akun ${profile.accountStatus}` : ''}
-        </p>
+        <h1 className="text-lg font-bold text-slate-900">Profil</h1>
       </header>
 
       {notice ? (
@@ -191,14 +212,45 @@ export default function ProfilePage() {
         </p>
       ) : null}
 
-      <section className="card space-y-3" aria-labelledby="account-heading">
-        <h2 id="account-heading" className="text-sm font-semibold text-slate-800">
-          Detail akun
-        </h2>
-        <dl className="space-y-1 text-sm text-slate-700">
-          <DetailRow label="Username" value={profile?.username ?? '-'} />
-          <DetailRow label="Role" value={rolesLabel} />
-        </dl>
+      <section className="overflow-hidden rounded-xl border border-slate-200 shadow-sm" aria-label="Identitas akun">
+        <div className="bg-gradient-to-br from-brand-700 to-brand-800 p-5">
+          <div className="flex items-center gap-4">
+            <span
+              aria-hidden="true"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/15 text-lg font-bold text-white ring-2 ring-white/30"
+            >
+              {initialsOf(profile?.displayName ?? undefined, profile?.username ?? user?.username ?? 'A')}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-bold text-white">{profile?.displayName ?? user?.username ?? '-'}</p>
+              <p className="truncate text-sm text-white/80">@{profile?.username ?? user?.username ?? '-'}</p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {roles.length > 0 ? (
+              roles.map((role) => (
+                <span
+                  key={role}
+                  className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold text-white"
+                >
+                  {role}
+                </span>
+              ))
+            ) : (
+              <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold text-white">-</span>
+            )}
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                profile?.accountStatus === 'ACTIVE' ? 'bg-emerald-400/20 text-emerald-100' : 'bg-amber-400/20 text-amber-100'
+              }`}
+            >
+              {accountStatusLabel}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <SectionCard title="Informasi akun" headingId="account-heading">
         <form
           className="space-y-3"
           onSubmit={(e) => {
@@ -224,19 +276,22 @@ export default function ProfilePage() {
               <input {...props} {...contactForm.register('phone')} type="tel" className="input" autoComplete="tel" />
             )}
           </FormField>
-          <button type="submit" className="btn-primary w-full" disabled={contactMutation.isPending}>
-            {contactMutation.isPending ? 'Menyimpan…' : 'Simpan Perubahan'}
-          </button>
+          <div className="flex justify-end pt-1">
+            <button type="submit" className="btn-primary w-full sm:w-auto" disabled={contactMutation.isPending}>
+              {contactMutation.isPending ? 'Menyimpan…' : 'Simpan Perubahan'}
+            </button>
+          </div>
         </form>
-      </section>
+      </SectionCard>
 
       {intern ? (
-        <section className="card space-y-1" aria-labelledby="assignment-heading">
-          <h2 id="assignment-heading" className="pb-2 text-sm font-semibold text-slate-800">
-            Data penugasan
-          </h2>
-          <dl className="space-y-1 text-sm text-slate-700">
+        <SectionCard title="Data penugasan" headingId="assignment-heading">
+          <dl className="grid gap-x-6 sm:grid-cols-2">
             <DetailRow label="Nomor peserta" value={intern.participantNumber} />
+            <DetailRow
+              label="Status peserta"
+              value={INTERN_STATUS_LABEL[intern.status] ?? intern.status}
+            />
             <DetailRow label="Biro" value={intern.bureauName ?? '-'} />
             <DetailRow label="Divisi" value={intern.divisionName ?? '-'} />
             <DetailRow label="Penempatan" value={intern.placementName ?? '-'} />
@@ -244,50 +299,53 @@ export default function ProfilePage() {
               label="Periode magang"
               value={`${formatDateWib(intern.startDate)} s.d. ${intern.endDate ? formatDateWib(intern.endDate) : '-'}`}
             />
-            <DetailRow label="Status peserta" value={intern.status === 'COMPLETED' ? 'Selesai' : 'Aktif'} />
           </dl>
-        </section>
+
+          {intern.supervisors.length > 0 ? (
+            <div className="border-t border-slate-100 pt-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pembimbing</h3>
+              <ul className="mt-2 space-y-2">
+                {intern.supervisors.map((s) => (
+                  <li key={s.displayName} className="flex items-center gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-800"
+                    >
+                      {initialsOf(s.displayName, 'P')}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-800">{s.displayName}</p>
+                      <p className="truncate text-xs text-slate-500">{s.email ?? '-'}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </SectionCard>
       ) : null}
 
       {schedule && schedule.days.length > 0 ? (
-        <section className="card space-y-2" aria-labelledby="schedule-heading">
-          <h2 id="schedule-heading" className="text-sm font-semibold text-slate-800">
-            Jadwal kerja
-          </h2>
-          <p className="text-xs text-slate-500">{schedule.name}</p>
-          <ul className="divide-y divide-slate-100 text-sm">
+        <SectionCard title="Jadwal kerja" headingId="schedule-heading">
+          <p className="text-sm text-slate-500">{schedule.name}</p>
+          <ul className="divide-y divide-slate-100">
             {schedule.days.map((day) => (
-              <li key={day.weekday} className="flex justify-between gap-2 py-1.5">
-                <span className="text-slate-600">{WEEKDAY_LABELS[day.weekday - 1] ?? `Hari ${day.weekday}`}</span>
-                <span className={day.isWorkingDay ? 'font-medium' : 'text-slate-400'}>
+              <li key={day.weekday} className="flex items-center justify-between gap-2 py-2">
+                <span className="text-sm text-slate-700">{WEEKDAY_LABELS[day.weekday - 1] ?? `Hari ${day.weekday}`}</span>
+                <span
+                  className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                    day.isWorkingDay ? 'bg-brand-soft text-brand-800' : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
                   {scheduleRowLabel(day)}
                 </span>
               </li>
             ))}
           </ul>
-        </section>
+        </SectionCard>
       ) : null}
 
-      {intern && intern.supervisors.length > 0 ? (
-        <section className="card space-y-2" aria-labelledby="supervisor-heading">
-          <h2 id="supervisor-heading" className="text-sm font-semibold text-slate-800">
-            Pembimbing
-          </h2>
-          <ul className="space-y-1 text-sm text-slate-700">
-            {intern.supervisors.map((s) => (
-              <li key={s.displayName} className="flex justify-between gap-2">
-                <span className="font-medium">{s.displayName}</span>
-                <span className="text-slate-500">{s.email ?? '-'}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <section className="card space-y-3" aria-labelledby="password-heading">
-        <h2 id="password-heading" className="text-sm font-semibold text-slate-800">
-          Ubah kata sandi
-        </h2>
+      <SectionCard title="Keamanan" headingId="password-heading">
         <form
           className="space-y-3"
           onSubmit={(e) => {
@@ -329,15 +387,26 @@ export default function ProfilePage() {
               />
             )}
           </FormField>
-          <button type="submit" className="btn-primary w-full" disabled={passwordMutation.isPending}>
-            {passwordMutation.isPending ? 'Memproses…' : 'Ubah Kata Sandi'}
-          </button>
+          <div className="flex justify-end pt-1">
+            <button type="submit" className="btn-primary w-full sm:w-auto" disabled={passwordMutation.isPending}>
+              {passwordMutation.isPending ? 'Memproses…' : 'Ubah Kata Sandi'}
+            </button>
+          </div>
         </form>
-      </section>
+      </SectionCard>
 
-      <button type="button" className="btn-danger w-full" onClick={() => setLogoutOpen(true)}>
-        Keluar
-      </button>
+      <section
+        className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50/60 p-4 sm:flex-row sm:items-center sm:justify-between"
+        aria-label="Keluar dari akun"
+      >
+        <div>
+          <p className="text-sm font-semibold text-red-800">Keluar dari akun</p>
+          <p className="text-xs text-red-700/80">Anda harus login kembali untuk menggunakan aplikasi.</p>
+        </div>
+        <button type="button" className="btn-danger shrink-0 sm:w-auto" onClick={() => setLogoutOpen(true)}>
+          Keluar
+        </button>
+      </section>
 
       <ConfirmDialog
         open={logoutOpen}

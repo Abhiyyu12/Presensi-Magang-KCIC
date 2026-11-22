@@ -4,6 +4,23 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: halaman Profil didesain ulang (clean, elegan, profesional)
+
+### Diubah
+- **Halaman Profil (UI/UX + tata letak) didesain ulang** tanpa mengubah fungsi maupun data (semua isian tetap dari backend, semua fitur lama tetap ada):
+  - **Kartu hero identitas ber-brand KCIC**: avatar inisial (selaras dengan avatar header), nama besar, @username, chip role, dan chip status akun (Aktif hijau / nonaktif kuning) di band maroon `#8B1A1A` — menggantikan teks kecil "Masuk sebagai …".
+  - **Judul seksi konsisten** (uppercase kecil abu-abu) untuk Informasi akun, Data penugasan, Jadwal kerja, Keamanan.
+  - **Data penugasan jadi grid 2 kolom di layar ≥sm** (Nomor peserta/Status, Biro/Divisi, Penempatan/Periode berpasangan) dan **Pembimbing menyatu** di kartu yang sama dengan avatar inisial + email di bawah nama — sebelumnya kartu terpisah dan semua baris vertikal memanjang.
+  - **Jadwal kerja**: jam ditampilkan sebagai chip (maroon lembut untuk hari kerja, abu-abu untuk Libur).
+  - **Tombol aksi rata kanan di layar ≥sm** (tetap full-width di HP) dan **tombol Keluar masuk "danger zone"** berbingkai merah dengan keterangan — sebelumnya tombol merah full-width lepas tanpa konteks.
+  - Status peserta kini memakai pemetaan lengkap Aktif/Selesai/Mundur (selaras dengan beranda).
+
+### Pembuktian (bukan klaim)
+- Gate: web tsc+eslint bersih + test **48/48**.
+- Playwright (peserta1): hero memuat "Andi Prasetyo", inisial AP, chip "Peserta Magang" + "Aktif"; Data penugasan 6 baris + Pembimbing Budi Santoso (avatar BS + email); jadwal 7 hari berchip 09:00 – 18:00; seksi Keamanan dan danger zone Keluar ada. Regresi fungsi: submit nama kosong memunculkan validasi inline "Nama tampilan wajib diisi." **tanpa menyimpan data**.
+- Playwright (admin-hr): hero chip "Admin Magang/HR", seksi penugasan/jadwal tidak tampil (sesuai data), Keamanan tetap ada.
+- Tanpa scroll horizontal di 360 px maupun 390 px; screenshot mobile 360/390 px + desktop 1280 px.
+
 ## [2026-11-22] — UAT: kompresi foto bukti (frontend + backend)
 
 ### Ditambahkan
