@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import {
   EVENT_TYPE_LABELS,
   formatWib,
@@ -27,6 +28,7 @@ const MOVEMENT_LABELS: Record<Movement, string> = {
 
 export default function LeaveDetailPage() {
   const { leaveId } = useParams<{ leaveId: string }>();
+  const { has } = useAuth();
   const queryClient = useQueryClient();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [movement, setMovement] = useState<Movement | null>(null);
@@ -100,10 +102,13 @@ export default function LeaveDetailPage() {
 
   const status = leave.status;
   const isTemporary = leave.leaveType === 'TEMPORARY';
-  const canDepart = status === 'APPROVED' && isTemporary;
-  const canEarlyCheckout = status === 'APPROVED' && !isTemporary;
-  const canReturn = status === 'DEPARTED';
-  const canCancel = status === 'PENDING';
+  // Aksi gerak/pembatalan hanya untuk pemilik izin (peserta); approver melihat
+  // detail untuk memutuskan, bukan untuk mencatat gerak.
+  const isOwner = has('attendance:submit') && has('leave:request');
+  const canDepart = isOwner && status === 'APPROVED' && isTemporary;
+  const canEarlyCheckout = isOwner && status === 'APPROVED' && !isTemporary;
+  const canReturn = isOwner && status === 'DEPARTED';
+  const canCancel = isOwner && status === 'PENDING';
 
   const uploadState =
     submitter.phase === 'submitting'

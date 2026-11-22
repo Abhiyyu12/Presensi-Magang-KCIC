@@ -49,7 +49,7 @@ export default function MasterDataPage() {
     const perm = TAB_PERMISSIONS[key];
     return !perm || has(perm);
   });
-  const activeTab = tabs.includes(tab) ? tab : 'users';
+  const activeTab = tabs.includes(tab) ? tab : (tabs[0] ?? 'users');
 
   return (
     <div className="space-y-4">

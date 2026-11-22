@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, API_BASE, buildQuery } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { DAY_STATUS_LABELS, formatDateWib, formatTimeWib, nextDay, todayWibDateString } from '../lib/format';
 import { LEAVE_TYPE_LABELS } from '../lib/format';
 import type { NamedEntity, Paginated, ReportMetrics, ReportRow } from '../lib/types';
@@ -38,6 +39,8 @@ const METRIC_LABELS: { key: keyof ReportMetrics; label: string }[] = [
 ];
 
 export default function ReportsPage() {
+  const { has } = useAuth();
+  const canExport = has('report:export');
   const today = todayWibDateString();
   const [filters, setFilters] = useState<ReportFilters>({
     startDate: today,
@@ -138,14 +141,16 @@ export default function ReportsPage() {
             Metrik dihitung server sesuai filter dan cakupan Anda. Denominator: terjadwal.
           </p>
         </div>
-        <div className="flex gap-2">
-          <a className="btn-secondary" href={exportHref('csv')} download>
-            Ekspor CSV
-          </a>
-          <a className="btn-primary" href={exportHref('xlsx')} download>
-            Ekspor XLSX
-          </a>
-        </div>
+        {canExport ? (
+          <div className="flex gap-2">
+            <a className="btn-secondary" href={exportHref('csv')} download>
+              Ekspor CSV
+            </a>
+            <a className="btn-primary" href={exportHref('xlsx')} download>
+              Ekspor XLSX
+            </a>
+          </div>
+        ) : null}
       </header>
 
       <form

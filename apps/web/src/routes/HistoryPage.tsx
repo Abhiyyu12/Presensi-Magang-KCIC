@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, API_BASE, buildQuery } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { formatDateWib, formatTimeWib, nextDay, todayWibDateString } from '../lib/format';
 import type { AttendanceDay, Paginated } from '../lib/types';
 import { DataTable, type Column } from '../components/DataTable';
@@ -31,6 +32,7 @@ function presetRange(kind: (typeof PRESETS)[number]['key']): HistoryFilters {
 
 export default function HistoryPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<HistoryFilters>(() => presetRange('30d'));
   const [applied, setApplied] = useState(filters);
@@ -92,9 +94,11 @@ export default function HistoryPage() {
           <h1 className="text-lg font-bold text-slate-900">Riwayat Absensi</h1>
           <p className="text-sm text-slate-600">Data riwayat milik Anda sendiri.</p>
         </div>
-        <a className="btn-secondary" href={exportHref} download>
-          Unduh CSV
-        </a>
+        {user?.internProfileId ? (
+          <a className="btn-secondary" href={exportHref} download>
+            Unduh CSV
+          </a>
+        ) : null}
       </header>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filter cepat riwayat">
