@@ -731,3 +731,112 @@ describe('Fase 1.2-1.4: pagination server-side, urutan terbaru, alasan izin', ()
     expect(Array.isArray(body.data.items)).toBe(true);
   });
 });
+
+describe('Fase 1.5: role CRUD + gabung peserta ke pengguna + filter pengguna', () => {
+  const suffix = `${Date.now()}`;
+  const roleCode = `ROLE_UJI_CRUD_${suffix}`;
+  const testUsername = `uji.crud.${suffix}`;
+  let roleId = '';
+  let testUserId = '';
+
+  it('role list exposes activeUserCount for each role', async () => {
+    const res = await get(app, '/api/v1/admin/access/roles?pageSize=50', bootstrap);
+    expect(res.statusCode).toBe(200);
+    const items = envelope(res).data.items;
+    expect(items.length).toBeGreaterThan(0);
+    for (const item of items) expect(item).toHaveProperty('activeUserCount');
+    const internRole = items.find((r: { code: string }) => r.code === 'INTERN');
+    expect(internRole.activeUserCount).toBeGreaterThan(0);
+  });
+
+  it('creates role + user with merged intern profile, then blocks role delete', async () => {
+    const db = getDb();
+    const bureauOps = await db.bureau.findFirstOrThrow({ where: { code: 'BIO-OPS' } });
+    const createdRole = await post(app, '/api/v1/admin/access/roles', bootstrap, {
+      code: roleCode,
+      name: 'Role Uji CRUD',
+    });
+    expect(createdRole.statusCode).toBe(200);
+    roleId = envelope(createdRole).data.id;
+
+    const created = await post(app, '/api/v1/admin/users', admin, {
+      username: testUsername,
+      displayName: 'Pengguna Uji CRUD',
+      password: DEV_PASSWORD,
+      roleIds: [roleId],
+      internProfile: {
+        participantNumber: `UJI-${suffix}`,
+        bureauId: bureauOps.id,
+        startDate: today,
+      },
+    });
+    expect(created.statusCode).toBe(200);
+    testUserId = envelope(created).data.id;
+
+    const listed = envelope(await get(app, `/api/v1/admin/users?search=${testUsername}`, admin));
+    expect(listed.data.items.length).toBe(1);
+    expect(listed.data.items[0].internProfile.participantNumber).toBe(`UJI-${suffix}`);
+    expect(listed.data.items[0].internProfile.bureau.name).toBe(bureauOps.name);
+
+    const byBureau = envelope(
+      await get(app, `/api/v1/admin/users?bureauId=${bureauOps.id}&search=uji.crud`, admin),
+    );
+    expect(byBureau.data.items.some((u: { username: string }) => u.username === testUsername)).toBe(true);
+    const otherBureau = await db.bureau.findFirstOrThrow({ where: { code: { not: 'BIO-OPS' } } });
+    const byOther = envelope(
+      await get(app, `/api/v1/admin/users?bureauId=${otherBureau.id}&search=uji.crud`, admin),
+    );
+    expect(byOther.data.items.some((u: { username: string }) => u.username === testUsername)).toBe(false);
+
+    const detail = await get(app, `/api/v1/admin/users/${testUserId}`, admin);
+    expect(detail.statusCode).toBe(200);
+    expect(envelope(detail).data.internProfile.status).toBe('ACTIVE');
+
+    const patched = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/admin/users/${testUserId}`,
+      headers: authHeaders(admin),
+      payload: { internProfile: { status: 'COMPLETED' } },
+    });
+    expect(patched.statusCode).toBe(200);
+    const after = envelope(await get(app, `/api/v1/admin/users/${testUserId}`, admin));
+    expect(after.data.internProfile.status).toBe('COMPLETED');
+
+    const del = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/admin/access/roles/${roleId}`,
+      headers: authHeaders(bootstrap),
+    });
+    expect(del.statusCode).toBe(422);
+    expect(envelope(del).error?.message).toContain('penugasan');
+  });
+
+  it('blocks delete of a system role', async () => {
+    const db = getDb();
+    const systemRole = await db.role.findFirstOrThrow({ where: { isSystem: true } });
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/admin/access/roles/${systemRole.id}`,
+      headers: authHeaders(bootstrap),
+    });
+    expect(res.statusCode).toBe(422);
+    expect(envelope(res).error?.message).toContain('Role sistem');
+  });
+
+  it('deletes the role once its assignments are gone', async () => {
+    const db = getDb();
+    await db.session.deleteMany({ where: { userId: testUserId } });
+    await db.internProfile.deleteMany({ where: { userId: testUserId } });
+    await db.userRoleAssignment.deleteMany({ where: { userId: testUserId } });
+    await db.user.deleteMany({ where: { id: testUserId } });
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/admin/access/roles/${roleId}`,
+      headers: authHeaders(bootstrap),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(envelope(res).data.deleted).toBe(true);
+    const gone = await db.role.findUnique({ where: { id: roleId } });
+    expect(gone).toBeNull();
+  });
+});

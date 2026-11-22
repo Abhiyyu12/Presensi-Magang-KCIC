@@ -1,4 +1,4 @@
-export type IconName = 'eye' | 'check' | 'x' | 'pencil' | 'trash' | 'download';
+export type IconName = 'eye' | 'check' | 'x' | 'pencil' | 'trash' | 'download' | 'shield' | 'key';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   eye: (
@@ -33,6 +33,20 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M12 4v10" />
       <path d="m7 10 5 5 5-5" />
       <path d="M4 19h16" />
+    </>
+  ),
+  shield: (
+    <>
+      <path d="M12 3 5 5.5v5c0 4.5 3 8.6 7 10.5 4-1.9 7-6 7-10.5v-5L12 3Z" />
+      <path d="m9 11.5 2.2 2.2L15.5 9.5" />
+    </>
+  ),
+  key: (
+    <>
+      <circle cx="8" cy="14" r="4" />
+      <path d="m11 11 8-8" />
+      <path d="m16 6 3 3" />
+      <path d="m13.5 8.5 2.5 2.5" />
     </>
   ),
 };

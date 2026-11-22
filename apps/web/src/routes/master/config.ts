@@ -3,9 +3,6 @@ import { ApiError } from '../../lib/api';
 import { asString, isRecord } from '../../lib/types';
 import {
   fetchBureauOptions,
-  fetchDivisionOptions,
-  fetchInternProfileOptions,
-  fetchPlacementOptions,
   fetchScopeIdOptions,
   fetchUserOptions,
 } from './options';
@@ -159,125 +156,6 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
       { name: 'description', label: 'Keterangan', type: 'textarea' },
       { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS },
     ],
-  },
-  {
-    key: 'intern-profiles',
-    label: 'Peserta',
-    path: '/admin/intern-profiles',
-    columns: [
-      { header: 'Nama', render: (row) => nestedName(row, 'user') },
-      { header: 'Nomor peserta', field: 'participantNumber' },
-      { header: 'Biro', render: (row) => nestedName(row, 'bureau') },
-      { header: 'Divisi', render: (row) => nestedName(row, 'division') },
-    ],
-    fields: [
-      {
-        name: 'userId',
-        label: 'Pengguna (akun peserta)',
-        type: 'combobox',
-        required: true,
-        createOnly: true,
-        combobox: { fetchOptions: fetchUserOptions(), serverSearch: true, labelFromRow: (row) => nestedName(row, 'user') },
-      },
-      { name: 'participantNumber', label: 'Nomor peserta', type: 'text', required: true },
-      {
-        name: 'bureauId',
-        label: 'Biro',
-        type: 'combobox',
-        required: true,
-        combobox: { fetchOptions: fetchBureauOptions, serverSearch: true, labelFromRow: (row) => nestedName(row, 'bureau') },
-      },
-      {
-        name: 'divisionId',
-        label: 'Divisi',
-        type: 'combobox',
-        combobox: {
-          fetchOptions: fetchDivisionOptions,
-          serverSearch: true,
-          dependsOn: 'bureauId',
-          labelFromRow: (row) => nestedName(row, 'division'),
-        },
-      },
-      {
-        name: 'placementId',
-        label: 'Penempatan',
-        type: 'combobox',
-        combobox: { fetchOptions: fetchPlacementOptions, serverSearch: true, labelFromRow: (row) => nestedName(row, 'placement') },
-      },
-      { name: 'startDate', label: 'Tanggal mulai magang', type: 'date', required: true },
-      { name: 'endDate', label: 'Tanggal selesai magang', type: 'date' },
-      {
-        name: 'status',
-        label: 'Status magang',
-        type: 'select',
-        options: [
-          { value: 'ACTIVE', label: 'Aktif' },
-          { value: 'COMPLETED', label: 'Selesai' },
-          { value: 'WITHDRAWN', label: 'Mengundurkan diri' },
-        ],
-      },
-    ],
-    toForm: (row) => ({ ...row, startDate: datePart(row['startDate']), endDate: datePart(row['endDate']) }),
-  },
-  {
-    key: 'assignments',
-    label: 'Penugasan',
-    path: '/admin/assignments',
-    columns: [
-      { header: 'Pembimbing', render: (row) => nestedName(row, 'supervisor') },
-      {
-        header: 'Peserta',
-        render: (row) => {
-          const profile = row['internProfile'];
-          return isRecord(profile)
-            ? nestedName(profile, 'user') || asString(profile['participantNumber'])
-            : '';
-        },
-      },
-      { header: 'Status', field: 'status' },
-      { header: 'Berlaku dari', render: (row) => datePart(row['validFrom']) },
-    ],
-    fields: [
-      {
-        name: 'supervisorUserId',
-        label: 'Pembimbing',
-        type: 'combobox',
-        required: true,
-        createOnly: true,
-        combobox: { fetchOptions: fetchUserOptions('SUPERVISOR'), serverSearch: true, labelFromRow: (row) => nestedName(row, 'supervisor') },
-      },
-      {
-        name: 'internProfileId',
-        label: 'Peserta',
-        type: 'combobox',
-        required: true,
-        createOnly: true,
-        combobox: {
-          fetchOptions: fetchInternProfileOptions,
-          serverSearch: true,
-          labelFromRow: (row) => {
-            const profile = row['internProfile'];
-            if (!isRecord(profile)) return '';
-            const user = profile['user'];
-            return isRecord(user) ? asString(user['displayName'] ?? user['username']) : asString(profile['participantNumber']);
-          },
-        },
-      },
-      { name: 'validFrom', label: 'Berlaku dari', type: 'date' },
-      { name: 'validTo', label: 'Berlaku sampai', type: 'date' },
-      {
-        name: 'status',
-        label: 'Status',
-        type: 'select',
-        required: true,
-        options: [
-          { value: 'ACTIVE', label: 'Aktif' },
-          { value: 'ENDED', label: 'Berakhir' },
-        ],
-      },
-    ],
-    toForm: (row) => ({ ...row, validFrom: datePart(row['validFrom']), validTo: datePart(row['validTo']) }),
-    toPayload: (payload) => withIsoDates(payload, ['validFrom', 'validTo']),
   },
   {
     key: 'scopes',

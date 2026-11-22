@@ -10,12 +10,12 @@ const byKey = (key: string) => {
 
 // Required create fields must mirror the API zod bodies in
 // apps/api/src/modules/admin/routes.ts and schedules/routes.ts.
+// Peserta (intern-profiles) lives in UsersPanel; Penugasan (assignments)
+// moved into the user detail dialog.
 const REQUIRED_CREATE_FIELDS: Record<string, string[]> = {
   bureaus: ['name', 'code'],
   divisions: ['name', 'code', 'bureauId'],
   placements: ['name', 'code'],
-  'intern-profiles': ['userId', 'participantNumber', 'bureauId', 'startDate'],
-  assignments: ['supervisorUserId', 'internProfileId', 'status'],
   scopes: ['userId', 'scopeType'],
   calendar: ['calendarDate', 'dayType'],
   'leave-categories': ['name', 'code'],
@@ -31,32 +31,29 @@ describe('master resource configs match API contracts', () => {
     });
   }
 
-  it('intern-profiles/assignments/scopes keep immutable FKs create-only', () => {
-    expect(byKey('intern-profiles').fields.find((f) => f.name === 'userId')?.createOnly).toBe(true);
-    for (const name of ['supervisorUserId', 'internProfileId']) {
-      expect(byKey('assignments').fields.find((f) => f.name === name)?.createOnly).toBe(true);
-    }
+  it('intern-profiles/assignments are no longer separate master menus', () => {
+    expect(MASTER_RESOURCES.find((r) => r.key === 'intern-profiles')).toBeUndefined();
+    expect(MASTER_RESOURCES.find((r) => r.key === 'assignments')).toBeUndefined();
+  });
+
+  it('scopes/calendar keep immutable FKs create-only', () => {
     for (const name of ['userId', 'scopeType', 'scopeId']) {
       expect(byKey('scopes').fields.find((f) => f.name === name)?.createOnly).toBe(true);
     }
     expect(byKey('calendar').fields.find((f) => f.name === 'calendarDate')?.createOnly).toBe(true);
   });
 
-  it('assignments/scopes convert form dates to ISO datetime for the API', () => {
-    for (const key of ['assignments', 'scopes']) {
-      const config = byKey(key);
-      const payload = config.toPayload?.({ validFrom: '2026-11-22', validTo: '' }, 'create') ?? {};
-      expect(payload['validFrom']).toBe('2026-11-22T00:00:00.000Z');
-      expect(payload['validTo']).toBe('');
-    }
+  it('scopes convert form dates to ISO datetime for the API', () => {
+    const config = byKey('scopes');
+    const payload = config.toPayload?.({ validFrom: '2026-11-22', validTo: '' }, 'create') ?? {};
+    expect(payload['validFrom']).toBe('2026-11-22T00:00:00.000Z');
+    expect(payload['validTo']).toBe('');
   });
 
-  it('assignments/scopes toForm trims ISO dates back to YYYY-MM-DD', () => {
-    for (const key of ['assignments', 'scopes']) {
-      const form = byKey(key).toForm?.({ validFrom: '2026-11-22T00:00:00.000Z', validTo: null }) ?? {};
-      expect(form['validFrom']).toBe('2026-11-22');
-      expect(form['validTo']).toBe('');
-    }
+  it('scopes toForm trims ISO dates back to YYYY-MM-DD', () => {
+    const form = byKey('scopes').toForm?.({ validFrom: '2026-11-22T00:00:00.000Z', validTo: null }) ?? {};
+    expect(form['validFrom']).toBe('2026-11-22');
+    expect(form['validTo']).toBe('');
   });
 
   it('business-parameters toPayload parses JSON value and rejects invalid JSON', () => {
@@ -68,8 +65,10 @@ describe('master resource configs match API contracts', () => {
   });
 
   it('edit schema drops create-only fields', () => {
-    const schema = buildSchema(byKey('intern-profiles').fields, 'edit');
-    expect(schema.safeParse({ participantNumber: 'P-1', bureauId: 'x', startDate: '2026-11-22' }).success).toBe(true);
+    const schema = buildSchema(byKey('scopes').fields, 'edit');
+    expect(schema.safeParse({ validFrom: '2026-11-22' }).success).toBe(true);
     expect('userId' in schema.shape).toBe(false);
+    expect('scopeType' in schema.shape).toBe(false);
+    expect('scopeId' in schema.shape).toBe(false);
   });
 });

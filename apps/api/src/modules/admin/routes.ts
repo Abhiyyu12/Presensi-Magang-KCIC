@@ -28,6 +28,26 @@ function requireScopeCovers(ctx: AccessContext, target: { bureauId: string | nul
   if (!adminScopeCovers(ctx, target)) throw forbidden();
 }
 
+type ProfileRefTx = Pick<Prisma.TransactionClient, 'bureau' | 'division' | 'placement'>;
+
+async function validateProfileRefs(
+  tx: ProfileRefTx,
+  refs: { bureauId: string; divisionId: string | null; placementId: string | null },
+): Promise<void> {
+  const bureau = await tx.bureau.findUnique({ where: { id: refs.bureauId }, select: { id: true } });
+  if (!bureau) throw badRequest('Biro tidak ditemukan.');
+  if (refs.divisionId) {
+    const division = await tx.division.findUnique({ where: { id: refs.divisionId }, select: { id: true, bureauId: true } });
+    if (!division || division.bureauId !== refs.bureauId) {
+      throw unprocessable('Divisi tidak ditemukan atau tidak berada di bawah biro tersebut.');
+    }
+  }
+  if (refs.placementId) {
+    const placement = await tx.placement.findUnique({ where: { id: refs.placementId }, select: { id: true } });
+    if (!placement) throw badRequest('Penempatan tidak ditemukan.');
+  }
+}
+
 function internProfileScopeWhere(ctx: AccessContext): Prisma.InternProfileWhereInput {
   if (ctx.hasGlobalAdminScope) return {};
   const bureauIds = ctx.adminScopes.filter((s) => s.scopeType === 'BUREAU').map((s) => s.scopeId).filter(Boolean) as string[];
@@ -99,26 +119,6 @@ const placementListQuery = paginationQuery.extend({
   status: genericStatus.optional(),
 });
 
-const userCreateBody = z.object({
-  username: z.string().min(3).max(64),
-  displayName: z.string().min(1).max(128),
-  password: z.string().min(passwordSchemaMin).max(256),
-  email: z.string().email().max(255).optional(),
-  phone: z.string().max(32).optional(),
-  roleIds: z.array(z.string().uuid()).min(1),
-});
-const userPatchBody = z.object({
-  displayName: z.string().min(1).max(128).optional(),
-  email: z.string().email().max(255).nullable().optional(),
-  phone: z.string().max(32).nullable().optional(),
-  accountStatus: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
-  mustChangePassword: z.boolean().optional(),
-});
-const userListQuery = paginationQuery.extend({
-  search: z.string().max(128).optional(),
-  accountStatus: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
-  roleCode: z.string().max(64).optional(),
-});
 const userRolesBody = z.object({
   roleIds: z.array(z.string().uuid()).min(1),
   validTo: dateTimeStr.optional(),
@@ -148,6 +148,39 @@ const internProfileListQuery = paginationQuery.extend({
   divisionId: z.string().uuid().optional(),
   search: z.string().max(128).optional(),
   status: z.enum(['ACTIVE', 'COMPLETED', 'WITHDRAWN']).optional(),
+});
+
+const internProfileEmbedCreate = internProfileCreateBody
+  .omit({ userId: true })
+  .extend({
+    divisionId: z.string().uuid().nullable().optional(),
+    placementId: z.string().uuid().nullable().optional(),
+    endDate: dateOnly.nullable().optional(),
+  });
+
+const userCreateBody = z.object({
+  username: z.string().min(3).max(64),
+  displayName: z.string().min(1).max(128),
+  password: z.string().min(passwordSchemaMin).max(256),
+  email: z.string().email().max(255).optional(),
+  phone: z.string().max(32).optional(),
+  roleIds: z.array(z.string().uuid()).min(1),
+  internProfile: internProfileEmbedCreate.optional(),
+});
+const userPatchBody = z.object({
+  displayName: z.string().min(1).max(128).optional(),
+  email: z.string().email().max(255).nullable().optional(),
+  phone: z.string().max(32).nullable().optional(),
+  accountStatus: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
+  mustChangePassword: z.boolean().optional(),
+  internProfile: internProfilePatchBody.optional(),
+});
+const userListQuery = paginationQuery.extend({
+  search: z.string().max(128).optional(),
+  accountStatus: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
+  roleCode: z.string().max(64).optional(),
+  bureauId: z.string().uuid().optional(),
+  divisionId: z.string().uuid().optional(),
 });
 
 const assignmentCreateBody = z.object({
@@ -562,12 +595,35 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
             },
             select: USER_SAFE_SELECT,
           });
+          if (body.internProfile) {
+            const p = body.internProfile;
+            await validateProfileRefs(tx, {
+              bureauId: p.bureauId,
+              divisionId: p.divisionId ?? null,
+              placementId: p.placementId ?? null,
+            });
+            if (p.endDate && parseDateOnly(p.endDate) < parseDateOnly(p.startDate)) {
+              throw unprocessable('Tanggal berakhir tidak boleh sebelum tanggal mulai.');
+            }
+            await tx.internProfile.create({
+              data: {
+                userId: created.id,
+                participantNumber: p.participantNumber,
+                bureauId: p.bureauId,
+                divisionId: p.divisionId,
+                placementId: p.placementId,
+                startDate: parseDateOnly(p.startDate),
+                endDate: p.endDate ? parseDateOnly(p.endDate) : null,
+                status: p.status ?? 'ACTIVE',
+              },
+            });
+          }
           await writeAudit(tx as never, {
             actorUserId: ctx.user.id,
             action: 'ADMIN_USER_CREATE',
             objectType: 'user',
             objectId: created.id,
-            after: redactForAudit({ ...created, roleIds: body.roleIds }),
+            after: redactForAudit({ ...created, roleIds: body.roleIds, hasInternProfile: Boolean(body.internProfile) }),
             requestId: req.id,
           });
           return created;
@@ -589,6 +645,8 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       const query = userListQuery.parse(req.query);
       const where: Prisma.UserWhereInput = {
         ...(query.accountStatus ? { accountStatus: query.accountStatus } : {}),
+        ...(query.bureauId ? { internProfile: { bureauId: query.bureauId } } : {}),
+        ...(query.divisionId ? { internProfile: { divisionId: query.divisionId } } : {}),
         ...(query.search
           ? {
               OR: [
@@ -618,6 +676,18 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
             roleAssignments: {
               where: { validFrom: { lte: new Date() }, OR: [{ validTo: null }, { validTo: { gte: new Date() } }] },
               select: { roleId: true, role: { select: { code: true, name: true } } },
+            },
+            internProfile: {
+              select: {
+                id: true,
+                participantNumber: true,
+                status: true,
+                startDate: true,
+                endDate: true,
+                bureau: { select: { id: true, name: true } },
+                division: { select: { id: true, name: true } },
+                placement: { select: { id: true, name: true } },
+              },
             },
           },
           orderBy: { createdAt: 'desc' },
@@ -658,7 +728,32 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
             include: { role: true },
             orderBy: { validFrom: 'desc' },
           },
-          internProfile: { select: { id: true, participantNumber: true, status: true } },
+          internProfile: {
+            select: {
+              id: true,
+              participantNumber: true,
+              status: true,
+              startDate: true,
+              endDate: true,
+              bureau: { select: { id: true, name: true } },
+              division: { select: { id: true, name: true } },
+              placement: { select: { id: true, name: true } },
+              supervisorAssignments: {
+                where: {
+                  status: 'ACTIVE',
+                  validFrom: { lte: new Date() },
+                  OR: [{ validTo: null }, { validTo: { gte: new Date() } }],
+                },
+                select: {
+                  id: true,
+                  validFrom: true,
+                  validTo: true,
+                  supervisor: { select: { id: true, username: true, displayName: true } },
+                },
+                orderBy: { validFrom: 'desc' },
+              },
+            },
+          },
         },
       });
       if (!user) throw notFound();
@@ -674,29 +769,97 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       requireGlobalScope(ctx);
       const { id } = idParams.parse(req.params);
       const body = userPatchBody.parse(req.body);
-      const before = await db.user.findUnique({ where: { id }, select: USER_SAFE_SELECT });
+      const before = await db.user.findUnique({
+        where: { id },
+        select: { ...USER_SAFE_SELECT, internProfile: { select: { id: true } } },
+      });
       if (!before) throw notFound();
+      const { internProfile: profilePatch, ...userFields } = body;
       const deactivating =
         body.accountStatus !== undefined &&
         body.accountStatus !== 'ACTIVE' &&
         before.accountStatus !== body.accountStatus;
-      const user = await db.$transaction(async (tx) => {
-        const updated = await tx.user.update({ where: { id }, data: body, select: USER_SAFE_SELECT });
-        if (deactivating) {
-          await tx.session.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
-        }
-        await writeAudit(tx as never, {
-          actorUserId: ctx.user.id,
-          action: 'ADMIN_USER_UPDATE',
-          objectType: 'user',
-          objectId: id,
-          before,
-          after: updated,
-          reason: deactivating ? 'Sesi dicabut karena status akun dinonaktifkan.' : null,
-          requestId: req.id,
+      let user;
+      try {
+        user = await db.$transaction(async (tx) => {
+          const updated = await tx.user.update({ where: { id }, data: userFields, select: USER_SAFE_SELECT });
+          if (profilePatch) {
+            const p = profilePatch;
+            const existing = before.internProfile;
+            if (existing) {
+              const current = await tx.internProfile.findUniqueOrThrow({ where: { id: existing.id } });
+              await validateProfileRefs(tx, {
+                bureauId: p.bureauId ?? current.bureauId,
+                divisionId: p.divisionId !== undefined ? p.divisionId : current.divisionId,
+                placementId: p.placementId !== undefined ? p.placementId : current.placementId,
+              });
+              const startDate = p.startDate ? parseDateOnly(p.startDate) : current.startDate;
+              const endDate =
+                p.endDate === undefined || p.endDate === null
+                  ? current.endDate
+                  : parseDateOnly(p.endDate);
+              if (endDate && endDate < startDate) {
+                throw unprocessable('Tanggal berakhir tidak boleh sebelum tanggal mulai.');
+              }
+              await tx.internProfile.update({
+                where: { id: existing.id },
+                data: {
+                  ...(p.participantNumber !== undefined ? { participantNumber: p.participantNumber } : {}),
+                  ...(p.bureauId !== undefined ? { bureauId: p.bureauId } : {}),
+                  ...(p.divisionId !== undefined ? { divisionId: p.divisionId } : {}),
+                  ...(p.placementId !== undefined ? { placementId: p.placementId } : {}),
+                  ...(p.startDate !== undefined ? { startDate } : {}),
+                  ...(p.endDate !== undefined ? { endDate } : {}),
+                  ...(p.status !== undefined ? { status: p.status } : {}),
+                },
+              });
+            } else {
+              if (!p.participantNumber || !p.bureauId || !p.startDate) {
+                throw unprocessable(
+                  'Profil peserta baru membutuhkan nomor peserta, biro, dan tanggal mulai magang.',
+                );
+              }
+              await validateProfileRefs(tx, {
+                bureauId: p.bureauId,
+                divisionId: p.divisionId ?? null,
+                placementId: p.placementId ?? null,
+              });
+              if (p.endDate && parseDateOnly(p.endDate) < parseDateOnly(p.startDate)) {
+                throw unprocessable('Tanggal berakhir tidak boleh sebelum tanggal mulai.');
+              }
+              await tx.internProfile.create({
+                data: {
+                  userId: id,
+                  participantNumber: p.participantNumber,
+                  bureauId: p.bureauId,
+                  divisionId: p.divisionId,
+                  placementId: p.placementId,
+                  startDate: parseDateOnly(p.startDate),
+                  endDate: p.endDate ? parseDateOnly(p.endDate) : null,
+                  status: p.status ?? 'ACTIVE',
+                },
+              });
+            }
+          }
+          if (deactivating) {
+            await tx.session.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+          }
+          await writeAudit(tx as never, {
+            actorUserId: ctx.user.id,
+            action: 'ADMIN_USER_UPDATE',
+            objectType: 'user',
+            objectId: id,
+            before,
+            after: { ...updated, internProfileTouched: Boolean(profilePatch) },
+            reason: deactivating ? 'Sesi dicabut karena status akun dinonaktifkan.' : null,
+            requestId: req.id,
+          });
+          return updated;
         });
-        return updated;
-      });
+      } catch (err) {
+        if (isUniqueViolation(err)) throw conflict('Data sudah ada (mis. nomor peserta atau username).');
+        throw err;
+      }
       return ok(user, req.id);
     },
   );

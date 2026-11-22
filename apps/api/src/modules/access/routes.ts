@@ -178,7 +178,25 @@ export async function accessRoutes(app: FastifyInstance): Promise<void> {
           ...skipTake(query),
         }),
       ]);
-      return ok({ items, pagination: paginationMeta(query, total) }, req.id);
+      const now = new Date();
+      const counts = items.length
+        ? await db.userRoleAssignment.groupBy({
+            by: ['roleId'],
+            where: {
+              roleId: { in: items.map((r) => r.id) },
+              validFrom: { lte: now },
+              OR: [{ validTo: null }, { validTo: { gte: now } }],
+            },
+            _count: { roleId: true },
+          })
+        : [];
+      const activeCountByRole = new Map(counts.map((c) => [c.roleId, c._count.roleId]));
+      const rows = items.map(({ rolePermissions, ...role }) => ({
+        ...role,
+        permissions: rolePermissions.map((rp) => ({ permissionCode: rp.permission.code, effect: rp.effect })),
+        activeUserCount: activeCountByRole.get(role.id) ?? 0,
+      }));
+      return ok({ items: rows, pagination: paginationMeta(query, total) }, req.id);
     },
   );
 
@@ -252,6 +270,38 @@ export async function accessRoutes(app: FastifyInstance): Promise<void> {
         requestId: req.id,
       });
       return ok(role, req.id);
+    },
+  );
+
+  app.delete(
+    '/admin/access/roles/:id',
+    { schema: { params: idParams }, preHandler: authorize('access:roles:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      const { id } = idParams.parse(req.params);
+      const role = await db.role.findUnique({
+        where: { id },
+        include: { _count: { select: { rolePermissions: true, userAssignments: true } } },
+      });
+      if (!role) throw notFound();
+      if (role.isSystem) throw unprocessable('Role sistem tidak dapat dihapus.');
+      if (role._count.userAssignments > 0) {
+        throw unprocessable(
+          `Role masih tercatat pada ${role._count.userAssignments} penugasan ke pengguna. Nonaktifkan role bila tidak lagi digunakan.`,
+        );
+      }
+      await db.$transaction(async (tx) => {
+        await tx.role.delete({ where: { id } });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ACCESS_ROLE_DELETE',
+          objectType: 'role',
+          objectId: id,
+          before: { code: role.code, name: role.name, description: role.description, status: role.status },
+          requestId: req.id,
+        });
+      });
+      return ok({ deleted: true, id }, req.id);
     },
   );
 

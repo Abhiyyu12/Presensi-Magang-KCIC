@@ -146,6 +146,8 @@ export default function App() {
                   'admin:calendar:manage',
                   'admin:leave-categories:manage',
                   'admin:params:manage',
+                  'access:roles:manage',
+                  'access:scopes:manage',
                 ]}
               >
                 <MasterDataPage />
