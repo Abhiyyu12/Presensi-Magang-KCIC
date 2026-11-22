@@ -255,7 +255,7 @@ export function Layout() {
                 collapsed ? 'justify-center' : 'gap-2'
               }`}
               aria-pressed={collapsed}
-              title={collapsed ? 'Perluas menu' : 'Ciutkan menu'}
+              title={collapsed ? 'Tampilkan menu' : 'Sembunyikan menu'}
               onClick={() => setCollapsed((v) => !v)}
             >
               <span aria-hidden="true" className={`shrink-0 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}>
@@ -272,7 +272,7 @@ export function Layout() {
                   <path d="M18 17l-5-5 5-5" />
                 </svg>
               </span>
-              {!collapsed ? <span className="text-xs font-semibold">Ciutkan menu</span> : <span className="sr-only">Perluas menu</span>}
+              {!collapsed ? <span className="text-xs font-semibold">Sembunyikan menu</span> : <span className="sr-only">Tampilkan menu</span>}
             </button>
           </div>
         </nav>

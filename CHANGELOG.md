@@ -4,6 +4,15 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: istilah tombol sidebar diperbaiki ("Ciutkan menu" → "Sembunyikan menu")
+
+### Diubah
+- **Label tombol ciut sidebar diganti dari "Ciutkan menu" menjadi "Sembunyikan menu"** (permintaan user: istilah "ciutkan" kurang bagus) dengan pasangan standar UI Indonesia: terbuka → **"Sembunyikan menu"**, ciut → **"Tampilkan menu"** (tooltip `title` dan teks sr-only ikut diganti). Tampilan dan perilaku tombol tidak berubah.
+
+### Pembuktian (bukan klaim)
+- Gate: web tsc+eslint bersih.
+- Playwright: keadaan terbuka = label & tooltip "Sembunyikan menu"; keadaan ciut = tooltip & sr-only "Tampilkan menu"; klik lagi memulihkan label semula.
+
 ## [2026-11-22] — UAT: tombol ciutkan sidebar didesain ulang (clean & futuristik)
 
 ### Diubah
