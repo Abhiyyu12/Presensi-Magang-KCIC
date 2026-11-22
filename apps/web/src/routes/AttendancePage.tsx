@@ -9,6 +9,7 @@ import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { CameraCapture } from '../components/CameraCapture';
 import { LocationStatus, useGeolocation, type LocationFix } from '../components/LocationStatus';
+import { MapsLink } from '../components/MapsLink';
 import { useAttendanceSubmit } from '../hooks/useAttendanceSubmit';
 
 type FlowStep = 'capture' | 'confirm' | 'done';
@@ -145,9 +146,14 @@ export default function AttendancePage() {
             <div className="flex justify-between gap-2">
               <dt>Lokasi</dt>
               <dd className="font-medium">
-                {location
-                  ? `Lokasi tercatat (±${formatMeters(location.accuracyMeters)})`
-                  : 'Lokasi tidak tercatat (izin/GPS tidak tersedia)'}
+                {location ? (
+                  <>
+                    Tercatat (±{formatMeters(location.accuracyMeters)}) ·{' '}
+                    <MapsLink latitude={location.latitude} longitude={location.longitude} />
+                  </>
+                ) : (
+                  'Tidak tercatat (izin/GPS tidak tersedia)'
+                )}
               </dd>
             </div>
           </dl>

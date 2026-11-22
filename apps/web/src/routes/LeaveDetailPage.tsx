@@ -16,6 +16,7 @@ import { ErrorState } from '../components/ErrorState';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { CameraCapture } from '../components/CameraCapture';
 import { LocationStatus, useGeolocation, type LocationFix } from '../components/LocationStatus';
+import { MapsLink } from '../components/MapsLink';
 import { useAttendanceSubmit } from '../hooks/useAttendanceSubmit';
 
 type Movement = 'departure' | 'return' | 'early-checkout';
@@ -177,7 +178,8 @@ export default function LeaveDetailPage() {
                 <p className="text-xs text-slate-500">{formatWib(event.occurredAtServer)}</p>
                 {event.latitude != null && event.longitude != null ? (
                   <p className="text-xs text-slate-500">
-                    Lokasi tercatat · akurasi ±{formatMeters(event.accuracyMeters)}
+                    Lokasi tercatat · akurasi ±{formatMeters(event.accuracyMeters)} ·{' '}
+                    <MapsLink latitude={event.latitude} longitude={event.longitude} />
                   </p>
                 ) : (
                   <p className="text-xs text-slate-500">Lokasi tidak tercatat saat pergerakan ini.</p>

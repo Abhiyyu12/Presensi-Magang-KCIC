@@ -2,14 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatMeters } from '../lib/format';
 
 // Location states per DESIGN.md §5:
-// idle, requesting_permission, permission_denied, unavailable, low_accuracy, ready.
+// idle, requesting_permission, permission_denied, unavailable, ready.
+// Akurasi rendah tidak lagi dibedakan: lokasi murni bukti, akurasi dicatat apa adanya.
 
 export type LocationState =
   | 'idle'
   | 'requesting_permission'
   | 'permission_denied'
   | 'unavailable'
-  | 'low_accuracy'
   | 'ready';
 
 export interface LocationFix {
@@ -17,8 +17,6 @@ export interface LocationFix {
   longitude: number;
   accuracyMeters: number;
 }
-
-const LOW_ACCURACY_THRESHOLD_M = 25;
 
 export function useGeolocation() {
   const [state, setState] = useState<LocationState>('idle');
@@ -47,7 +45,7 @@ export function useGeolocation() {
             accuracyMeters: position.coords.accuracy,
           };
           setFix(next);
-          setState(next.accuracyMeters > LOW_ACCURACY_THRESHOLD_M ? 'low_accuracy' : 'ready');
+          setState('ready');
           resolve(next);
         },
         (error) => {
@@ -97,23 +95,9 @@ export function LocationStatus({ state, fix, onRetry }: LocationStatusProps) {
 
       {state === 'ready' && fix ? (
         <p className="mt-2 text-sm text-green-700">
-          Lokasi tercatat. Akurasi ±{formatMeters(fix.accuracyMeters)}.
+          Lokasi tercatat. Akurasi ±{formatMeters(fix.accuracyMeters)} — akurasi tergantung
+          perangkat dan tidak membatasi absensi.
         </p>
-      ) : null}
-
-      {state === 'low_accuracy' && fix ? (
-        <div className="mt-2">
-          <p className="text-sm text-amber-700">
-            Lokasi diperoleh dengan akurasi ±{formatMeters(fix.accuracyMeters)} (lebih dari{' '}
-            {LOW_ACCURACY_THRESHOLD_M} m). Anda tetap dapat melanjutkan, namun disarankan
-            berpindah ke area terbuka lalu perbarui lokasi.
-          </p>
-          {onRetry ? (
-            <button type="button" className="btn-secondary mt-2 px-3 py-1.5 text-xs" onClick={onRetry}>
-              Perbarui Lokasi
-            </button>
-          ) : null}
-        </div>
       ) : null}
 
       {state === 'permission_denied' ? (

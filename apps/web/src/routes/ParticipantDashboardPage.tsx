@@ -7,6 +7,7 @@ import type { TodayResponse } from '../lib/types';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
+import { MapsLink } from '../components/MapsLink';
 
 export default function ParticipantDashboardPage() {
   const { user } = useAuth();
@@ -88,10 +89,13 @@ export default function ParticipantDashboardPage() {
                 <dd className="font-medium text-slate-800">{formatTimeWib(checkOut.occurredAtServer)} WIB</dd>
               </div>
             ) : null}
-            {lastEvent?.latitude != null ? (
+            {lastEvent?.latitude != null && lastEvent.longitude != null ? (
               <div className="col-span-2">
                 <dt className="text-slate-500">Lokasi terakhir tercatat</dt>
-                <dd className="font-medium text-slate-800">±{formatMeters(lastEvent.accuracyMeters)} dari titik absen</dd>
+                <dd className="font-medium text-slate-800">
+                  ±{formatMeters(lastEvent.accuracyMeters)} dari titik absen ·{' '}
+                  <MapsLink latitude={lastEvent.latitude} longitude={lastEvent.longitude} />
+                </dd>
               </div>
             ) : null}
           </dl>

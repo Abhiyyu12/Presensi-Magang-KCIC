@@ -20,6 +20,7 @@ import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { EvidenceImage } from '../components/EvidenceImage';
 import { FormField } from '../components/FormField';
+import { MapsLink } from '../components/MapsLink';
 
 const correctionSchema = z.object({
   correctedOccurredAt: z.string().min(1, 'Waktu koreksi wajib diisi.'),
@@ -143,7 +144,8 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
                 <p className="text-xs text-slate-500">Waktu server: {formatWib(event.occurredAtServer)}</p>
                 {event.latitude != null && event.longitude != null ? (
                   <p className="text-xs text-slate-500">
-                    Lokasi tercatat · akurasi ±{formatMeters(event.accuracyMeters)}
+                    Lokasi tercatat · akurasi ±{formatMeters(event.accuracyMeters)} ·{' '}
+                    <MapsLink latitude={event.latitude} longitude={event.longitude} />
                   </p>
                 ) : (
                   <p className="text-xs text-slate-500">Lokasi tidak tercatat pada event ini.</p>

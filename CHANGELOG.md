@@ -4,6 +4,19 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT lanjutan: peringatan akurasi dihapus + koordinat bisa dilihat di Google Maps
+
+### Diperbaiki
+- **Nag akurasi 25 m dihapus** — sebelumnya setiap lokasi dengan akurasi >25 m (khas laptop/WiFi, biasanya ±100–200 m) memunculkan peringatan kuning "disarankan berpindah ke area terbuka". Bertentangan dengan kebijakan "bebas absen di mana saja": lokasi murni bukti, akurasi dicatat apa adanya. State `low_accuracy` dihapus dari state machine lokasi; pesan siap kini netral: "Lokasi tercatat. Akurasi ±X m — akurasi tergantung perangkat dan tidak membatasi absensi."
+- **Klarifikasi prompt izin lokasi** (bukan bug): dialog persetujuan lokasi adalah perilaku bawaan browser dan hanya muncul sekali per situs. Bila koordinat berhasil didapat (mis. ±143 m), artinya izin sudah pernah disetujui di sesi sebelumnya. Jika sebelumnya ditolak, reset lewat ikon di bilah alamat browser — UI panel "Status lokasi" sudah menuntun hal ini.
+
+### Ditambahkan
+- **Link "Lihat di Google Maps"** di semua titik lokasi tercatat: layar sukses absensi, detail riwayat (timeline event), detail izin (timeline pergerakan), dan kartu "Lokasi terakhir tercatat" di dashboard peserta — koordinat kini bisa diverifikasi visual, bukan hanya angka. Tanpa dependensi baru (anchor ke `google.com/maps?q=lat,lng`).
+
+### Pembuktian (bukan klaim)
+- Gate: web tsc + eslint bersih, test **46/46** (API tidak berubah).
+- Playwright: geolocation uji akurasi 143 m → panel menampilkan pesan netral "±143", teks "area terbuka" hilang; dashboard peserta menampilkan link maps dengan href `google.com/maps?q=-6.9147,107.6098`; detail riwayat menampilkan 2 link maps pada timeline event. Semua skenario read-only tanpa menulis data uji.
+
 ## [2026-11-22] — UAT: lokasi absensi opsional — absen dari mana saja, koordinat tercatat bila tersedia
 
 ### Diperbaiki

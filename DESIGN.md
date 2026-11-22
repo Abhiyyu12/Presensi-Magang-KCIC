@@ -95,8 +95,7 @@ Location:
 - requesting_permission
 - permission_denied
 - unavailable
-- low_accuracy
-- ready
+- ready (akurasi dicatat apa adanya, tidak membatasi absensi)
 
 Attendance:
 - not_started
