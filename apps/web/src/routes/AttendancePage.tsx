@@ -176,7 +176,7 @@ export default function AttendancePage() {
             <StatusBadge status={today.attendanceDay?.dayStatus} />
           </p>
           {today.attendanceDay?.dayStatus === 'NEEDS_REVIEW' ? (
-            <p className="mt-2 text-sm text-purple-700">
+            <p className="mt-2 text-sm text-amber-700">
               Catatan hari ini perlu diperiksa oleh admin.
             </p>
           ) : null}

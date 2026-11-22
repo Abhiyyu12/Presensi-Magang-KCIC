@@ -6,8 +6,9 @@ import { DataTable, type Column } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
 import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { MasterCombobox } from '../../components/MasterCombobox';
 import { SuccessNotice } from '../../components/SuccessNotice';
-import { buildSchema, type ResourceConfig } from './config';
+import { buildSchema, type FieldConfig, type ResourceConfig } from './config';
 
 type Row = Record<string, unknown>;
 
@@ -23,6 +24,15 @@ function toFormValues(row: Row | null, config: ResourceConfig): Record<string, s
     values[field.name] = raw === null || raw === undefined ? '' : String(raw);
   }
   return values;
+}
+
+function toInitialLabels(row: Row | null, config: ResourceConfig): Record<string, string> {
+  const labels: Record<string, string> = {};
+  if (!row) return labels;
+  for (const field of config.fields) {
+    if (field.combobox?.labelFromRow) labels[field.name] = field.combobox.labelFromRow(row);
+  }
+  return labels;
 }
 
 function parsePayload(
@@ -50,6 +60,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [labels, setLabels] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -63,10 +74,22 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
   useEffect(() => {
     if (dialogOpen) {
       setValues(toFormValues(editing, config));
+      setLabels(toInitialLabels(editing, config));
       setErrors({});
       setFormError(null);
     }
   }, [dialogOpen, editing, config]);
+
+  // Mengganti nilai field dependensi (mis. Biro) mengosongkan field turunannya (Divisi).
+  const handleComboboxChange = (field: FieldConfig, value: string, label: string) => {
+    setValues((v) => ({ ...v, [field.name]: value }));
+    setLabels((l) => ({ ...l, [field.name]: label }));
+    for (const dependent of config.fields) {
+      if (dependent.combobox?.dependsOn !== field.name) continue;
+      setValues((v) => (v[dependent.name] ? { ...v, [dependent.name]: '' } : v));
+      setLabels((l) => ({ ...l, [dependent.name]: '' }));
+    }
+  };
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['master', config.key] });
@@ -226,9 +249,41 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
           ) : null}
           {config.fields
             .filter((field) => !(editing && field.createOnly))
+            .filter(
+              (field) =>
+                !(
+                  field.combobox?.hideWhen &&
+                  field.combobox.hideWhen.equals.includes(values[field.combobox.hideWhen.field] ?? '')
+                ),
+            )
             .map((field) => {
               const fieldId = `master-${config.key}-${field.name}`;
               const error = errors[field.name];
+              if (field.type === 'combobox' && field.combobox) {
+                const combo = field.combobox;
+                const depValue = combo.dependsOn ? (values[combo.dependsOn] ?? '') : '';
+                const depField = combo.dependsOn
+                  ? config.fields.find((f) => f.name === combo.dependsOn)
+                  : undefined;
+                return (
+                  <div key={field.name}>
+                    <MasterCombobox
+                      id={fieldId}
+                      label={field.label}
+                      value={values[field.name] ?? ''}
+                      valueLabel={labels[field.name] || undefined}
+                      onChange={(value, label) => handleComboboxChange(field, value, label)}
+                      fetchOptions={(search) => combo.fetchOptions(search, depValue)}
+                      serverSearch={combo.serverSearch ?? true}
+                      queryExtra={combo.dependsOn ? (depValue === '' ? null : depValue) : undefined}
+                      depHint={depField ? `Pilih ${depField.label} terlebih dahulu.` : undefined}
+                      required={field.required}
+                      error={error}
+                      allowClear={!field.required}
+                    />
+                  </div>
+                );
+              }
               return (
                 <div key={field.name}>
                   <label className="label" htmlFor={fieldId}>

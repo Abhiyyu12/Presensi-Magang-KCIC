@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens KCIC — dipakai komponen non-Tailwind (grafik SVG, dsb.). */
+:root {
+  --kcic-brand: #8b1a1a;
+  --kcic-brand-dark: #6e1414;
+  --kcic-brand-soft: #fbf0f0;
+  --kcic-brand-border: #ecbdbd;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;

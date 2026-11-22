@@ -4,6 +4,7 @@ import { computeEffectivePermissions, type PermissionGrant, type AbacPolicyInput
 export interface AccessContext {
   user: User;
   roleCodes: string[];
+  roles: { id: string; code: string; name: string }[];
   permissions: Set<string>;
   denied: Set<string>;
   adminScopes: { scopeType: 'GLOBAL' | 'BUREAU' | 'DIVISION'; scopeId: string | null }[];
@@ -30,10 +31,12 @@ export async function loadAccessContext(db: PrismaClient, userId: string): Promi
   if (!user) return null;
 
   const roleCodes: string[] = [];
+  const roles: { id: string; code: string; name: string }[] = [];
   const grants: PermissionGrant[] = [];
   for (const ra of user.roleAssignments) {
     if (!ra.role || ra.role.status !== 'ACTIVE') continue;
     roleCodes.push(ra.role.code);
+    roles.push({ id: ra.role.id, code: ra.role.code, name: ra.role.name });
     for (const rp of ra.role.rolePermissions) {
       grants.push({ permissionCode: rp.permission.code, effect: rp.effect });
     }
@@ -62,6 +65,7 @@ export async function loadAccessContext(db: PrismaClient, userId: string): Promi
   return {
     user,
     roleCodes,
+    roles,
     permissions: effective.allowed,
     denied: effective.denied,
     adminScopes: scopes,

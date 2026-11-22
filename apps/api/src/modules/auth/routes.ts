@@ -36,7 +36,7 @@ function userSummary(ctx: Awaited<ReturnType<typeof loadAccessContext>>) {
     phone: ctx.user.phone,
     accountStatus: ctx.user.accountStatus,
     mustChangePassword: ctx.user.mustChangePassword,
-    roles: ctx.roleCodes,
+    roles: ctx.roles,
     permissions: [...ctx.permissions].sort(),
     internProfileId: ctx.internProfileId,
   };

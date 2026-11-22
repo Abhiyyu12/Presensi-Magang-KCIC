@@ -1,16 +1,36 @@
 import { z, type ZodTypeAny } from 'zod';
 import { ApiError } from '../../lib/api';
 import { asString, isRecord } from '../../lib/types';
+import {
+  fetchBureauOptions,
+  fetchDivisionOptions,
+  fetchInternProfileOptions,
+  fetchPlacementOptions,
+  fetchScopeIdOptions,
+  fetchUserOptions,
+} from './options';
+
+export interface ComboboxFieldConfig {
+  fetchOptions: (search: string, dep: string) => Promise<{ value: string; label: string; description?: string }[]>;
+  /** Field lain yang nilainya menjadi dependensi (dependent dropdown). */
+  dependsOn?: string;
+  serverSearch?: boolean;
+  /** Sembunyikan field saat field lain bernilai salah satu dari daftar ini. */
+  hideWhen?: { field: string; equals: string[] };
+  /** Label awal untuk mode edit (mis. nama relasi dari baris). */
+  labelFromRow?: (row: Record<string, unknown>) => string;
+}
 
 export interface FieldConfig {
   name: string;
   label: string;
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea';
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'combobox';
   required?: boolean;
   min?: number;
   options?: { value: string; label: string }[];
   /** Only shown on create, not on edit (e.g. username). */
   createOnly?: boolean;
+  combobox?: ComboboxFieldConfig;
 }
 
 export interface ColumnConfig {
@@ -113,7 +133,13 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
     fields: [
       { name: 'name', label: 'Nama divisi', type: 'text', required: true },
       { name: 'code', label: 'Kode', type: 'text', required: true },
-      { name: 'bureauId', label: 'ID Biro', type: 'text', required: true },
+      {
+        name: 'bureauId',
+        label: 'Biro',
+        type: 'combobox',
+        required: true,
+        combobox: { fetchOptions: fetchBureauOptions, serverSearch: true, labelFromRow: (row) => nestedName(row, 'bureau') },
+      },
       { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS },
     ],
   },
@@ -145,11 +171,39 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
       { header: 'Divisi', render: (row) => nestedName(row, 'division') },
     ],
     fields: [
-      { name: 'userId', label: 'ID Pengguna (akun peserta)', type: 'text', required: true, createOnly: true },
+      {
+        name: 'userId',
+        label: 'Pengguna (akun peserta)',
+        type: 'combobox',
+        required: true,
+        createOnly: true,
+        combobox: { fetchOptions: fetchUserOptions(), serverSearch: true, labelFromRow: (row) => nestedName(row, 'user') },
+      },
       { name: 'participantNumber', label: 'Nomor peserta', type: 'text', required: true },
-      { name: 'bureauId', label: 'ID Biro', type: 'text', required: true },
-      { name: 'divisionId', label: 'ID Divisi', type: 'text' },
-      { name: 'placementId', label: 'ID Penempatan', type: 'text' },
+      {
+        name: 'bureauId',
+        label: 'Biro',
+        type: 'combobox',
+        required: true,
+        combobox: { fetchOptions: fetchBureauOptions, serverSearch: true, labelFromRow: (row) => nestedName(row, 'bureau') },
+      },
+      {
+        name: 'divisionId',
+        label: 'Divisi',
+        type: 'combobox',
+        combobox: {
+          fetchOptions: fetchDivisionOptions,
+          serverSearch: true,
+          dependsOn: 'bureauId',
+          labelFromRow: (row) => nestedName(row, 'division'),
+        },
+      },
+      {
+        name: 'placementId',
+        label: 'Penempatan',
+        type: 'combobox',
+        combobox: { fetchOptions: fetchPlacementOptions, serverSearch: true, labelFromRow: (row) => nestedName(row, 'placement') },
+      },
       { name: 'startDate', label: 'Tanggal mulai magang', type: 'date', required: true },
       { name: 'endDate', label: 'Tanggal selesai magang', type: 'date' },
       {
@@ -184,8 +238,31 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
       { header: 'Berlaku dari', render: (row) => datePart(row['validFrom']) },
     ],
     fields: [
-      { name: 'supervisorUserId', label: 'ID Pengguna pembimbing', type: 'text', required: true, createOnly: true },
-      { name: 'internProfileId', label: 'ID Profil peserta', type: 'text', required: true, createOnly: true },
+      {
+        name: 'supervisorUserId',
+        label: 'Pembimbing',
+        type: 'combobox',
+        required: true,
+        createOnly: true,
+        combobox: { fetchOptions: fetchUserOptions('SUPERVISOR'), serverSearch: true, labelFromRow: (row) => nestedName(row, 'supervisor') },
+      },
+      {
+        name: 'internProfileId',
+        label: 'Peserta',
+        type: 'combobox',
+        required: true,
+        createOnly: true,
+        combobox: {
+          fetchOptions: fetchInternProfileOptions,
+          serverSearch: true,
+          labelFromRow: (row) => {
+            const profile = row['internProfile'];
+            if (!isRecord(profile)) return '';
+            const user = profile['user'];
+            return isRecord(user) ? asString(user['displayName'] ?? user['username']) : asString(profile['participantNumber']);
+          },
+        },
+      },
       { name: 'validFrom', label: 'Berlaku dari', type: 'date' },
       { name: 'validTo', label: 'Berlaku sampai', type: 'date' },
       {
@@ -213,7 +290,14 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
       { header: 'Berlaku sampai', render: (row) => (row['validTo'] ? datePart(row['validTo']) : '-') },
     ],
     fields: [
-      { name: 'userId', label: 'ID Pengguna', type: 'text', required: true, createOnly: true },
+      {
+        name: 'userId',
+        label: 'Pengguna',
+        type: 'combobox',
+        required: true,
+        createOnly: true,
+        combobox: { fetchOptions: fetchUserOptions(), serverSearch: true, labelFromRow: (row) => nestedName(row, 'user') },
+      },
       {
         name: 'scopeType',
         label: 'Tipe scope',
@@ -226,7 +310,18 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
           { value: 'DIVISION', label: 'DIVISION' },
         ],
       },
-      { name: 'scopeId', label: 'ID objek scope (biro/divisi)', type: 'text', createOnly: true },
+      {
+        name: 'scopeId',
+        label: 'Objek scope (biro/divisi)',
+        type: 'combobox',
+        createOnly: true,
+        combobox: {
+          fetchOptions: fetchScopeIdOptions,
+          serverSearch: true,
+          dependsOn: 'scopeType',
+          hideWhen: { field: 'scopeType', equals: ['GLOBAL'] },
+        },
+      },
       { name: 'validFrom', label: 'Berlaku dari', type: 'date' },
       { name: 'validTo', label: 'Berlaku sampai', type: 'date' },
     ],

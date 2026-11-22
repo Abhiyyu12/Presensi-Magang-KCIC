@@ -4,12 +4,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Palet brand KCIC (#8B1A1A); varian soft/border dipakai state hover & aksen.
         brand: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
+          50: '#fbf0f0',
+          100: '#f6dbdb',
+          200: '#ecbdbd',
+          300: '#da8c8c',
+          400: '#c75f5f',
+          500: '#b23a3a',
+          600: '#9e2626',
+          700: '#8b1a1a',
+          800: '#6e1414',
+          900: '#571010',
+          950: '#3f0c0c',
         },
       },
       minHeight: {

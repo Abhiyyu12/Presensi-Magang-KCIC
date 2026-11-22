@@ -66,6 +66,7 @@ const bureauPatchBody = z.object({
 });
 const bureauListQuery = paginationQuery.extend({
   code: z.string().max(32).optional(),
+  search: z.string().max(128).optional(),
   status: genericStatus.optional(),
 });
 
@@ -82,6 +83,7 @@ const divisionPatchBody = z.object({
 });
 const divisionListQuery = paginationQuery.extend({
   bureauId: z.string().uuid().optional(),
+  search: z.string().max(128).optional(),
   status: genericStatus.optional(),
 });
 
@@ -92,7 +94,10 @@ const placementCreateBody = z.object({
   status: genericStatus.optional(),
 });
 const placementPatchBody = placementCreateBody.partial();
-const placementListQuery = paginationQuery.extend({ status: genericStatus.optional() });
+const placementListQuery = paginationQuery.extend({
+  search: z.string().max(128).optional(),
+  status: genericStatus.optional(),
+});
 
 const userCreateBody = z.object({
   username: z.string().min(3).max(64),
@@ -112,6 +117,7 @@ const userPatchBody = z.object({
 const userListQuery = paginationQuery.extend({
   search: z.string().max(128).optional(),
   accountStatus: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
+  roleCode: z.string().max(64).optional(),
 });
 const userRolesBody = z.object({
   roleIds: z.array(z.string().uuid()).min(1),
@@ -140,6 +146,7 @@ const internProfilePatchBody = z.object({
 const internProfileListQuery = paginationQuery.extend({
   bureauId: z.string().uuid().optional(),
   divisionId: z.string().uuid().optional(),
+  search: z.string().max(128).optional(),
   status: z.enum(['ACTIVE', 'COMPLETED', 'WITHDRAWN']).optional(),
 });
 
@@ -263,6 +270,14 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       const query = bureauListQuery.parse(req.query);
       const where: Prisma.BureauWhereInput = {
         ...(query.code ? { code: { contains: query.code, mode: 'insensitive' } } : {}),
+        ...(query.search
+          ? {
+              OR: [
+                { code: { contains: query.search, mode: 'insensitive' } },
+                { name: { contains: query.search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
         ...(query.status ? { status: query.status } : {}),
       };
       const [total, items] = await db.$transaction([
@@ -357,6 +372,14 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
           divisionScopeWhere(ctx),
           {
             ...(query.bureauId ? { bureauId: query.bureauId } : {}),
+            ...(query.search
+              ? {
+                  OR: [
+                    { code: { contains: query.search, mode: 'insensitive' } },
+                    { name: { contains: query.search, mode: 'insensitive' } },
+                  ],
+                }
+              : {}),
             ...(query.status ? { status: query.status } : {}),
           },
         ],
@@ -447,7 +470,17 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       const ctx = requireCtx(req);
       requireGlobalScope(ctx);
       const query = placementListQuery.parse(req.query);
-      const where: Prisma.PlacementWhereInput = { ...(query.status ? { status: query.status } : {}) };
+      const where: Prisma.PlacementWhereInput = {
+        ...(query.search
+          ? {
+              OR: [
+                { code: { contains: query.search, mode: 'insensitive' } },
+                { name: { contains: query.search, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+        ...(query.status ? { status: query.status } : {}),
+      };
       const [total, items] = await db.$transaction([
         db.placement.count({ where }),
         db.placement.findMany({ where, orderBy: { code: 'asc' }, ...skipTake(query) }),
@@ -562,6 +595,17 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
                 { username: { contains: query.search, mode: 'insensitive' } },
                 { displayName: { contains: query.search, mode: 'insensitive' } },
               ],
+            }
+          : {}),
+        ...(query.roleCode
+          ? {
+              roleAssignments: {
+                some: {
+                  role: { code: query.roleCode },
+                  validFrom: { lte: new Date() },
+                  OR: [{ validTo: null }, { validTo: { gte: new Date() } }],
+                },
+              },
             }
           : {}),
       };
@@ -776,6 +820,21 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
           {
             ...(query.bureauId ? { bureauId: query.bureauId } : {}),
             ...(query.divisionId ? { divisionId: query.divisionId } : {}),
+            ...(query.search
+              ? {
+                  OR: [
+                    { participantNumber: { contains: query.search, mode: 'insensitive' } },
+                    {
+                      user: {
+                        OR: [
+                          { displayName: { contains: query.search, mode: 'insensitive' } },
+                          { username: { contains: query.search, mode: 'insensitive' } },
+                        ],
+                      },
+                    },
+                  ],
+                }
+              : {}),
             ...(query.status ? { status: query.status } : {}),
           },
         ],

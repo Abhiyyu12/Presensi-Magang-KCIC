@@ -57,8 +57,8 @@ export function SimulatePanel() {
 
   return (
     <div className="space-y-4">
-      <div className="card border-sky-200 bg-sky-50">
-        <p className="text-sm text-sky-900">
+      <div className="card border-brand-200 bg-brand-50">
+        <p className="text-sm text-brand-900">
           <strong>Simulasi bersifat diagnostik, tidak memberi akses.</strong> Hasil hanya untuk
           membantu administrator memahami evaluasi permission efektif.
         </p>

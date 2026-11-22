@@ -150,7 +150,7 @@ export default function LeaveDetailPage() {
           <p className="text-amber-700">Pengajuan izin menunggu persetujuan.</p>
         ) : null}
         {status === 'NEEDS_REVIEW' ? (
-          <p className="text-purple-700">Catatan hari ini perlu diperiksa oleh admin.</p>
+          <p className="text-amber-700">Catatan hari ini perlu diperiksa oleh admin.</p>
         ) : null}
       </section>
 

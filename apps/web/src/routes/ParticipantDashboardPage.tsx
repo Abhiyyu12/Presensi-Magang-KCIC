@@ -140,18 +140,18 @@ export default function ParticipantDashboardPage() {
       </section>
 
       {today.activeLeave ? (
-        <section className="card border-sky-200 bg-sky-50" aria-labelledby="leave-heading">
-          <h2 id="leave-heading" className="text-sm font-semibold text-sky-900">
+        <section className="card border-brand-200 bg-brand-50" aria-labelledby="leave-heading">
+          <h2 id="leave-heading" className="text-sm font-semibold text-brand-900">
             Izin aktif
           </h2>
-          <p className="mt-1 text-sm text-sky-800">
+          <p className="mt-1 text-sm text-brand-800">
             {today.activeLeave.leaveType === 'TEMPORARY'
               ? 'Izin sementara (akan kembali)'
               : 'Pulang lebih awal'}{' '}
             · Status: <StatusBadge kind="leaveStatus" status={today.activeLeave.status} />
           </p>
           {today.activeLeave.status === 'PENDING' ? (
-            <p className="mt-1 text-sm text-sky-800">Pengajuan izin menunggu persetujuan.</p>
+            <p className="mt-1 text-sm text-brand-800">Pengajuan izin menunggu persetujuan.</p>
           ) : null}
           <Link
             to={`/izin/${today.activeLeave.id}`}

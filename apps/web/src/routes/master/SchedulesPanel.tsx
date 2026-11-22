@@ -6,6 +6,8 @@ import { DataTable, type Column } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
 import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { MasterCombobox } from '../../components/MasterCombobox';
+import { fetchScheduleScopeOptions } from './options';
 
 type Row = Record<string, unknown>;
 
@@ -23,6 +25,12 @@ interface FormDefaults {
 }
 
 const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
+const SCOPE_LABELS: Record<string, string> = {
+  BUREAU: 'Biro',
+  DIVISION: 'Divisi',
+  INDIVIDUAL: 'Pengguna (individu)',
+};
 
 // Empty times/tolerance = "not filled"; the server applies the business-parameter
 // default for tolerance. No policy values are invented in the client.
@@ -223,7 +231,9 @@ export function SchedulesPanel() {
                 id="sched-scope"
                 className="input"
                 value={form.scopeType}
-                onChange={(e) => setForm((f) => ({ ...f, scopeType: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, scopeType: e.target.value, scopeId: '' }))
+                }
               >
                 <option value="GLOBAL">GLOBAL</option>
                 <option value="BUREAU">BUREAU</option>
@@ -231,15 +241,18 @@ export function SchedulesPanel() {
                 <option value="INDIVIDUAL">INDIVIDUAL</option>
               </select>
             </div>
-            <div>
-              <label className="label" htmlFor="sched-scope-id">ID scope (opsional)</label>
-              <input
+            {form.scopeType === 'GLOBAL' ? null : (
+              <MasterCombobox
                 id="sched-scope-id"
-                className="input"
+                label={`Objek scope (${SCOPE_LABELS[form.scopeType] ?? form.scopeType})`}
                 value={form.scopeId}
-                onChange={(e) => setForm((f) => ({ ...f, scopeId: e.target.value }))}
+                onChange={(value) => setForm((f) => ({ ...f, scopeId: value }))}
+                fetchOptions={(search) => fetchScheduleScopeOptions(search, form.scopeType)}
+                serverSearch
+                queryExtra={form.scopeType}
+                required={form.scopeType !== 'GLOBAL'}
               />
-            </div>
+            )}
             <div>
               <label className="label" htmlFor="sched-from">Berlaku dari *</label>
               <input

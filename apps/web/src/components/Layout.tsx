@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
@@ -48,13 +48,36 @@ function fallbackNav(has: (perm: string) => boolean): NavItem[] {
   return items.filter((item, idx, arr) => arr.findIndex((i) => i.route === item.route) === idx);
 }
 
-const BOTTOM_SLOTS = 4;
+function initialsOf(name: string | undefined, fallback: string): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return fallback.slice(0, 2).toUpperCase();
+  return parts
+    .slice(0, 2)
+    .map((p) => p.charAt(0).toUpperCase())
+    .join('');
+}
+
+function roleLabel(user: { roles?: { code?: string; name?: string }[] } | null | undefined): string {
+  const first = user?.roles?.[0];
+  if (!first) return '';
+  if (first.name && first.name.trim().length > 0) return first.name;
+  return first.code ?? '';
+}
+
+const COLLAPSE_KEY = 'presensi.nav.collapsed';
 
 export function Layout() {
   const { user, has, loading, logout } = useAuth();
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(COLLAPSE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
 
   const accessQuery = useQuery({
     queryKey: ['access', 'me', 'effective'],
@@ -73,22 +96,19 @@ export function Layout() {
     return base;
   }, [accessQuery.data, has]);
 
-  const { primary, secondary } = useMemo(() => {
-    const prim = navItems.filter((i) => i.route !== '/profil');
-    const sec = navItems.filter((i) => i.route === '/profil');
-    if (prim.length > 6) {
-      const help = prim.find((i) => i.route === '/bantuan');
-      if (help) {
-        prim.splice(prim.indexOf(help), 1);
-        sec.unshift(help);
-      }
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+    } catch {
+      // ignore storage failures (private mode)
     }
-    return { primary: prim, secondary: sec };
-  }, [navItems]);
+  }, [collapsed]);
 
-  const bottomItems = primary.slice(0, BOTTOM_SLOTS);
-  const sheetItems = navItems;
-  const hasOverflow = navItems.length > bottomItems.length;
+  // Close transient overlays when switching routes.
+  useEffect(() => {
+    setDrawerOpen(false);
+    setProfileMenuOpen(false);
+  }, [navItems.length]);
 
   if (loading) {
     return (
@@ -104,178 +124,205 @@ export function Layout() {
   };
 
   const linkClass = (isActive: boolean) =>
-    `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
+    `flex min-h-touch items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
       isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 hover:bg-slate-50'
     }`;
+
+  const displayName = user?.displayName ?? user?.username ?? 'Akun';
+  const initials = initialsOf(user?.displayName, user?.username ?? 'A');
+
+  const sidebarNav = (
+    <>
+      <ul className="space-y-1">
+        {navItems.map((item) => (
+          <li key={item.route}>
+            <NavLink
+              to={item.route}
+              end={item.route === '/'}
+              className={({ isActive }) => linkClass(isActive)}
+              title={collapsed ? item.label : undefined}
+            >
+              <span className="shrink-0" aria-hidden="true">
+                <NavIcon route={item.route} />
+              </span>
+              {!collapsed ? <span className="truncate">{item.label}</span> : null}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
 
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4">
-          <NavLink to="/" className="flex min-w-0 items-center gap-2 font-bold text-slate-900">
-            <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-700 text-sm text-white">
-              P
-            </span>
-            <span className="truncate">Presensi Magang KCIC</span>
-          </NavLink>
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              className="btn-secondary -ml-1 px-2 lg:hidden"
+              aria-label="Buka menu navigasi"
+              aria-expanded={drawerOpen}
+              onClick={() => setDrawerOpen(true)}
+            >
+              <MenuIcon />
+            </button>
+            <NavLink to="/" className="flex min-w-0 items-center gap-2 font-bold text-slate-900">
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-700 text-sm text-white"
+              >
+                P
+              </span>
+              <span className="truncate">Presensi Magang KCIC</span>
+            </NavLink>
+          </div>
           <div className="relative shrink-0">
             <button
               type="button"
-              className="btn-secondary max-w-[11rem] px-3 py-1.5 text-xs"
-              aria-expanded={menuOpen}
+              className="flex min-h-touch items-center gap-2 rounded-lg px-2 hover:bg-slate-50"
+              aria-expanded={profileMenuOpen}
               aria-haspopup="menu"
-              onClick={() => setMenuOpen((v) => !v)}
+              aria-label={`Menu akun ${displayName}`}
+              onClick={() => setProfileMenuOpen((v) => !v)}
             >
-              <span className="truncate">{user?.displayName ?? user?.username ?? 'Akun'}</span>
-              <span aria-hidden="true">▾</span>
-            </button>
-            {menuOpen ? (
-              <div
-                role="menu"
-                className="absolute right-0 mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-700 text-xs font-bold text-white"
               >
-                <NavLink
-                  to="/profil"
-                  role="menuitem"
-                  className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Profil / Akun
-                </NavLink>
+                {initials}
+              </span>
+              <span className="hidden min-w-0 flex-col items-start leading-tight sm:flex">
+                <span className="max-w-[10rem] truncate text-sm font-semibold text-slate-800">{displayName}</span>
+                <span className="max-w-[10rem] truncate text-[11px] text-slate-500">{roleLabel(user)}</span>
+              </span>
+              <span aria-hidden="true" className="text-slate-400">
+                ▾
+              </span>
+            </button>
+            {profileMenuOpen ? (
+              <>
                 <button
                   type="button"
-                  role="menuitem"
-                  className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50"
-                  onClick={() => void handleLogout()}
+                  aria-label="Tutup menu akun"
+                  className="fixed inset-0 z-40 cursor-default"
+                  onClick={() => setProfileMenuOpen(false)}
+                />
+                <div
+                  role="menu"
+                  className="absolute right-0 z-50 mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
                 >
-                  Keluar
-                </button>
-              </div>
+                  <p className="border-b border-slate-100 px-4 py-2 sm:hidden">
+                    <span className="block truncate text-sm font-semibold text-slate-800">{displayName}</span>
+                    <span className="block truncate text-[11px] text-slate-500">{roleLabel(user)}</span>
+                  </p>
+                  <NavLink
+                    to="/profil"
+                    role="menuitem"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    Profil / Akun
+                  </NavLink>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50"
+                    onClick={() => void handleLogout()}
+                  >
+                    Keluar
+                  </button>
+                </div>
+              </>
             ) : null}
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl lg:flex">
+      <div className="mx-auto flex max-w-7xl">
+        {/* Desktop sidebar: collapsible. */}
         <nav
-          aria-label="Navigasi utama (desktop)"
-          className="hidden w-60 shrink-0 border-r border-slate-200 bg-white lg:block"
+          aria-label="Navigasi utama"
+          className={`sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 flex-col justify-between border-r border-slate-200 bg-white py-3 transition-[width] lg:flex ${
+            collapsed ? 'w-[4.25rem]' : 'w-60'
+          }`}
         >
-          <ul className="space-y-1 p-3">
-            {primary.map((item) => (
-              <li key={item.route}>
-                <NavLink to={item.route} end={item.route === '/'} className={({ isActive }) => linkClass(isActive)}>
-                  <NavIcon route={item.route} />
-                  {item.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-          {secondary.length > 0 ? (
-            <>
-              <p className="px-6 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Lainnya
-              </p>
-              <ul className="space-y-1 p-3 pt-0">
-                {secondary.map((item) => (
-                  <li key={item.route}>
-                    <NavLink to={item.route} end={item.route === '/'} className={({ isActive }) => linkClass(isActive)}>
-                      <NavIcon route={item.route} />
-                      {item.label}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
+          <div className={collapsed ? 'px-2' : 'px-3'}>{sidebarNav}</div>
+          <button
+            type="button"
+            className={`mx-3 flex min-h-touch items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 ${
+              collapsed ? 'justify-center px-2' : ''
+            }`}
+            aria-pressed={collapsed}
+            onClick={() => setCollapsed((v) => !v)}
+          >
+            <span aria-hidden="true">{collapsed ? '»' : '«'}</span>
+            {!collapsed ? <span>Ciutkan menu</span> : <span className="sr-only">Perluas menu</span>}
+          </button>
         </nav>
 
-        <main className="w-full min-w-0 flex-1 px-4 pb-24 pt-4 lg:pb-8">
+        <main className="w-full min-w-0 flex-1 px-4 pb-10 pt-4">
           <Outlet />
         </main>
       </div>
 
-      <nav
-        aria-label="Navigasi utama (mobile)"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white lg:hidden"
-      >
-        <ul className="flex">
-          {bottomItems.map((item) => (
-            <li key={item.route} className="flex-1">
-              <NavLink
-                to={item.route}
-                end={item.route === '/'}
-                className={({ isActive }) =>
-                  `flex min-h-touch flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium ${
-                    isActive ? 'text-brand-700' : 'text-slate-600'
-                  }`
-                }
-              >
-                <NavIcon route={item.route} />
-                <span className="truncate">{item.label}</span>
-              </NavLink>
-            </li>
-          ))}
-          {hasOverflow ? (
-            <li className="flex-1">
-              <button
-                type="button"
-                aria-haspopup="dialog"
-                aria-expanded={sheetOpen}
-                onClick={() => setSheetOpen(true)}
-                className={`flex min-h-touch w-full flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium ${
-                  sheetOpen ? 'text-brand-700' : 'text-slate-600'
-                }`}
-              >
-                <MenuIcon />
-                <span>Menu</span>
-              </button>
-            </li>
-          ) : null}
-        </ul>
-      </nav>
-
-      {sheetOpen ? (
+      {/* Mobile drawer: hamburger in the header, closes itself after picking a menu. */}
+      {drawerOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            aria-label="Tutup menu"
+            aria-label="Tutup menu navigasi"
             className="absolute inset-0 bg-slate-900/40"
-            onClick={() => setSheetOpen(false)}
+            onClick={() => setDrawerOpen(false)}
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Menu navigasi"
-            className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-2xl bg-white p-4 pb-8 shadow-xl"
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl"
           >
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-800">Menu</p>
-              <button type="button" className="btn-secondary px-3 py-1 text-xs" onClick={() => setSheetOpen(false)}>
-                Tutup
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <p className="text-sm font-bold text-slate-900">Menu</p>
+              <button
+                type="button"
+                className="btn-secondary px-2 py-1 text-xs"
+                aria-label="Tutup menu"
+                onClick={() => setDrawerOpen(false)}
+              >
+                ✕
               </button>
             </div>
-            <ul className="grid grid-cols-2 gap-2">
-              {sheetItems.map((item) => (
-                <li key={item.route}>
-                  <NavLink
-                    to={item.route}
-                    end={item.route === '/'}
-                    onClick={() => setSheetOpen(false)}
-                    className={({ isActive }) =>
-                      `flex min-h-touch items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium ${
-                        isActive
-                          ? 'border-brand-600 bg-brand-50 text-brand-800'
-                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`
-                    }
-                  >
-                    <NavIcon route={item.route} />
-                    <span className="truncate">{item.label}</span>
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
+            <nav className="flex-1 overflow-y-auto p-3">
+              <ul className="space-y-1">
+                {navItems.map((item) => (
+                  <li key={item.route}>
+                    <NavLink
+                      to={item.route}
+                      end={item.route === '/'}
+                      onClick={() => setDrawerOpen(false)}
+                      className={({ isActive }) => linkClass(isActive)}
+                    >
+                      <span className="shrink-0" aria-hidden="true">
+                        <NavIcon route={item.route} />
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <div className="border-t border-slate-100 p-3">
+              <button
+                type="button"
+                className="btn-secondary w-full justify-start text-sm"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  void handleLogout();
+                }}
+              >
+                Keluar
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
