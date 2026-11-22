@@ -32,6 +32,14 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
+  // Handlers are read through refs so the focus-trap effect only runs when the
+  // dialog opens/closes. Callers pass inline closures; if they were effect deps,
+  // every parent re-render (each keystroke) would re-run focus() and steal
+  // focus from the field being typed into.
+  const onCloseRef = useRef(onClose);
+  const busyRef = useRef(busy);
+  onCloseRef.current = onClose;
+  busyRef.current = busy;
 
   useEffect(() => {
     if (!open) return;
@@ -43,7 +51,7 @@ export function ConfirmDialog({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        if (!busy) onClose();
+        if (!busyRef.current) onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab' || !dialog) return;
@@ -65,7 +73,7 @@ export function ConfirmDialog({
       document.removeEventListener('keydown', onKeyDown);
       previousFocus.current?.focus();
     };
-  }, [open, busy, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

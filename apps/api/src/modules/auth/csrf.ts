@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { randomBytes } from 'node:crypto';
 import { forbidden } from '../../common/errors.js';
-import { loadEnv, isDev } from '../../config/env.js';
+import { loadEnv, isDev, parseOriginList } from '../../config/env.js';
 
 export const CSRF_COOKIE = 'csrf_token';
 export const CSRF_HEADER = 'x-csrf-token';
@@ -20,7 +20,11 @@ export function issueCsrfToken(reply: FastifyReply): string {
 
 function originMatches(req: FastifyRequest): boolean {
   const env = loadEnv();
-  const allowed = new Set([env.APP_URL, env.CORS_ORIGIN, ...(isDev(env) ? ['http://localhost:5173', 'http://127.0.0.1:5173'] : [])]);
+  const allowed = new Set([
+    env.APP_URL,
+    ...parseOriginList(env.CORS_ORIGIN),
+    ...(isDev(env) ? ['http://localhost:5173', 'http://127.0.0.1:5173'] : []),
+  ]);
   const origin = req.headers.origin;
   if (origin) return allowed.has(origin);
   const referer = req.headers.referer;

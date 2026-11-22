@@ -30,6 +30,14 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+/** CORS_ORIGIN accepts one origin or a comma-separated list. */
+export function parseOriginList(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
 let cached: Env | null = null;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {

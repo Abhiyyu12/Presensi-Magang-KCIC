@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { computeEffectivePermissions, evaluateCondition } from '../src/modules/access/evaluator.js';
 import type { SubjectAttributes } from '../src/modules/access/evaluator.js';
 import { businessDate, businessWeekday, zonedTimeToUtc, addDays } from '../src/common/time.js';
+import { parseOriginList } from '../src/config/env.js';
 
 const internAttrs: SubjectAttributes = {
   roleCodes: ['INTERN'],
@@ -92,6 +93,22 @@ describe('computeEffectivePermissions', () => {
         isIntern: true,
       }),
     ).toBe(false);
+  });
+});
+
+describe('parseOriginList (CORS_ORIGIN comma-separated)', () => {
+  it('splits on commas and trims whitespace', () => {
+    expect(parseOriginList('http://a.test, http://b.test ,http://c.test')).toEqual([
+      'http://a.test',
+      'http://b.test',
+      'http://c.test',
+    ]);
+  });
+
+  it('keeps a single origin and drops empty segments', () => {
+    expect(parseOriginList('http://only.test')).toEqual(['http://only.test']);
+    expect(parseOriginList('http://only.test,,')).toEqual(['http://only.test']);
+    expect(parseOriginList('')).toEqual([]);
   });
 });
 
