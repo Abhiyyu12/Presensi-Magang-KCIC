@@ -15,8 +15,12 @@ Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 ### Diperbaiki
 - **Backend menolak penugasan pembimbing ganda yang masih aktif** (bug data ditemukan saat UAT beranda: satu peserta tercatat punya pembimbing yang sama 9× karena POST/PATCH `/admin/assignments` belum memvalidasi pasangan peserta+pembimbing yang sudah ACTIVE — repeat klik "tambah pembimbing" diam-diam membuat baris duplikat). Kini POST maupun PATCH yang menghasilkan penugasan ACTIVE duplikat ditolak **409** dengan pesan Bahasa Indonesia. Pembacaan `/profile` juga mendedupe pembimbing per ID sehingga tampilan tetap benar meski ada baris duplikat lama (baris dev yang sudah ada tidak dihapus — menunggu konfirmasi).
 
+### Diubah
+- **Jam hidup "Waktu server" dihapus dari header beranda** (permintaan user) — sisa tampilan cukup "Halo, {nama}" + tanggal hari ini. Catatan: label "Waktu server" di layar sukses absensi, detail riwayat, dan detail izin **tetap ada** karena di sana itu bukan jam hidup melainkan **waktu resmi tercatatnya event** (bukti kehadiran menurut server), bukan keterangan kosmetik.
+
 ### Pembuktian (bukan klaim)
 - Gate: api tsc+eslint bersih + test **83/83** (asersi baru: POST `/admin/assignments` duplikat → **409**, dan `/profile` tetap mengembalikan tepat 1 pembimbing); web tsc+eslint bersih + test **46/46**.
+- Playwright (peserta3): header beranda kini hanya "Halo, Dewi Lestari" + "22/11/2026" — teks "Waktu server" tidak ada lagi di header, tanggal tetap tampil.
 - Playwright (peserta3, read-only): beranda menampilkan MG-2026-003, Biro Operasi, Divisi Operasi & Dengkel, Depo Tegalluar, Pembimbing Budi Santoso **(1×)**, Periode magang, Status Aktif; kartu absensi memuat jadwal 09:00–18:00 WIB, toleransi 15 menit, badge Terlambat; izin aktif dengan estimasi keluar/kembali; tile kehadiran bulan ini cocok dengan SQL (`NEEDS_REVIEW=1`, "Dari 1 hari kerja terjadwal"); tanpa scroll horizontal di 390 px; screenshot 390 px & desktop 1280 px.
 - Satu-satunya error console adalah `GET /auth/me` **401** saat halaman login sebelum sesi ada — perilaku bawaan yang sudah ada sebelumnya (bukan dari perubahan ini).
 

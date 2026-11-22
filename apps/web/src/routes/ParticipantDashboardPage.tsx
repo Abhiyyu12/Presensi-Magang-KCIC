@@ -130,9 +130,7 @@ export default function ParticipantDashboardPage() {
         <h1 className="text-lg font-bold text-slate-900">
           Halo, {user?.displayName ?? user?.username}
         </h1>
-        <p className="text-sm text-slate-600">
-          {formatDateWib(today.workDate)} · Waktu server: {formatWib(today.serverTime)}
-        </p>
+        <p className="text-sm text-slate-600">{formatDateWib(today.workDate)}</p>
       </header>
 
       <section className="card" aria-labelledby="identity-heading">
