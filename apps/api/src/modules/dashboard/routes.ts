@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import type { Prisma } from '@prisma/client';
+import { z } from 'zod';
 import { getDb } from '../../infrastructure/db.js';
 import { ok } from '../../common/http.js';
-import { forbidden } from '../../common/errors.js';
+import { forbidden, badRequest } from '../../common/errors.js';
 import { businessDate, businessWeekday, parseDateOnly } from '../../common/time.js';
 import { authenticate, requireCtx } from '../../app/auth.js';
 import { hasPermission, type AccessContext } from '../access/context.js';
@@ -11,6 +12,52 @@ import { resolveWorkday } from '../schedules/service.js';
 function requirePermissionCode(ctx: AccessContext, code: string): void {
   if (!hasPermission(ctx, code)) throw forbidden();
 }
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_RE = /^\d{4}-\d{2}$/;
+const YEAR_RE = /^\d{4}$/;
+
+const adminDashboardQuery = z.object({
+  bureauId: z.string().uuid().optional(),
+  divisionId: z.string().uuid().optional(),
+  date: z.string().regex(DATE_RE, 'Format tanggal harus YYYY-MM-DD.').optional(),
+  from: z.string().regex(DATE_RE, 'Format tanggal harus YYYY-MM-DD.').optional(),
+  to: z.string().regex(DATE_RE, 'Format tanggal harus YYYY-MM-DD.').optional(),
+  month: z.string().regex(MONTH_RE, 'Format bulan harus YYYY-MM.').optional(),
+  year: z.string().regex(YEAR_RE, 'Format tahun harus YYYY.').optional(),
+});
+
+interface DateRange {
+  from: string;
+  to: string;
+}
+
+function lastDayOfMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** Normalisasi filter waktu menjadi rentang [from, to] (date-only string). */
+function normalizeRange(q: z.infer<typeof adminDashboardQuery>, today: string): DateRange {
+  if (q.date) return { from: q.date, to: q.date };
+  if (q.month) {
+    const [year, month] = q.month.split('-').map(Number) as [number, number];
+    const last = lastDayOfMonth(year, month);
+    return { from: `${q.month}-01`, to: `${q.month}-${String(last).padStart(2, '0')}` };
+  }
+  if (q.year) return { from: `${q.year}-01-01`, to: `${q.year}-12-31` };
+  const from = q.from ?? q.to ?? today;
+  const to = q.to ?? q.from ?? today;
+  if (from > to) throw badRequest('Tanggal awal melebihi tanggal akhir.');
+  return { from, to };
+}
+
+function addDays(dateOnly: string, delta: number): string {
+  const d = parseDateOnly(dateOnly);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+const SERIES_MAX_DAYS = 31;
 
 export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
   const db = getDb();
@@ -154,14 +201,43 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
     ) {
       throw forbidden();
     }
+    const parsed = adminDashboardQuery.safeParse(req.query);
+    if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? 'Parameter filter tidak valid.');
+    const q = parsed.data;
     const today = businessDate();
+    const range = normalizeRange(q, today);
     const todayDate = parseDateOnly(today);
+    const fromDate = parseDateOnly(range.from);
+    const toDate = parseDateOnly(range.to);
 
-    const snapshotCount = await db.workdaySnapshot.count({ where: { workDate: todayDate, isWorkingDay: true } });
-    let scheduled = snapshotCount;
-    if (snapshotCount === 0) {
-      // No snapshots yet today: resolve schedules instead of assuming all interns are scheduled.
-      const interns = await db.internProfile.findMany({ where: { status: 'ACTIVE' }, select: { id: true }, take: 500 });
+    // Filter scope organisasi: biro/divisi dari profil peserta.
+    const profileFilter: Prisma.InternProfileWhereInput = {
+      ...(q.bureauId ? { bureauId: q.bureauId } : {}),
+      ...(q.divisionId ? { divisionId: q.divisionId } : {}),
+    };
+
+    const dayWhere: Prisma.AttendanceDayWhereInput = {
+      workDate: { gte: fromDate, lte: toDate },
+      internProfile: profileFilter,
+    };
+    const leaveWhere: Prisma.LeaveRequestWhereInput = {
+      workDate: { gte: fromDate, lte: toDate },
+      internProfile: profileFilter,
+    };
+    const snapshotWhere: Prisma.WorkdaySnapshotWhereInput = {
+      workDate: { gte: fromDate, lte: toDate },
+      isWorkingDay: true,
+      internProfile: profileFilter,
+    };
+
+    let scheduled = await db.workdaySnapshot.count({ where: snapshotWhere });
+    if (scheduled === 0 && toDate >= todayDate) {
+      // Snapshot hari ini belum dibuat: hitung dari resolusi jadwal, bukan asumsi.
+      const interns = await db.internProfile.findMany({
+        where: { status: 'ACTIVE', ...profileFilter },
+        select: { id: true },
+        take: 500,
+      });
       const weekday = businessWeekday(new Date());
       let resolvedCount = 0;
       for (const intern of interns) {
@@ -172,19 +248,67 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const [checkedIn, late, needsReview, pendingLeaves, staleLeaves] = await Promise.all([
-      db.attendanceDay.count({
-        where: { workDate: todayDate, checkInEventId: { not: null } },
-      }),
-      db.attendanceDay.count({ where: { workDate: todayDate, dayStatus: 'LATE' } }),
-      db.attendanceDay.count({ where: { workDate: todayDate, dayStatus: 'NEEDS_REVIEW' } }),
-      db.leaveRequest.count({ where: { status: 'PENDING' } }),
-      db.leaveRequest.count({ where: { status: 'DEPARTED', workDate: { lt: todayDate } } }),
+      db.attendanceDay.count({ where: { ...dayWhere, checkInEventId: { not: null } } }),
+      db.attendanceDay.count({ where: { ...dayWhere, dayStatus: 'LATE' } }),
+      db.attendanceDay.count({ where: { ...dayWhere, dayStatus: 'NEEDS_REVIEW' } }),
+      db.leaveRequest.count({ where: { ...leaveWhere, status: 'PENDING' } }),
+      db.leaveRequest.count({ where: { ...leaveWhere, status: 'DEPARTED' } }),
     ]);
+
+    // Seri harian untuk grafik: maksimal 31 titik terakhir dalam rentang.
+    const seriesFrom = range.to > today ? today : range.to;
+    const seriesStart = addDays(seriesFrom, -(SERIES_MAX_DAYS - 1));
+    const effStart = seriesStart > range.from ? seriesStart : range.from;
+    const [dayRows, snapshotRows] = await Promise.all([
+      db.attendanceDay.findMany({
+        where: {
+          workDate: { gte: parseDateOnly(effStart), lte: toDate },
+          internProfile: profileFilter,
+        },
+        select: { workDate: true, dayStatus: true, checkInEventId: true },
+      }),
+      db.workdaySnapshot.findMany({
+        where: {
+          workDate: { gte: parseDateOnly(effStart), lte: toDate },
+          isWorkingDay: true,
+          internProfile: profileFilter,
+        },
+        select: { workDate: true },
+      }),
+    ]);
+    const dayByDate = new Map<string, { checkedIn: number; late: number; needsReview: number }>();
+    for (const row of dayRows) {
+      const key = row.workDate.toISOString().slice(0, 10);
+      const agg = dayByDate.get(key) ?? { checkedIn: 0, late: 0, needsReview: 0 };
+      if (row.checkInEventId !== null) agg.checkedIn += 1;
+      if (row.dayStatus === 'LATE') agg.late += 1;
+      if (row.dayStatus === 'NEEDS_REVIEW') agg.needsReview += 1;
+      dayByDate.set(key, agg);
+    }
+    const snapByDate = new Map<string, number>();
+    for (const row of snapshotRows) {
+      const key = row.workDate.toISOString().slice(0, 10);
+      snapByDate.set(key, (snapByDate.get(key) ?? 0) + 1);
+    }
+    const series: { date: string; scheduled: number; checkedIn: number; late: number; needsReview: number }[] = [];
+    let cursor = effStart;
+    while (cursor <= seriesFrom) {
+      series.push({
+        date: cursor,
+        scheduled: snapByDate.get(cursor) ?? 0,
+        checkedIn: dayByDate.get(cursor)?.checkedIn ?? 0,
+        late: dayByDate.get(cursor)?.late ?? 0,
+        needsReview: dayByDate.get(cursor)?.needsReview ?? 0,
+      });
+      cursor = addDays(cursor, 1);
+    }
 
     return ok(
       {
         today,
+        range,
         counts: { scheduled, checkedIn, late, needsReview, pendingLeaves, staleLeaves },
+        series,
       },
       req.id,
     );

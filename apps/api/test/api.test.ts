@@ -646,3 +646,32 @@ describe('account lifecycle', () => {
     expect(me.statusCode).toBe(401);
   });
 });
+
+describe('admin dashboard filters (Fase 1.1)', () => {
+  it('returns counts, range, and daily series with default = today', async () => {
+    const res = await get(app, '/api/v1/dashboard/admin', admin);
+    expect(res.statusCode).toBe(200);
+    const body = envelope(res).data;
+    expect(body.counts).toHaveProperty('checkedIn');
+    expect(Array.isArray(body.series)).toBe(true);
+    expect(body.range.from).toBe(body.range.to);
+    expect(body.series.length).toBeGreaterThan(0);
+  });
+
+  it('filters by organization scope: bureau without interns yields zero', async () => {
+    const bureaus = envelope(await get(app, '/api/v1/admin/organizations/bureaus', admin)).data;
+    const biroTek = bureaus.items.find((b: { code: string }) => b.code === 'BIO-TEK');
+    expect(biroTek).toBeTruthy();
+    const scoped = envelope(await get(app, `/api/v1/dashboard/admin?bureauId=${biroTek.id}`, admin)).data;
+    expect(scoped.counts.checkedIn).toBe(0);
+    const base = envelope(await get(app, '/api/v1/dashboard/admin', admin)).data;
+    expect(base.counts.checkedIn).toBeGreaterThan(0);
+  });
+
+  it('validates time filter format and inverted range on the backend', async () => {
+    const badFormat = await get(app, '/api/v1/dashboard/admin?date=22-11-2026', admin);
+    expect(badFormat.statusCode).toBe(400);
+    const inverted = await get(app, '/api/v1/dashboard/admin?from=2026-12-31&to=2026-01-01', admin);
+    expect(inverted.statusCode).toBe(400);
+  });
+});

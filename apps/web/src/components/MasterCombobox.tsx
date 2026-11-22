@@ -148,7 +148,7 @@ export function MasterCombobox({
         <button
           type="button"
           id={id}
-          className={`input flex min-h-touch w-full items-center justify-between text-left ${
+          className={`input flex min-h-touch w-full min-w-0 items-center justify-between text-left ${
             error ? 'border-red-400' : ''
           }`}
           aria-haspopup="listbox"
