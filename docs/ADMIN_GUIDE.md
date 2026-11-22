@@ -28,7 +28,9 @@ melalui Data Master.
    langsung dari DB (bukan hardcode).
 2. Isi baris pengguna baru. Aturan utama:
    - Tanggal format `YYYY-MM-DD`, contoh `2026-01-15`.
-   - No. HP format Indonesia `08xxxxxxxxxx` tanpa spasi/tanda hubung.
+   - No. HP: `08xxxxxxxxxx` atau kode negara apa pun (mis. `+6281234567890`),
+     tanpa spasi/tanda hubung. Kolom No. HP di template bertipe teks — Excel
+     tidak menghapus 0 di depan dan tidak menjadikan `+` formula.
    - `roleCode` wajib role yang sudah ada; username & nomor peserta unik.
 3. **Validate** → periksa laporan per baris (error ditampilkan per baris).
 4. **Confirm** → pengguna dibuat dengan `mustChangePassword`; mereka wajib

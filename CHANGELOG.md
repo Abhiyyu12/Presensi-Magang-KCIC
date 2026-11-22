@@ -4,6 +4,19 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: No. HP terima kode negara + (semua negara), kolom HP template bertipe teks
+
+### Diubah
+- **Akar masalah Excel**: kolom No. HP di template dulu berformat umum — Excel memperlakukan `081234567890` sebagai **angka** sehingga 0 di depan hilang (jadi `81234567890`), dan `+62…` dieksekusi sebagai formula. Sekarang **kolom No. HP (D) bertipe teks** (numFmtId 49, baris 2–201): Excel menyimpan persis apa yang diketik, 0 di depan dan tanda `+` tetap utuh. Ditambah validasi Excel `textLength` 8–16 karakter dengan petunjuk/error Bahasa Indonesia saat sel dipilih/diisi salah.
+- **Validasi No. HP diperlongir sesuai usulan user**: selain format Indonesia (`08xxxxxxxxxx` / `62xxxxxxxxxx` — bentuk tanpa `+` ini tetap diterima karena biasanya artefak sel angka Excel), kini **kode negara + apa pun diterima** (E.164, 7–15 digit setelah `+`, mis. `+6281234567890`, `+811234567890`). Regex baru `^(?:08\d{7,12}|62\d{8,13}|\+\d{7,15})$` dipakai **seragam** di profil (PATCH /profile), admin create/update user, dan import Excel — satu sumber di `phoneIdSchema`/`PHONE_PATTERN`, tidak di-hardcode dua kali. Pesan error diganti jadi: "No. HP tidak valid. Gunakan 08xxxxxxxxxx atau awali kode negara, mis. +6281234567890."
+- UI profil: hint kolom Telepon diganti "Isi 08xxxxxxxxxx atau kode negara, mis. +6281234567890."; regex mirror frontend mengikuti backend. Petunjuk template (sheet Petunjuk poin 6) + docs (ADMIN_GUIDE, USER_GUIDE, LAPORAN_AKHIR asumsi #6) ikut disesuaikan.
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **91/91** (+1 test baru: `+62…` dan `+81…` lolos validate, `81234567890` tanpa awalan ditolak dengan pesan jelas; PATCH /profile `+811234567890` = 200; template assert kolom D `textLength` + format teks). Web tsc+eslint bersih + test **48/48**.
+- Template hasil unduhan diperiksa XML-nya: `<dataValidation type="textLength" ... sqref="D10:D201">` dengan `<formula1>8</formula1><formula2>16</formula2>`; sel `D2`–`D201` memakai style `numFmtId="49"` (teks); validasi tanggal & dropdown DataMaster tidak berubah.
+- Playwright (peserta1, 390px): hint baru tampil; isi `+811234567890` → Simpan → tanpa error → **setelah reload nilai tetap `+811234567890`** (backend benar-benar menyimpan); lalu dikembalikan ke nilai asli `081234567804` dan diverifikasi di DB.
+- 10 sampah foto 1.2KiB run-test disapu dari MinIO.
+
 ## [2026-11-22] — UAT: kolom tanggal template import kini bertipe tanggal (validasi + format yyyy-mm-dd)
 
 ### Ditambahkan

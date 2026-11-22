@@ -9,6 +9,7 @@ import { writeAudit } from '../../common/audit.js';
 import { parseDateOnly } from '../../common/time.js';
 import { authorize, requireCtx } from '../../app/auth.js';
 import { hashPassword } from '../auth/password.js';
+import { PHONE_PATTERN } from '../users/profileRoutes.js';
 import type { AccessContext } from '../access/context.js';
 
 // Fase 1.5f: import pengguna massal via Excel (.xlsx).
@@ -152,7 +153,7 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
     '3. Kode Role, Biro, Divisi, Penempatan, dan Status Peserta memiliki dropdown dari data master terkini.',
     '4. Peserta magang (role INTERN) wajib mengisi Nomor Peserta, Biro, dan Tanggal Mulai.',
     '5. Jika Divisi diisi, kolom Biro juga wajib diisi dan divisi harus milik biro tersebut.',
-    '6. Kolom tanggal bertipe tanggal (tampil YYYY-MM-DD) dengan validasi rentang 2020-2035 — Excel menolak nilai salah. Format No. HP: 08xxxxxxxxxx tanpa spasi atau tanda hubung.',
+    '6. Kolom tanggal bertipe tanggal (tampil YYYY-MM-DD) dengan validasi rentang 2020-2035 — Excel menolak nilai salah. Kolom No. HP bertipe teks (Excel tidak menghapus 0 di depan): isi 08xxxxxxxxxx atau kode negara apa pun, mis. +6281234567890.',
     '7. Setiap pengguna baru mendapat password sementara yang tampil sekali pada laporan setelah import.',
     `8. Maksimal ${MAX_IMPORT_ROWS} baris per file, ukuran file maksimal 2 MB.`,
     '9. Contoh baris berikut hanya ilustrasi — jangan ikut mengimpornya.',
@@ -235,6 +236,27 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
         type: 'list', allowBlank: true, formulae: [`=DataMaster!$E$2:$E$${placements.length + 1}`],
       };
     }
+  }
+  // Kolom No. HP bertipe teks: bila format sel dibiarkan umum, Excel
+  // memperlakukan 08… sebagai angka (0 di depan hilang) dan mengeksekusi
+  // +62… sebagai formula. textLength 8-16 menutup 08xxxxxxxxxx maupun
+  // kode negara + 7-15 digit (E.164).
+  const PHONE_VALIDATION: DataValidation = {
+    type: 'textLength',
+    operator: 'between',
+    allowBlank: true,
+    formulae: ['8', '16'],
+    showErrorMessage: true,
+    errorTitle: 'No. HP tidak valid',
+    error: 'Isi 08xxxxxxxxxx atau awali kode negara, mis. +6281234567890.',
+    showInputMessage: true,
+    promptTitle: 'No. HP',
+    prompt: 'Isi 08xxxxxxxxxx atau +6281234567890.',
+  };
+  for (let r = 2; r <= dvLastRow; r += 1) {
+    const cell = sheet.getCell(`D${r}`);
+    cell.numFmt = '@';
+    cell.dataValidation = { ...PHONE_VALIDATION };
   }
   // Kolom tanggal bertipe tanggal: format tampilan yyyy-mm-dd + validasi rentang.
   // Excel/xlsx tidak punya kalender popup bawaan (hanya bisa via macro/VBA yang
@@ -420,8 +442,8 @@ async function validateImportRows(
         errors.push('Email sudah dipakai pengguna lain.');
       }
     }
-    if (row.phone && !/^(?:\+62|62|0)8\d{7,12}$/.test(row.phone)) {
-      errors.push('No. HP wajib format nomor Indonesia (mis. 081234567890).');
+    if (row.phone && !PHONE_PATTERN.test(row.phone)) {
+      errors.push('No. HP tidak valid. Gunakan 08xxxxxxxxxx atau awali kode negara, mis. +6281234567890.');
     }
 
     const role = roles.find((r) => r.code.toLowerCase() === row.roleCode.toLowerCase());

@@ -110,7 +110,7 @@ Izin hanya bisa diajukan **setelah absen masuk** pada hari itu.
   role, kontak, serta untuk peserta: nomor peserta, biro/divisi/penempatan,
   periode magang, jadwal kerja aktif (per hari), dan daftar pembimbing.
 - Yang bisa Anda ubah sendiri: **nama tampilan, email, telepon**. Email harus
-  unik, telepon format nomor Indonesia (mis. `081234567890`). Field lain hanya
+  unik, telepon `08xxxxxxxxxx` atau kode negara (mis. `+6281234567890`). Field lain hanya
   bisa diubah admin. Nama baru langsung tampil di header tanpa perlu reload.
 - Ganti kata sandi di bagian **Ubah kata sandi**.
 

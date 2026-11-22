@@ -8,10 +8,15 @@ import { conflict } from '../../common/errors.js';
 import { getActiveScheduleForProfile } from '../schedules/service.js';
 import { businessDate } from '../../common/time.js';
 
-// Nomor Indonesia: 08xx / 62-8xx / +62-8xx, total 9-14 digit setelah awalan 8.
+// Indonesia: 08xx (lokal) / 62-8xx (internasional tanpa +, artefak sel angka
+// Excel) — atau kode negara + apa pun (E.164, 7-15 digit setelah +).
+export const PHONE_PATTERN = /^(?:08\d{7,12}|62\d{8,13}|\+\d{7,15})$/;
 export const phoneIdSchema = z
   .string()
-  .regex(/^(?:\+62|62|0)8\d{7,12}$/, 'Nomor telepon wajib format nomor Indonesia (mis. 081234567890).');
+  .regex(
+    PHONE_PATTERN,
+    'Nomor telepon tidak valid. Gunakan 08xxxxxxxxxx atau awali kode negara, mis. +6281234567890.',
+  );
 
 // Self-service: hanya kontak yang boleh diubah. Field di luar whitelist DITOLAK
 // (strict), bukan diam-diam dibuang.

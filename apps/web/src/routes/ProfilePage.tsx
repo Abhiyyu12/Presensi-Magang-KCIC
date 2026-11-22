@@ -19,7 +19,10 @@ const contactSchema = z.object({
   email: z.string().email('Format email tidak valid.').or(z.literal('')).optional(),
   phone: z
     .string()
-    .regex(/^(?:\+62|62|0)8\d{7,12}$/, 'Nomor telepon wajib format nomor Indonesia (mis. 081234567890).')
+    .regex(
+      /^(?:08\d{7,12}|62\d{8,13}|\+\d{7,15})$/,
+      'Nomor telepon tidak valid. Gunakan 08xxxxxxxxxx atau awali kode negara, mis. +6281234567890.',
+    )
     .or(z.literal(''))
     .optional(),
 });
@@ -269,7 +272,7 @@ export default function ProfilePage() {
           </FormField>
           <FormField
             label="Telepon"
-            hint="Format nomor Indonesia, mis. 081234567890."
+            hint="Isi 08xxxxxxxxxx atau kode negara, mis. +6281234567890."
             error={contactForm.formState.errors.phone?.message}
           >
             {(props) => (

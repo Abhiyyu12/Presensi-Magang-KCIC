@@ -94,7 +94,7 @@ Perubahan data yang dilakukan selama uji (tanpa menghapus data pengguna):
 3. **Menu Penugasan dihapus dari UI Data Master**; pembuatan peserta digabung ke tab Pengguna (user + profil sekaligus). Endpoint `/admin/assignments` tetap ada di API dan dipakai oleh fitur profil/test.
 4. **Template role disimpan di backend** (`permission-taxonomy.ts`) sehingga pohon permission tidak di-hardcode di frontend.
 5. **Pagination server-side default 15 baris** (konsisten kontrak API: default 15, maks 100); UI menawarkan 10/25/50/100.
-6. **Telepon wajib format Indonesia** `^(?:\+62|62|0)8\d{7,12}$` — seragam di profil, admin user, import Excel.
+6. **Telepon** `^(?:08\d{7,12}|62\d{8,13}|\+\d{7,15})$` — Indonesia `08xx`/`62-8xx` atau kode negara `+` apa pun (E.164, 7-15 digit); seragam di profil, admin user, import Excel. Kolom No. HP template bertipe teks agar Excel tidak menghapus 0 di depan.
 7. **Grafik dashboard SVG buatan sendiri** — tanpa library chart baru (aturan dependency).
 8. **Import Excel dua langkah (validate → confirm)** agar admin melihat error per baris sebelum data dibuat; semua user hasil import `mustChangePassword`.
 9. **Login tidak menolak Origin asing.** Pemeriksaan Origin+CSRF dijalankan pada semua mutasi ber-sesi (`apps/api/src/app/auth.ts:18`); `POST /auth/login` memang dikecualikan karena belum ada sesi/cookie. Probe ulang membuktikan login Origin asing tetap 200 — ini *login-CSRF*, risiko rendah untuk aplikasi lokal dummy; sengaja tidak diubah di ujung arc agar tidak merusak alur login yang sudah terbukti, dicatat sebagai saran lanjutan (§8). Bukti A4 "Origin asing → 403" tetap valid untuk endpoint ber-sesi.

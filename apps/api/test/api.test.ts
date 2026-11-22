@@ -928,6 +928,11 @@ describe('Fase 1.5f: import pengguna via Excel', () => {
       expect(dv?.operator).toBe('between');
       expect(pengguna.getCell(cell).numFmt).toBe('yyyy-mm-dd');
     }
+    // Kolom No. HP bertipe teks: Excel tidak menghapus 0 di depan, + tetap literal.
+    const dvPhone = pengguna.getCell('D2').dataValidation;
+    expect(dvPhone?.type, 'D2 validasi panjang teks').toBe('textLength');
+    expect(dvPhone?.operator).toBe('between');
+    expect(pengguna.getCell('D2').numFmt).toBe('@');
     const db = getDb();
     bureauName = (await db.bureau.findFirstOrThrow({ where: { code: 'BIO-OPS' } })).name;
   });
@@ -976,6 +981,29 @@ describe('Fase 1.5f: import pengguna via Excel', () => {
     expect(data.totalRows).toBe(1);
     expect(data.errorCount).toBe(0);
     expect(data.rows[0].errors).toEqual([]);
+  });
+
+  it('no. HP kode negara + diterima (semua negara), 0 yang dimakan Excel ditolak dengan pesan jelas', async () => {
+    const buf = await buildImportWorkbook([
+      [`uji.import.hp1.${suffix}`, 'Impor HP Plus 62 Uji', '', '+6281234567890', 'SUPERVISOR', '', '', '', '', '', '', ''],
+      [`uji.import.hp2.${suffix}`, 'Impor HP Plus 81 Uji', '', '+811234567890', 'SUPERVISOR', '', '', '', '', '', '', ''],
+      [`uji.import.hp3.${suffix}`, 'Impor HP Tanpa Nol Uji', '', '81234567890', 'SUPERVISOR', '', '', '', '', '', '', ''],
+    ]);
+    const mp = buildMultipart({}, { field: 'file', filename: 'import.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', content: buf });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/users/import/validate',
+      headers: authHeaders(admin, { 'content-type': mp.contentType }),
+      payload: mp.body,
+    });
+    expect(res.statusCode).toBe(200);
+    const data = envelope(res).data;
+    expect(data.totalRows).toBe(3);
+    expect(data.errorCount).toBe(1);
+    expect(data.rows[0].errors).toEqual([]);
+    expect(data.rows[1].errors).toEqual([]);
+    const bad = data.rows.find((r: { username: string }) => r.username === `uji.import.hp3.${suffix}`);
+    expect(bad.errors.join(' ')).toContain('No. HP tidak valid');
   });
 
   it('confirm membuat pengguna + profil + role, password sementara bekerja', async () => {
@@ -1249,6 +1277,15 @@ describe('Fase 3: profil lengkap + edit whitelist kontak', () => {
     expect(goodPhone.statusCode).toBe(200);
     originalPhone = envelope(goodPhone).data.user.phone;
     expect(originalPhone).toBe('081999999999');
+
+    const intlPhone = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/profile',
+      headers: authHeaders(admin),
+      payload: { phone: '+811234567890' },
+    });
+    expect(intlPhone.statusCode).toBe(200);
+    expect(envelope(intlPhone).data.user.phone).toBe('+811234567890');
 
     const restore = await app.inject({
       method: 'PATCH',
