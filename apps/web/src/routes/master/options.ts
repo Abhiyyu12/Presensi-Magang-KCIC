@@ -43,13 +43,30 @@ export async function fetchPlacementOptions(search: string): Promise<ComboboxOpt
   return rows.map((row) => toOption(row, 'id', 'name', 'code'));
 }
 
+function profileDateMeta(row: Row): Record<string, unknown> {
+  const start = asString(row['startDate']);
+  const end = asString(row['endDate']);
+  return {
+    ...(start ? { profileStart: start.slice(0, 10) } : {}),
+    ...(end ? { profileEnd: end.slice(0, 10) } : {}),
+  };
+}
+
 export function fetchUserOptions(roleCode?: string) {
   return async (search: string): Promise<ComboboxOption[]> => {
     const rows = await fetchPage('/admin/users', {
       ...(search ? { search } : {}),
       ...(roleCode ? { roleCode } : {}),
     });
-    return rows.map((row) => ({ value: asString(row['id']), label: asString(row['displayName']), description: asString(row['username']) }));
+    return rows.map((row) => {
+      const profile = isRecord(row['internProfile']) ? row['internProfile'] : undefined;
+      return {
+        value: asString(row['id']),
+        label: asString(row['displayName']),
+        description: asString(row['username']),
+        ...(profile ? { meta: profileDateMeta(profile) } : {}),
+      };
+    });
   };
 }
 
@@ -61,6 +78,7 @@ export async function fetchInternProfileOptions(search: string): Promise<Combobo
       value: asString(row['id']),
       label: asString(user?.['displayName']),
       description: asString(row['participantNumber']) || asString(user?.['username']),
+      meta: profileDateMeta(row),
     };
   });
 }

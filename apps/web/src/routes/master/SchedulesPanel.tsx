@@ -282,7 +282,19 @@ export function SchedulesPanel() {
                 id="sched-scope-id"
                 label={`Objek scope (${SCOPE_LABELS[form.scopeType] ?? form.scopeType})`}
                 value={form.scopeId}
-                onChange={(value) => setForm((f) => ({ ...f, scopeId: value }))}
+                onChange={(value, _label, meta) =>
+                  setForm((f) => {
+                    const next = { ...f, scopeId: value };
+                    // Peserta individu: isi otomatis periode berlaku dari tanggal magang profil yang dipilih (bila ada).
+                    if (f.scopeType === 'INDIVIDUAL' && meta) {
+                      const start = typeof meta['profileStart'] === 'string' ? meta['profileStart'].slice(0, 10) : '';
+                      const end = typeof meta['profileEnd'] === 'string' ? meta['profileEnd'].slice(0, 10) : '';
+                      if (start) next.validFrom = start;
+                      if (end) next.validTo = end;
+                    }
+                    return next;
+                  })
+                }
                 fetchOptions={(search) => fetchScheduleScopeOptions(search, form.scopeType)}
                 serverSearch
                 queryExtra={form.scopeType}

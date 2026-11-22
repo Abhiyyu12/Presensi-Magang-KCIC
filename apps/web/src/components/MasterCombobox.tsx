@@ -6,6 +6,8 @@ export interface ComboboxOption {
   value: string;
   label: string;
   description?: string;
+  /** Data tambahan dari baris sumber (mis. tanggal periode magang) untuk autofill form. */
+  meta?: Record<string, unknown>;
 }
 
 interface MasterComboboxProps {
@@ -14,7 +16,7 @@ interface MasterComboboxProps {
   value: string;
   /** Teks tampilan untuk nilai terpilih (mis. nama relasi dari baris yang diedit). */
   valueLabel?: string;
-  onChange: (value: string, label: string) => void;
+  onChange: (value: string, label: string, meta?: Record<string, unknown>) => void;
   fetchOptions: (search: string) => Promise<ComboboxOption[]>;
   /** true: pencarian dikirim ke server dengan debounce; false: filter di sisi klien. */
   serverSearch?: boolean;
@@ -110,7 +112,7 @@ export function MasterCombobox({
   }, [activeIndex, open, options]);
 
   const pick = (option: ComboboxOption) => {
-    onChange(option.value, option.label);
+    onChange(option.value, option.label, option.meta);
     setOpen(false);
   };
 

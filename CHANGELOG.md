@@ -4,6 +4,19 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — Autofill tanggal berlaku di Cakupan & Jadwal dari periode magang pengguna
+
+### Ditambah
+- **Tanggal terisi otomatis dari data pengguna yang sudah ada** (permintaan user: "jika ada data yang bersangkutan dengan userid itu dia bisa keisi otomatis, jika belum ada datanya baru bisa diisi"):
+  - **Data Master > Cakupan**: memilih **Pengguna** yang punya profil magang otomatis mengisi **Berlaku dari** (tanggal mulai magang) dan **Berlaku sampai** (tanggal selesai magang, bila ada). Tanggal tetap bisa diubah manual; pengguna tanpa profil magang tidak mengisi apa pun.
+  - **Data Master > Jadwal** cakupan **Peserta (individu)**: memilih peserta otomatis mengisi Berlaku dari/sampai dari periode magang profil peserta tersebut (aturan yang sama: bisa diubah manual, peserta tanpa tanggal tidak mengisi).
+- Mekanisme: opsi combobox kini membawa data tambahan (`meta`) dari baris sumber (tanggal `startDate`/`endDate` profil); form memakainya saat opsi dipilih. Tidak ada perubahan API/backend — data sudah tersedia di endpoint daftar pengguna & profil peserta.
+- Hint baru di field Pengguna (Cakupan): "Tanggal berlaku terisi otomatis dari periode magang pengguna yang dipilih (bila ada) dan tetap bisa diubah."
+
+### Pembuktian (bukan klaim)
+- Gate: web tsc+eslint bersih + test **48/48**.
+- Playwright live **9/9 OK** (login dev-admin; log `uat_autofill.py`, screenshot `autofill_scope_*.png` / `autofill_jadwal_*.png`): peserta1 (magang 2026-10-23, tanpa akhir) → Berlaku dari terisi, Berlaku sampai tetap kosong; oioi (2026-11-22 s.d. 2026-12-22) → keduanya terisi lalu Berlaku dari berhasil diubah manual; dev-admin (tanpa profil) → tanggal tetap kosong; jadwal individu peserta1 → Berlaku dari terisi 2026-10-23. Tidak ada data uji yang tersimpan (semua dialog ditutup tanpa Simpan).
+
 ## [2026-11-22] — Istilah teknis di Data Master jadi Bahasa Indonesia + deskripsi bantuan tiap isian
 
 ### Diubah

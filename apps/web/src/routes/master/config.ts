@@ -15,6 +15,8 @@ export interface ComboboxFieldConfig {
   hideWhen?: { field: string; equals: string[] };
   /** Label awal untuk mode edit (mis. nama relasi dari baris). */
   labelFromRow?: (row: Record<string, unknown>) => string;
+  /** Saat opsi terpilih membawa meta { profileStart, profileEnd }, isi otomatis dua field tanggal ini. */
+  autofillDates?: { startField: string; endField: string };
 }
 
 export interface FieldConfig {
@@ -193,7 +195,13 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
         type: 'combobox',
         required: true,
         createOnly: true,
-        combobox: { fetchOptions: fetchUserOptions(), serverSearch: true, labelFromRow: (row) => nestedName(row, 'user') },
+        hint: 'Tanggal berlaku terisi otomatis dari periode magang pengguna yang dipilih (bila ada) dan tetap bisa diubah.',
+        combobox: {
+          fetchOptions: fetchUserOptions(),
+          serverSearch: true,
+          labelFromRow: (row) => nestedName(row, 'user'),
+          autofillDates: { startField: 'validFrom', endField: 'validTo' },
+        },
       },
       {
         name: 'scopeType',

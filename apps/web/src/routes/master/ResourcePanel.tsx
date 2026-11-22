@@ -82,9 +82,19 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
   }, [dialogOpen, editing, config]);
 
   // Mengganti nilai field dependensi (mis. Direktorat) mengosongkan field turunannya (Biro).
-  const handleComboboxChange = (field: FieldConfig, value: string, label: string) => {
+  const handleComboboxChange = (field: FieldConfig, value: string, label: string, meta?: Record<string, unknown>) => {
     setValues((v) => ({ ...v, [field.name]: value }));
     setLabels((l) => ({ ...l, [field.name]: label }));
+    const autofill = field.combobox?.autofillDates;
+    if (autofill) {
+      const start = typeof meta?.['profileStart'] === 'string' ? meta['profileStart'] : '';
+      const end = typeof meta?.['profileEnd'] === 'string' ? meta['profileEnd'] : '';
+      setValues((v) => ({
+        ...v,
+        [autofill.startField]: start.slice(0, 10),
+        ...(end ? { [autofill.endField]: end.slice(0, 10) } : {}),
+      }));
+    }
     for (const dependent of config.fields) {
       if (dependent.combobox?.dependsOn !== field.name) continue;
       setValues((v) => (v[dependent.name] ? { ...v, [dependent.name]: '' } : v));
@@ -302,7 +312,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
                       label={field.label}
                       value={values[field.name] ?? ''}
                       valueLabel={labels[field.name] || undefined}
-                      onChange={(value, label) => handleComboboxChange(field, value, label)}
+                      onChange={(value, label, meta) => handleComboboxChange(field, value, label, meta)}
                       fetchOptions={(search) => combo.fetchOptions(search, depValue)}
                       serverSearch={combo.serverSearch ?? true}
                       queryExtra={combo.dependsOn ? (depValue === '' ? null : depValue) : undefined}
