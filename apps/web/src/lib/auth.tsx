@@ -18,6 +18,7 @@ interface AuthContextValue {
   permissions: Set<string>;
   roles: Set<string>;
   loading: boolean;
+  bootError: string | null;
   has: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   login: (username: string, password: string) => Promise<AuthUser>;
@@ -35,20 +36,27 @@ interface LoginResponse {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bootError, setBootError] = useState<string | null>(null);
 
   const fetchMe = useCallback(async (): Promise<AuthUser | null> => {
     try {
       // /auth/me returns { user: ... } inside the envelope.
       const data = await api<{ user: AuthUser }>('/auth/me');
       setUser(data.user ?? null);
+      setBootError(null);
       return data.user ?? null;
     } catch (error) {
+      setUser(null);
+      // Only a real 401 means "not signed in". Network/server failures must
+      // surface an error state, not silently redirect to the login page.
       if (error instanceof ApiError && error.status === 401) {
-        setUser(null);
+        setBootError(null);
       } else {
-        // Silent fail: treat network/server errors as logged out for the shell,
-        // individual screens surface their own error states.
-        setUser(null);
+        setBootError(
+          error instanceof ApiError
+            ? error.message
+            : 'Tidak dapat menghubungi server. Periksa koneksi lalu coba lagi.',
+        );
       }
       return null;
     }
@@ -116,8 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasRole = useCallback((role: string) => roles.has(role), [roles]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, permissions, roles, loading, has, hasRole, login, logout, refresh }),
-    [user, permissions, roles, loading, has, hasRole, login, logout, refresh],
+    () => ({ user, permissions, roles, loading, bootError, has, hasRole, login, logout, refresh }),
+    [user, permissions, roles, loading, bootError, has, hasRole, login, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

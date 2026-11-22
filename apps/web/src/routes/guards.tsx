@@ -2,13 +2,17 @@ import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { LoadingState } from '../components/LoadingState';
+import { ErrorState } from '../components/ErrorState';
 import { PermissionDenied } from '../components/PermissionDenied';
 
 /** Redirects unauthenticated users to /login, preserving the intended path. */
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, bootError, refresh } = useAuth();
   const location = useLocation();
   if (loading) return <LoadingState label="Memuat sesi…" />;
+  if (bootError) {
+    return <ErrorState message={bootError} onRetry={() => void refresh()} />;
+  }
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <>{children}</>;
 }

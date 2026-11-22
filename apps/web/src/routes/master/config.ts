@@ -1,5 +1,6 @@
 import { z, type ZodTypeAny } from 'zod';
 import { ApiError } from '../../lib/api';
+import { asString, isRecord } from '../../lib/types';
 
 export interface FieldConfig {
   name: string;
@@ -24,11 +25,9 @@ export interface ResourceConfig {
   path: string;
   columns: ColumnConfig[];
   fields: FieldConfig[];
-  /** Whether rows support an isActive toggle via PATCH. */
-  hasActiveToggle?: boolean;
-  /** Row field used as display name for select references. */
-  nameLabel?: string;
-  /** Map an API row onto form field values (e.g. JSON columns). */
+  /** Whether rows support a status ACTIVE/INACTIVE toggle via PATCH. */
+  hasStatusToggle?: boolean;
+  /** Map an API row onto form field values (e.g. JSON columns, ISO dates). */
   toForm?: (row: Record<string, unknown>) => Record<string, unknown>;
   /** Map the parsed form payload onto the API body; may throw ApiError. */
   toPayload?: (payload: Record<string, unknown>, mode: 'create' | 'edit') => Record<string, unknown>;
@@ -57,54 +56,82 @@ export function buildSchema(fields: FieldConfig[], mode: 'create' | 'edit'): z.Z
   return z.object(shape);
 }
 
+type Row = Record<string, unknown>;
+
+const STATUS_OPTIONS = [
+  { value: 'ACTIVE', label: 'Aktif' },
+  { value: 'INACTIVE', label: 'Nonaktif' },
+];
+
+const statusText = (row: Row): string => (row['status'] === 'INACTIVE' ? 'Nonaktif' : 'Aktif');
+
+const nestedName = (row: Row, key: string): string => {
+  const value = row[key];
+  return isRecord(value) ? asString(value['name'] ?? value['displayName']) : '';
+};
+
+const datePart = (value: unknown): string => (typeof value === 'string' ? value.slice(0, 10) : '');
+
+/** API expects ISO-8601 datetime for these fields; the form yields YYYY-MM-DD. */
+function withIsoDates(payload: Row, keys: string[]): Row {
+  const next = { ...payload };
+  for (const key of keys) {
+    const raw = next[key];
+    if (typeof raw === 'string' && raw !== '') next[key] = new Date(raw).toISOString();
+  }
+  return next;
+}
+
 export const MASTER_RESOURCES: ResourceConfig[] = [
   {
     key: 'bureaus',
     label: 'Biro',
     path: '/admin/organizations/bureaus',
-    hasActiveToggle: true,
+    hasStatusToggle: true,
     columns: [
       { header: 'Nama', field: 'name' },
       { header: 'Kode', field: 'code' },
-      { header: 'Status', render: (row) => (row['isActive'] === false ? 'Nonaktif' : 'Aktif') },
+      { header: 'Status', render: statusText },
     ],
     fields: [
       { name: 'name', label: 'Nama biro', type: 'text', required: true },
-      { name: 'code', label: 'Kode', type: 'text' },
-      { name: 'isActive', label: 'Aktif (true/false)', type: 'select', options: [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }] },
+      { name: 'code', label: 'Kode', type: 'text', required: true },
+      { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS },
     ],
   },
   {
     key: 'divisions',
     label: 'Divisi',
     path: '/admin/organizations/divisions',
-    hasActiveToggle: true,
+    hasStatusToggle: true,
     columns: [
       { header: 'Nama', field: 'name' },
-      { header: 'Biro', field: 'bureauName' },
-      { header: 'Status', render: (row) => (row['isActive'] === false ? 'Nonaktif' : 'Aktif') },
+      { header: 'Kode', field: 'code' },
+      { header: 'Biro', render: (row) => nestedName(row, 'bureau') },
+      { header: 'Status', render: statusText },
     ],
     fields: [
       { name: 'name', label: 'Nama divisi', type: 'text', required: true },
-      { name: 'bureauId', label: 'ID Biro', type: 'text' },
-      { name: 'isActive', label: 'Aktif (true/false)', type: 'select', options: [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }] },
+      { name: 'code', label: 'Kode', type: 'text', required: true },
+      { name: 'bureauId', label: 'ID Biro', type: 'text', required: true },
+      { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS },
     ],
   },
   {
     key: 'placements',
     label: 'Penempatan',
     path: '/admin/placements',
+    hasStatusToggle: true,
     columns: [
       { header: 'Nama', field: 'name' },
-      { header: 'Divisi', field: 'divisionName' },
-      { header: 'Berlaku dari', field: 'validFrom' },
-      { header: 'Berlaku sampai', field: 'validTo' },
+      { header: 'Kode', field: 'code' },
+      { header: 'Status', render: statusText },
     ],
     fields: [
       { name: 'name', label: 'Nama penempatan', type: 'text', required: true },
-      { name: 'divisionId', label: 'ID Divisi', type: 'text' },
-      { name: 'validFrom', label: 'Berlaku dari', type: 'date', required: true },
-      { name: 'validTo', label: 'Berlaku sampai', type: 'date' },
+      { name: 'code', label: 'Kode', type: 'text', required: true },
+      { name: 'description', label: 'Keterangan', type: 'textarea' },
+      { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS },
     ],
   },
   {
@@ -112,80 +139,143 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
     label: 'Peserta',
     path: '/admin/intern-profiles',
     columns: [
-      { header: 'Nama', field: 'fullName' },
+      { header: 'Nama', render: (row) => nestedName(row, 'user') },
       { header: 'Nomor peserta', field: 'participantNumber' },
-      { header: 'Biro', field: 'bureauName' },
-      { header: 'Divisi', field: 'divisionName' },
+      { header: 'Biro', render: (row) => nestedName(row, 'bureau') },
+      { header: 'Divisi', render: (row) => nestedName(row, 'division') },
     ],
     fields: [
-      { name: 'fullName', label: 'Nama lengkap', type: 'text', required: true },
+      { name: 'userId', label: 'ID Pengguna (akun peserta)', type: 'text', required: true, createOnly: true },
       { name: 'participantNumber', label: 'Nomor peserta', type: 'text', required: true },
-      { name: 'bureauId', label: 'ID Biro', type: 'text' },
+      { name: 'bureauId', label: 'ID Biro', type: 'text', required: true },
       { name: 'divisionId', label: 'ID Divisi', type: 'text' },
-      { name: 'startDate', label: 'Tanggal mulai magang', type: 'date' },
+      { name: 'placementId', label: 'ID Penempatan', type: 'text' },
+      { name: 'startDate', label: 'Tanggal mulai magang', type: 'date', required: true },
       { name: 'endDate', label: 'Tanggal selesai magang', type: 'date' },
+      {
+        name: 'status',
+        label: 'Status magang',
+        type: 'select',
+        options: [
+          { value: 'ACTIVE', label: 'Aktif' },
+          { value: 'COMPLETED', label: 'Selesai' },
+          { value: 'WITHDRAWN', label: 'Mengundurkan diri' },
+        ],
+      },
     ],
+    toForm: (row) => ({ ...row, startDate: datePart(row['startDate']), endDate: datePart(row['endDate']) }),
   },
   {
     key: 'assignments',
     label: 'Penugasan',
     path: '/admin/assignments',
     columns: [
-      { header: 'Jenis relasi', field: 'assignmentType' },
-      { header: 'Pengguna', field: 'userName' },
-      { header: 'Target', field: 'targetName' },
-      { header: 'Berlaku dari', field: 'validFrom' },
+      { header: 'Pembimbing', render: (row) => nestedName(row, 'supervisor') },
+      {
+        header: 'Peserta',
+        render: (row) => {
+          const profile = row['internProfile'];
+          return isRecord(profile)
+            ? nestedName(profile, 'user') || asString(profile['participantNumber'])
+            : '';
+        },
+      },
+      { header: 'Status', field: 'status' },
+      { header: 'Berlaku dari', render: (row) => datePart(row['validFrom']) },
     ],
     fields: [
-      { name: 'assignmentType', label: 'Jenis (mis. SUPERVISOR_INTERN)', type: 'text', required: true },
-      { name: 'userId', label: 'ID Pengguna', type: 'text', required: true },
-      { name: 'targetType', label: 'Tipe target (mis. INTERN_PROFILE)', type: 'text' },
-      { name: 'targetId', label: 'ID Target', type: 'text' },
-      { name: 'validFrom', label: 'Berlaku dari', type: 'date', required: true },
+      { name: 'supervisorUserId', label: 'ID Pengguna pembimbing', type: 'text', required: true, createOnly: true },
+      { name: 'internProfileId', label: 'ID Profil peserta', type: 'text', required: true, createOnly: true },
+      { name: 'validFrom', label: 'Berlaku dari', type: 'date' },
       { name: 'validTo', label: 'Berlaku sampai', type: 'date' },
+      {
+        name: 'status',
+        label: 'Status',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'ACTIVE', label: 'Aktif' },
+          { value: 'ENDED', label: 'Berakhir' },
+        ],
+      },
     ],
+    toForm: (row) => ({ ...row, validFrom: datePart(row['validFrom']), validTo: datePart(row['validTo']) }),
+    toPayload: (payload) => withIsoDates(payload, ['validFrom', 'validTo']),
   },
   {
     key: 'scopes',
     label: 'Cakupan (Scope)',
     path: '/admin/scopes',
     columns: [
-      { header: 'Nama', field: 'name' },
+      { header: 'Pengguna', render: (row) => nestedName(row, 'user') },
       { header: 'Tipe', field: 'scopeType' },
+      { header: 'Berlaku dari', render: (row) => datePart(row['validFrom']) },
+      { header: 'Berlaku sampai', render: (row) => (row['validTo'] ? datePart(row['validTo']) : '-') },
     ],
     fields: [
-      { name: 'name', label: 'Nama scope', type: 'text', required: true },
-      { name: 'scopeType', label: 'Tipe (mis. BUREAU/DIVISION)', type: 'text', required: true },
-      { name: 'scopeId', label: 'ID objek scope', type: 'text' },
+      { name: 'userId', label: 'ID Pengguna', type: 'text', required: true, createOnly: true },
+      {
+        name: 'scopeType',
+        label: 'Tipe scope',
+        type: 'select',
+        required: true,
+        createOnly: true,
+        options: [
+          { value: 'GLOBAL', label: 'GLOBAL' },
+          { value: 'BUREAU', label: 'BUREAU' },
+          { value: 'DIVISION', label: 'DIVISION' },
+        ],
+      },
+      { name: 'scopeId', label: 'ID objek scope (biro/divisi)', type: 'text', createOnly: true },
+      { name: 'validFrom', label: 'Berlaku dari', type: 'date' },
+      { name: 'validTo', label: 'Berlaku sampai', type: 'date' },
     ],
+    toForm: (row) => ({ ...row, validFrom: datePart(row['validFrom']), validTo: datePart(row['validTo']) }),
+    toPayload: (payload) => withIsoDates(payload, ['validFrom', 'validTo']),
   },
   {
     key: 'calendar',
     label: 'Kalender',
     path: '/admin/calendar',
     columns: [
-      { header: 'Tanggal', field: 'date' },
+      { header: 'Tanggal', render: (row) => datePart(row['calendarDate']) },
       { header: 'Jenis', field: 'dayType' },
       { header: 'Keterangan', field: 'name' },
+      { header: 'Status', render: statusText },
     ],
     fields: [
-      { name: 'date', label: 'Tanggal', type: 'date', required: true },
-      { name: 'dayType', label: 'Jenis hari (mis. HOLIDAY/WORKDAY)', type: 'text', required: true },
+      { name: 'calendarDate', label: 'Tanggal', type: 'date', required: true, createOnly: true },
+      {
+        name: 'dayType',
+        label: 'Jenis hari',
+        type: 'select',
+        required: true,
+        options: [
+          { value: 'NORMAL', label: 'Normal' },
+          { value: 'HOLIDAY', label: 'Libur' },
+          { value: 'WORKING_EXCEPTION', label: 'Masuk khusus (pengecualian)' },
+        ],
+      },
       { name: 'name', label: 'Keterangan', type: 'text' },
+      { name: 'source', label: 'Sumber', type: 'text' },
+      { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS },
     ],
   },
   {
     key: 'leave-categories',
     label: 'Kategori Izin',
     path: '/admin/leave-categories',
-    hasActiveToggle: true,
+    hasStatusToggle: true,
     columns: [
       { header: 'Nama', field: 'name' },
-      { header: 'Status', render: (row) => (row['isActive'] === false ? 'Nonaktif' : 'Aktif') },
+      { header: 'Kode', field: 'code' },
+      { header: 'Status', render: statusText },
     ],
     fields: [
       { name: 'name', label: 'Nama kategori', type: 'text', required: true },
-      { name: 'isActive', label: 'Aktif (true/false)', type: 'select', options: [{ value: 'true', label: 'Aktif' }, { value: 'false', label: 'Nonaktif' }] },
+      { name: 'code', label: 'Kode', type: 'text', required: true },
+      { name: 'sortOrder', label: 'Urutan tampil', type: 'number' },
+      { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS },
     ],
   },
   {

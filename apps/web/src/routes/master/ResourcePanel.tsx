@@ -37,8 +37,6 @@ function parsePayload(
     if (raw === '' && !field.required) continue;
     if (field.type === 'number') {
       payload[field.name] = Number(raw);
-    } else if (field.name === 'isActive' || raw === 'true' || raw === 'false') {
-      payload[field.name] = raw === 'true' ? true : raw === 'false' ? false : raw;
     } else {
       payload[field.name] = raw;
     }
@@ -118,7 +116,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
     mutationFn: (row: Row) =>
       api<Row>(`${config.path}/${asString(row['id'])}`, {
         method: 'PATCH',
-        body: { isActive: row['isActive'] === false },
+        body: { status: row['status'] === 'INACTIVE' ? 'ACTIVE' : 'INACTIVE' },
       }),
     onSuccess: () => {
       setNotice(`Status ${config.label.toLowerCase()} diperbarui.`);
@@ -150,7 +148,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
           >
             Ubah
           </button>
-          {config.hasActiveToggle ? (
+          {config.hasStatusToggle ? (
             <button
               type="button"
               className="min-h-touch rounded-lg border border-amber-200 px-3 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-50"
@@ -160,7 +158,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
                 toggleMutation.mutate(row);
               }}
             >
-              {row['isActive'] === false ? 'Aktifkan' : 'Nonaktifkan'}
+              {row['status'] === 'INACTIVE' ? 'Aktifkan' : 'Nonaktifkan'}
             </button>
           ) : null}
         </span>

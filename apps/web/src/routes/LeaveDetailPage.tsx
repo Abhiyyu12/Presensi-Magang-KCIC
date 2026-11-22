@@ -141,9 +141,9 @@ export default function LeaveDetailPage() {
             {formatWib(leave.estimatedReturnAt)}
           </p>
         ) : null}
-        {leave.approvalNote ? (
+        {leave.decisionNote ? (
           <p>
-            <span className="text-slate-500">Catatan approval:</span> {leave.approvalNote}
+            <span className="text-slate-500">Catatan keputusan:</span> {leave.decisionNote}
           </p>
         ) : null}
         {status === 'PENDING' ? (

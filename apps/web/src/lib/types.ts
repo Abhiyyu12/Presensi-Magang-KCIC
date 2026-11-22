@@ -111,7 +111,7 @@ export interface Leave {
   bureau?: string;
   division?: string;
   createdAt?: string;
-  approvalNote?: string | null;
+  decisionNote?: string | null;
   events?: LeaveEvent[];
 }
 

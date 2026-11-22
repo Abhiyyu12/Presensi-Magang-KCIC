@@ -73,6 +73,7 @@ export async function ensureCsrfToken(): Promise<string | null> {
     csrfRequest = fetch(`${API_BASE}/auth/csrf`, {
       method: 'GET',
       credentials: 'include',
+      signal: AbortSignal.timeout(10_000),
     })
       .then(async (res) => {
         if (!res.ok) return null;
@@ -103,6 +104,8 @@ export interface ApiOptions {
   /** Optional query parameters (undefined values are skipped). */
   query?: Record<string, string | number | boolean | undefined>;
   signal?: AbortSignal;
+  /** Override the default request deadline (15s reads, 60s mutations). */
+  timeoutMs?: number;
 }
 
 export function buildQuery(query?: ApiOptions['query']): string {
@@ -164,23 +167,38 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
   }
 
   let res: Response;
+  // Without a deadline a black-holed backend (e.g. stopped container behind a
+  // proxy with a cached upstream IP) leaves the UI stuck on loading forever.
+  const timeoutMs = options.timeoutMs ?? (isMutation ? 60_000 : 15_000);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const callerSignal = options.signal;
+  const onCallerAbort = () => controller.abort();
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort();
+    else callerSignal.addEventListener('abort', onCallerAbort, { once: true });
+  }
   try {
     res = await fetch(`${API_BASE}${path}${buildQuery(options.query)}`, {
       method,
       headers,
       body,
       credentials: 'include',
-      signal: options.signal,
+      signal: controller.signal,
     });
   } catch (networkError) {
-    if (networkError instanceof DOMException && networkError.name === 'AbortError') {
-      throw networkError;
+    if (callerSignal?.aborted) throw networkError;
+    if (controller.signal.aborted) {
+      throw new ApiError('NETWORK_ERROR', 'Server tidak merespons dalam batas waktu. Coba lagi.', 0);
     }
     throw new ApiError(
       'NETWORK_ERROR',
       'Tidak dapat menghubungi server. Periksa koneksi internet Anda, lalu coba lagi.',
       0,
     );
+  } finally {
+    clearTimeout(timer);
+    callerSignal?.removeEventListener('abort', onCallerAbort);
   }
 
   if (res.status === 401) {
