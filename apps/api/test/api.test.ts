@@ -113,7 +113,7 @@ describe('authentication and CSRF', () => {
     expect(res.statusCode).toBe(409);
     const body = JSON.parse(res.body) as { error?: { code?: string; message?: string } };
     expect(body.error?.code).toBe('CONFLICT');
-    expect(body.error?.message).toContain('Check-out hanya dapat dilakukan setelah check-in');
+    expect(body.error?.message).toContain('Absen pulang hanya dapat dilakukan setelah absen masuk');
   });
 
   it('rejects unsafe method without CSRF header', async () => {

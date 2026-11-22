@@ -47,7 +47,7 @@ export async function createLeave(ctx: AccessContext, input: CreateLeaveInput, r
   const day = await db.attendanceDay.findUnique({
     where: { internProfileId_workDate: { internProfileId, workDate: parseDateOnly(dateStr) } },
   });
-  if (!day?.checkInEventId) throw unprocessable('Izin tengah hari hanya dapat diajukan setelah check-in.');
+  if (!day?.checkInEventId) throw unprocessable('Izin tengah hari hanya dapat diajukan setelah absen masuk.');
 
   // Maksimal satu izin sementara aktif per peserta per hari.
   if (input.leaveType === 'TEMPORARY') {

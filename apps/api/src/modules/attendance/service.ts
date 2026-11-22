@@ -90,12 +90,12 @@ export async function submitAttendance(ctx: AccessContext, input: SubmitInput, r
     include: { events: true },
   });
   if (input.eventType === 'CHECK_IN' && existingDay?.events.some((e) => e.eventType === 'CHECK_IN' && e.status !== 'VOIDED')) {
-    throw conflict('Check-in sudah dilakukan hari ini.');
+    throw conflict('Absen masuk sudah dilakukan hari ini.');
   }
   if (input.eventType === 'CHECK_OUT') {
-    if (!existingDay?.checkInEventId) throw conflict('Check-out hanya dapat dilakukan setelah check-in sukses.');
+    if (!existingDay?.checkInEventId) throw conflict('Absen pulang hanya dapat dilakukan setelah absen masuk.');
     if (existingDay.events.some((e) => e.eventType === 'CHECK_OUT' && e.status !== 'VOIDED')) {
-      throw conflict('Check-out sudah dilakukan hari ini.');
+      throw conflict('Absen pulang sudah dilakukan hari ini.');
     }
   }
 
