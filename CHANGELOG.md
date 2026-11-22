@@ -4,6 +4,17 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: dialog Tambah/Ubah Pengguna diperlebar + auto-scroll ke inputan peserta
+
+### Diubah
+- **Dialog "Tambah Pengguna" dan "Ubah Pengguna" diperlebar dari 448px (max-w-md) menjadi 672px (max-w-2xl)** — permintaan user: "selectnya kepotong". `ConfirmDialog` mendapat prop opsional `wide` sehingga dialog lain (hapus, konfirmasi, detail) tidak berubah; prop ini dipakai khusus di dua dialog pengguna yang memuat seksi Data peserta magang (Nomor peserta, combobox Biro/Divisi/Penempatan, tanggal, status). Select di dalamnya kini lega penuh dan tidak terpotong.
+- **Saat centang "Jadikan peserta magang", badan dialog otomatis menggulir halus ke seksi "Data peserta magang"** — permintaan user: "kalo cuman ceklis doang ga keliatan inputannya". Sebelumnya inputan peserta muncul di bawah lipatan (di bawah daftar role) dan harus dicari manual dengan scroll; sekarang langsung "narik" pandangan ke inputannya. Berlaku juga di dialog Ubah Pengguna (untuk pengguna yang belum punya profil).
+
+### Pembuktian (bukan klaim)
+- Gate: web tsc+eslint bersih + test **48/48**.
+- Playwright desktop 1440px (admin-hr): lebar dialog terukur **672px** (sebelumnya 448px); centang checkbox → scroll container bergerak ke 501px, seksi "Data peserta magang" **terlihat penuh di dalam viewport dialog** (bounding box di dalam batas body dialog); uncheck → centang ulang tetap menggulir. Screenshot.
+- Playwright mobile 360px: dialog 328px (muat), auto-scroll bergerak (scrollTop 526), select Biro/Divisi/Penempatan full-width tanpa terpotong. Screenshot.
+
 ## [2026-11-22] — UAT: No. HP terima kode negara + (semua negara), kolom HP template bertipe teks
 
 ### Diubah

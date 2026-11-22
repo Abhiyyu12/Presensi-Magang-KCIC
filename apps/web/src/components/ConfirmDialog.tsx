@@ -9,6 +9,8 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   /** Sembunyikan tombol batal (untuk dialog detail tanpa keputusan). */
   hideCancel?: boolean;
+  /** Dialog lebar (max-w-2xl) untuk form panjang ber-kolom, mis. Tambah Pengguna. */
+  wide?: boolean;
   danger?: boolean;
   busy?: boolean;
   children?: ReactNode;
@@ -27,6 +29,7 @@ export function ConfirmDialog({
   confirmLabel = 'Konfirmasi',
   cancelLabel = 'Batal',
   hideCancel = false,
+  wide = false,
   danger = false,
   busy = false,
   children,
@@ -92,7 +95,7 @@ export function ConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
-        className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
+        className={`w-full rounded-xl bg-white p-5 shadow-xl ${wide ? 'max-w-2xl' : 'max-w-md'}`}
       >
         <h2 id="confirm-dialog-title" className="text-base font-semibold text-slate-900">
           {title}

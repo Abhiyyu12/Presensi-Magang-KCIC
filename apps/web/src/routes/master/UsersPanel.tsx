@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, firstFieldErrorMessage } from '../../lib/api';
 import { asString, isRecord, type Paginated } from '../../lib/types';
@@ -447,6 +447,18 @@ export function UsersPanel() {
     },
   ];
 
+  const createBodyRef = useRef<HTMLDivElement>(null);
+  const createInternRef = useRef<HTMLDivElement>(null);
+  const editBodyRef = useRef<HTMLDivElement>(null);
+  const editInternRef = useRef<HTMLDivElement>(null);
+  // Seksi "Data peserta magang" muncul di bawah lipatan dialog saat dicentang —
+  // gulirkan otomatis agar inputannya langsung terlihat.
+  const scrollToInternFields = (body: HTMLDivElement | null, section: HTMLDivElement | null) => {
+    if (!body || !section) return;
+    const top = body.scrollTop + section.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
+    body.scrollTo({ top, behavior: 'smooth' });
+  };
+
   const roleCheckboxes = (selected: string[], onChange: (ids: string[]) => void) => (
     <fieldset className="space-y-1">
       <legend className="label">Role<span className="ml-0.5 text-red-600">*</span></legend>
@@ -675,11 +687,12 @@ export function UsersPanel() {
         open={createOpen}
         title="Tambah Pengguna"
         confirmLabel="Simpan"
+        wide
         busy={createMutation.isPending}
         onClose={() => setCreateOpen(false)}
         onConfirm={() => createMutation.mutate()}
       >
-        <div className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+        <div ref={createBodyRef} className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
           {(
             [
               ['username', 'Username', 'text', true],
@@ -711,15 +724,19 @@ export function UsersPanel() {
               type="checkbox"
               className="h-4 w-4 rounded border-slate-300"
               checked={createForm.profile.asIntern}
-              onChange={(e) =>
-                setCreateForm((f) => ({ ...f, profile: { ...f.profile, asIntern: e.target.checked } }))
-              }
+              onChange={(e) => {
+                const { checked } = e.target;
+                setCreateForm((f) => ({ ...f, profile: { ...f.profile, asIntern: checked } }));
+                if (checked) {
+                  requestAnimationFrame(() => scrollToInternFields(createBodyRef.current, createInternRef.current));
+                }
+              }}
             />
             Jadikan peserta magang
           </label>
-          {createForm.profile.asIntern
-            ? profileFields(createForm.profile, (profile) => setCreateForm((f) => ({ ...f, profile })))
-            : null}
+          {createForm.profile.asIntern ? (
+            <div ref={createInternRef}>{profileFields(createForm.profile, (profile) => setCreateForm((f) => ({ ...f, profile })))}</div>
+          ) : null}
         </div>
       </ConfirmDialog>
 
@@ -727,11 +744,12 @@ export function UsersPanel() {
         open={editRow !== null}
         title="Ubah Pengguna"
         confirmLabel="Simpan"
+        wide
         busy={editMutation.isPending}
         onClose={() => setEditRow(null)}
         onConfirm={() => editMutation.mutate()}
       >
-        <div className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+        <div ref={editBodyRef} className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
           {(
             [
               ['displayName', 'Nama tampilan', 'text'],
@@ -773,16 +791,20 @@ export function UsersPanel() {
                 type="checkbox"
                 className="h-4 w-4 rounded border-slate-300"
                 checked={editForm.profile.asIntern}
-                onChange={(e) =>
-                  setEditForm((f) => ({ ...f, profile: { ...f.profile, asIntern: e.target.checked } }))
-                }
+                onChange={(e) => {
+                  const { checked } = e.target;
+                  setEditForm((f) => ({ ...f, profile: { ...f.profile, asIntern: checked } }));
+                  if (checked) {
+                    requestAnimationFrame(() => scrollToInternFields(editBodyRef.current, editInternRef.current));
+                  }
+                }}
               />
               Jadikan peserta magang
             </label>
           )}
-          {editForm.profile.asIntern
-            ? profileFields(editForm.profile, (profile) => setEditForm((f) => ({ ...f, profile })))
-            : null}
+          {editForm.profile.asIntern ? (
+            <div ref={editInternRef}>{profileFields(editForm.profile, (profile) => setEditForm((f) => ({ ...f, profile })))}</div>
+          ) : null}
         </div>
       </ConfirmDialog>
 
