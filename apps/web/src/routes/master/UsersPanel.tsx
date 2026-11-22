@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../../lib/api';
+import { api, ApiError, firstFieldErrorMessage } from '../../lib/api';
 import { asString, isRecord, type Paginated } from '../../lib/types';
 import { DataTable, type Column } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
@@ -250,7 +250,7 @@ export function UsersPanel() {
       invalidate();
     },
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal membuat pengguna.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal membuat pengguna.');
     },
   });
 
@@ -276,7 +276,7 @@ export function UsersPanel() {
       invalidate();
     },
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal memperbarui pengguna.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal memperbarui pengguna.');
     },
   });
 
@@ -293,7 +293,7 @@ export function UsersPanel() {
       invalidate();
     },
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal mengubah role.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal mengubah role.');
     },
   });
 
@@ -305,7 +305,7 @@ export function UsersPanel() {
       setResetToken(token || (typeof data === 'string' ? data : '(token tidak ditampilkan server)'));
     },
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal membuat token reset.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal membuat token reset.');
     },
   });
 

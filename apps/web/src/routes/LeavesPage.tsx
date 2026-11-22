@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../lib/api';
+import { api, ApiError, firstFieldErrorMessage } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import {
   formatDateWib,
@@ -92,7 +92,7 @@ export default function LeavesPage() {
       void queryClient.invalidateQueries({ queryKey: ['attendance'] });
     },
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal mengajukan izin. Coba lagi.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal mengajukan izin. Coba lagi.');
     },
   });
 

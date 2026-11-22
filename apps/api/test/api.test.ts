@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app/buildApp.js';
 import { getDb } from '../src/infrastructure/db.js';
@@ -1175,5 +1176,57 @@ describe('Fase 3: profil lengkap + edit whitelist kontak', () => {
     });
     expect(restore.statusCode).toBe(200);
     expect(envelope(restore).data.user.phone).toBeNull();
+  });
+});
+
+describe('Fase 4: feedback error ramah (envelope validasi + 404 Indonesia)', () => {
+  it('validasi schema mengembalikan VALIDATION_ERROR bahasa Indonesia + fieldErrors', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/organizations/bureaus',
+      headers: authHeaders(admin),
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+    const body = envelope(res).error;
+    expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body.message).toBe('Permintaan tidak valid.');
+    expect((body.fieldErrors?.name as string[] | undefined)?.join(' ')).toContain('Wajib diisi.');
+
+    const tooLong = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/organizations/bureaus',
+      headers: authHeaders(admin),
+      payload: { code: 'X', name: 'Biro '.repeat(40) },
+    });
+    expect(tooLong.statusCode).toBe(400);
+    expect(((envelope(tooLong).error.fieldErrors?.name as string[] | undefined) ?? []).join(' ')).toContain(
+      'Maksimal 128 karakter.',
+    );
+  });
+
+  it('nama tampilan 200+ karakter memberi fieldErrors per-field berbahasa Indonesia', async () => {
+    const res = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/profile',
+      headers: authHeaders(p1),
+      payload: { displayName: 'Andi Prasetyo '.repeat(15) },
+    });
+    expect(res.statusCode).toBe(400);
+    const body = envelope(res).error;
+    expect(body.message).toBe('Permintaan tidak valid.');
+    const msgs = body.fieldErrors?.displayName as string[] | undefined;
+    expect((msgs ?? []).join(' ')).toContain('Nama tampilan maksimal 128 karakter.');
+  });
+
+  it('PATCH pengguna yang tidak ada tetap 404 dengan pesan Indonesia', async () => {
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/admin/users/${randomUUID()}`,
+      headers: authHeaders(admin),
+      payload: { displayName: 'Tidak Ada' },
+    });
+    expect(res.statusCode).toBe(404);
+    expect(envelope(res).error.message).toBe('Data tidak ditemukan.');
   });
 });

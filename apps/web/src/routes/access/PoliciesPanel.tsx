@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../../lib/api';
+import { api, ApiError, firstFieldErrorMessage } from '../../lib/api';
 import { asString, isRecord, type Paginated } from '../../lib/types';
 import { DataTable, type Column } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
@@ -57,7 +57,7 @@ export function PoliciesPanel() {
       void queryClient.invalidateQueries({ queryKey: ['access', 'policies'] });
     },
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal membuat policy.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal membuat policy.');
     },
   });
 

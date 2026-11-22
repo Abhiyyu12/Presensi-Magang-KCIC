@@ -8,6 +8,7 @@ import swagger from '@fastify/swagger';
 import { serializerCompiler, validatorCompiler, jsonSchemaTransform } from 'fastify-type-provider-zod';
 import { randomUUID } from 'node:crypto';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { loadEnv, isDev, parseOriginList } from '../config/env.js';
 import { getDb } from '../infrastructure/db.js';
 import { AppError, errorEnvelope, tooManyRequests } from '../common/errors.js';
@@ -25,9 +26,25 @@ import { dashboardRoutes } from '../modules/dashboard/routes.js';
 import { profileRoutes } from '../modules/users/profileRoutes.js';
 import { ensureBuckets, getMinio } from '../infrastructure/minio.js';
 
+// Default zod messages are English; translate the common ones so every
+// validation error shown to users is Indonesian. Custom messages pass through.
+function zodMessageToIndonesian(message: string): string {
+  if (message === 'Required') return 'Wajib diisi.';
+  const tooBig = /^String must contain at most (\d+) character/.exec(message);
+  if (tooBig) return `Maksimal ${tooBig[1]} karakter.`;
+  const tooSmall = /^String must contain at least (\d+) character/.exec(message);
+  if (tooSmall) return `Minimal ${tooSmall[1]} karakter.`;
+  if (/Invalid email/.test(message)) return 'Format email tidak valid.';
+  if (/Invalid uuid/.test(message)) return 'Format tidak valid.';
+  if (/Invalid (date|datetime)/.test(message)) return 'Format tanggal tidak valid.';
+  if (/Invalid enum value/.test(message)) return 'Nilai tidak valid.';
+  if (/Unrecognized key/.test(message)) return 'Field tidak dikenal.';
+  if (/Number must be/.test(message)) return 'Angka tidak valid.';
+  return message;
+}
+
 export async function buildApp(): Promise<FastifyInstance> {
-  const env = loadEnv();
-  const app = Fastify({
+  const env = loadEnv();  const app = Fastify({
     logger: {
       level: env.LOG_LEVEL,
       redact: {
@@ -79,13 +96,31 @@ export async function buildApp(): Promise<FastifyInstance> {
         const path =
           (Array.isArray(issuePath) && issuePath.length > 0 ? issuePath.join('.') : undefined) ??
           ((item.instancePath ?? '').split('/').filter(Boolean).join('.') || '_');
-        const msg = typeof item.message === 'string' ? item.message : 'Isian tidak valid.';
+        const msg = typeof item.message === 'string' ? zodMessageToIndonesian(item.message) : 'Isian tidak valid.';
         fieldErrors[path] = [...(fieldErrors[path] ?? []), msg];
       }
       reply.code(400).send({
         error: { code: 'VALIDATION_ERROR', message: 'Permintaan tidak valid.', fieldErrors, requestId },
       });
       return;
+    }
+    // Prisma safety net: routes mostly guard these explicitly; this keeps any
+    // missed path from leaking a raw 500 with a Prisma error body.
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        reply.code(409).send({ error: { code: 'CONFLICT', message: 'Data sudah ada.', requestId } });
+        return;
+      }
+      if (error.code === 'P2003') {
+        reply
+          .code(409)
+          .send({ error: { code: 'CONFLICT', message: 'Data masih dipakai data lain sehingga tidak dapat diubah atau dihapus.', requestId } });
+        return;
+      }
+      if (error.code === 'P2025') {
+        reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Data tidak ditemukan.', requestId } });
+        return;
+      }
     }
     if ((error as { statusCode?: number }).statusCode === 429) {
       const mapped = errorEnvelope(tooManyRequests(), requestId);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../../lib/api';
+import { api, ApiError, firstFieldErrorMessage } from '../../lib/api';
 import { asString, isRecord, type Paginated } from '../../lib/types';
 import { DataTable, type Column } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
@@ -131,7 +131,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
       invalidate();
     },
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal menyimpan data.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal menyimpan data.');
     },
   });
 
@@ -146,7 +146,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
       invalidate();
     },
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal mengubah status.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal mengubah status.');
     },
   });
 

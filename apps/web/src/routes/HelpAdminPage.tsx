@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../lib/api';
+import { api, ApiError, firstFieldErrorMessage } from '../lib/api';
 import { asString, isRecord, type HelpArticle, type HelpCategory, type Paginated } from '../lib/types';
 import { DataTable, type Column } from '../components/DataTable';
 import { ErrorState } from '../components/ErrorState';
@@ -69,7 +69,7 @@ export default function HelpAdminPage() {
       invalidate();
     },
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal menyimpan artikel.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal menyimpan artikel.');
     },
   });
 
@@ -78,7 +78,7 @@ export default function HelpAdminPage() {
       api<HelpArticle>(`/admin/help/articles/${article.id}/${action}`, { method: 'POST' }),
     onSuccess: invalidate,
     onError: (error: unknown) => {
-      setFormError(error instanceof ApiError ? error.message : 'Gagal mengubah status artikel.');
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal mengubah status artikel.');
     },
   });
 

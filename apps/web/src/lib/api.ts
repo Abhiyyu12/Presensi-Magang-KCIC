@@ -238,9 +238,20 @@ export async function apiDownload(path: string): Promise<{ blob: Blob; filename:
 export function fieldErrorMessage(
   fieldErrors: ApiFieldErrors | undefined,
   field: string,
-): string | undefined {  if (!fieldErrors) return undefined;
+): string | undefined {
+  if (!fieldErrors) return undefined;
   const value = fieldErrors[field];
   if (typeof value === 'string') return value;
   if (Array.isArray(value) && value.length > 0) return value[0];
+  return undefined;
+}
+
+/** First non-empty field error across all fields, for compact error surfaces. */
+export function firstFieldErrorMessage(fieldErrors: ApiFieldErrors | undefined): string | undefined {
+  if (!fieldErrors) return undefined;
+  for (const value of Object.values(fieldErrors)) {
+    if (typeof value === 'string' && value) return value;
+    if (Array.isArray(value) && value.length > 0 && value[0]) return value[0];
+  }
   return undefined;
 }
