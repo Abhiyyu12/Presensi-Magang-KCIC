@@ -174,7 +174,9 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
     'bagus.pratama', 'Bagus Pratama', '', '', 'SUPERVISOR', '', '', '', '', '', '', '',
   ]);
 
-  const master = wb.addWorksheet('Data Master');
+  // Nama tanpa spasi supaya formula dropdown `DataMaster!$A$2…` resolve ke sheet
+  // internal — bila tidak cocok, Excel menganggapnya workbook eksternal (link rusak).
+  const master = wb.addWorksheet('DataMaster');
   master.state = 'hidden';
   master.columns = [
     { header: 'Kode Role', width: 16 },

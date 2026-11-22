@@ -4,6 +4,16 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: perbaikan template import pengguna (Excel "UNABLE TO REFRESH")
+
+### Diperbaiki
+- **Critical (bug UAT)**: template import pengguna yang diunduh memunculkan peringatan Excel **"UNABLE TO REFRESH — We couldn't get updated values from a linked workbook"** dengan entri Workbook Links bernama *DataMaster* ("This link exists in a data validation rule"). Akar masalah: sheet tersembunyi di dalam template dibuat dengan nama **"Data Master"** (ber-spasi), tetapi keempat dropdown validasi (Kode Role, Biro, Divisi, Penempatan) merujuk `DataMaster!$A$2…` (tanpa spasi) — nama tersebut tidak cocok dengan sheet mana pun, sehingga Excel mengartikannya sebagai **referensi workbook eksternal** yang tidak ditemukan. Perbaikan: sheet tersembunyi dinamai **"DataMaster"** supaya formula dropdown resolve ke sheet internal yang sama; tidak ada lagi workbook link di file (dropdown tetap berfungsi dari data master terkini di server).
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **89/89** (test template ditambah asersi regresi: setiap formula dropdown harus merujuk sheet bernama `DataMaster` **dan sheet itu ada** di workbook).
+- Template hasil unduhan dari API dev diperiksa langsung di XML-nya: workbook berisi sheet `Petunjuk` (visible), `DataMaster` (**hidden**), `Pengguna` (visible); keempat grup formula validasi = `DataMaster!$A$2:$A$5`, `$C$2:$C$4`, `$D$2:$D$4`, `$E$2:$E$2` — semuanya menunjuk sheet internal yang ada, bukan workbook eksternal.
+- **Pengguna perlu mengunduh ulang template** dari aplikasi; file lama yang sudah terunduh tetap mengandung link rusak (hanya berlaku pada file tersebut — boleh langsung dihapus).
+
 ## [2026-11-22] — UAT: istilah tombol sidebar diperbaiki ("Ciutkan menu" → "Sembunyikan menu")
 
 ### Diubah

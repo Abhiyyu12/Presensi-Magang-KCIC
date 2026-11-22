@@ -905,11 +905,22 @@ describe('Fase 1.5f: import pengguna via Excel', () => {
     const names = wb.worksheets.map((w) => w.name);
     expect(names).toContain('Petunjuk');
     expect(names).toContain('Pengguna');
-    const master = wb.getWorksheet('Data Master');
+    const master = wb.getWorksheet('DataMaster');
     expect(master?.state).toBe('hidden');
     const pengguna = wb.getWorksheet('Pengguna')!;
     expect(pengguna.getCell('A1').value).toBe('Username');
     expect(pengguna.getCell('E2').dataValidation?.type).toBe('list');
+    // Regresi UAT 2026-11-22: formula dropdown harus merujuk sheet yang benar-benar ada
+    // di workbook — bila nama sheet tidak cocok, Excel menganggapnya link workbook
+    // eksternal dan menampilkan "UNABLE TO REFRESH" saat template dibuka.
+    for (const cell of ['E2', 'G2', 'H2', 'I2'] as const) {
+      const dv = pengguna.getCell(cell).dataValidation;
+      if (!dv || dv.type !== 'list') continue;
+      const formula = (dv.formulae?.[0] ?? '').replace(/^=/, '');
+      const refSheet = formula.split('!')[0];
+      expect(refSheet, `dropdown ${cell} merujuk sheet internal`).toBe('DataMaster');
+      expect(wb.getWorksheet(refSheet), `sheet ${refSheet} ada di workbook`).toBeDefined();
+    }
     const db = getDb();
     bureauName = (await db.bureau.findFirstOrThrow({ where: { code: 'BIO-OPS' } })).name;
   });
