@@ -4,6 +4,20 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: struktur bukti MinIO per-user (folder username)
+
+### Ditambahkan
+- **Bukti selfie kini tersimpan per-user di MinIO**: object key baru `{username}/{uuid}.jpg` — foto absen/pergerakan izin masuk ke folder username intern pengirim (permintaan user; sebelumnya semua foto flat di root bucket dengan UUID acak). Nama file tetap UUID acak; bucket tetap privat dan hanya bisa dibaca lewat API yang ter-authorisasi.
+- **Validasi charset username di boundary**: pembuatan user via panel kini menolak username di luar `^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$` (selaras dengan validasi import Excel) karena username dipakai sebagai nama folder; `generateObjectKey` memvalidasi ulang sebelum menyusun key (tolak slash/spasi/diawali tanda baca).
+
+### Diubah (data dev)
+- Migrasi isi bucket `attendance-evidence` di dev: **9 foto sah** (semua baris `file_objects`) dipindah ke folder username pemiliknya (`abhi/` ×2, `bayu.pratama/`, `fajar.nugroho/`, `maya.sari/`, `peserta3/` ×2, `putri.maharani/` ×2) dan kolom `object_key` di DB di-update; **294 objek yatim** (tanpa baris DB — sisa run test suite yang memakai bucket yang sama) dipindah ke folder `_unlinked/` **tanpa dihapus** (menunggu konfirmasi user apakah boleh dibersihkan); 50 objek sampah 1.2KiB buatan run test suite sendiri di folder `peserta1/2/3` dihapus (artefak uji saya sendiri).
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **87/87** (3 test unit baru: format key `username/uuid.jpg`, bentuk username sah, tolak username tak aman; 1 test API baru: create user dengan 5 username tak aman → 400 dan user tidak tercipta).
+- Upload uji dari test suite (lewat stack API penuh ke MinIO dev) membuktikan jalur baru: objek masuk `peserta1/…`, `peserta2/…`, `peserta3/…` dengan timestamp yang sama dengan run test.
+- Migrasi terverifikasi: listing bucket menampilkan folder `abhi/`, `bayu.pratama/`, `fajar.nugroho/`, `maya.sari/`, `peserta3/`, `putri.maharani/` (root tidak lagi berisi objek flat kecuali `_unlinked/`); 9 baris `file_objects.object_key` di DB berformat folder; Playwright (peserta3): kedua foto bukti hari ini termuat dari key berfolder (`naturalWidth > 0`) — foto lama tetap tampil setelah migrasi.
+
 ## [2026-11-22] — UAT: beranda peserta dilengkapi (identitas lengkap + elemen kehadiran)
 
 ### Ditambahkan

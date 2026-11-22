@@ -161,7 +161,11 @@ const internProfileEmbedCreate = internProfileCreateBody
   });
 
 const userCreateBody = z.object({
-  username: z.string().min(3).max(64),
+  // Charset dijaga konsisten dengan validasi import (user-import.ts): tanpa
+  // spasi/slash — username dipakai sebagai nama folder bukti di MinIO.
+  username: z
+    .string()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/, 'Username hanya boleh huruf, angka, titik, garis bawah, atau hubung (diawali huruf/angka).'),
   displayName: z.string().min(1).max(128),
   password: z.string().min(passwordSchemaMin).max(256),
   email: z.string().email().max(255).optional(),

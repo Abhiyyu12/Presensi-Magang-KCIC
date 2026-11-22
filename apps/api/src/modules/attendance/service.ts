@@ -146,9 +146,9 @@ export async function submitAttendance(ctx: AccessContext, input: SubmitInput, r
     }
   }
 
-  // 6. Upload evidence to private bucket (opaque key, no PII).
+  // 6. Upload evidence ke bucket privat, folder per-user (username/uuid.jpg).
   const bucket = env.MINIO_BUCKET_ATTENDANCE;
-  const objectKey = generateObjectKey();
+  const objectKey = generateObjectKey(ctx.user.username);
   await uploadEvidence(bucket, objectKey, img);
 
   // 7. Single transaction: evidence metadata + event + day + idempotency + audit.

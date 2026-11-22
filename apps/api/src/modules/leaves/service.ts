@@ -239,7 +239,7 @@ export async function submitMovement(
   const now = new Date();
   const dateStr = businessDate(now);
   const bucket = env.MINIO_BUCKET_ATTENDANCE;
-  const objectKey = generateObjectKey();
+  const objectKey = generateObjectKey(ctx.user.username);
   await uploadEvidence(bucket, objectKey, img);
 
   // Alamat di-resolve di luar transaksi (panggilan jaringan best-effort).

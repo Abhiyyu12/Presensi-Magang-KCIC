@@ -69,7 +69,7 @@ The MVP does not guarantee prevention of GPS spoofing, device compromise, photo 
 - Separate buckets/policies for attendance evidence and help media.
 - Application uses least-privilege service credentials, not root credentials.
 - Credentials stay server-side.
-- Object keys are random/opaque and contain no personal identifiers.
+- Object keys use the format `{username}/{uuid}.jpg` (folder per-user, product decision 2026-11-22); username charset is validated at creation boundaries and re-checked before key generation; file names stay random UUIDs.
 - Backend authorizes before stream or short-lived signed URL.
 - Signed URL expiry is short and configurable; never log or persist as permanent URL.
 - Upload size and rate limits.

@@ -835,6 +835,20 @@ describe('Fase 1.5: role CRUD + gabung peserta ke pengguna + filter pengguna', (
     expect(envelope(del).error?.message).toContain('penugasan');
   });
 
+  it('rejects usernames that are unsafe as MinIO evidence folder names', async () => {
+    for (const bad of ['ab/cd', 'ab cd', '.abc', '-abc', 'ab!set']) {
+      const res = await post(app, '/api/v1/admin/users', admin, {
+        username: bad,
+        displayName: 'Uji Username Invalid',
+        password: DEV_PASSWORD,
+        roleIds: [roleId],
+      });
+      expect(res.statusCode).toBe(400);
+    }
+    const listed = envelope(await get(app, '/api/v1/admin/users?search=Uji Username Invalid', admin));
+    expect(listed.data.items.length).toBe(0);
+  });
+
   it('blocks delete of a system role', async () => {
     const db = getDb();
     const systemRole = await db.role.findFirstOrThrow({ where: { isSystem: true } });
