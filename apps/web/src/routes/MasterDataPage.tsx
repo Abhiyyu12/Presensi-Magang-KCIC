@@ -5,6 +5,7 @@ import { ResourcePanel } from './master/ResourcePanel';
 import { UsersPanel } from './master/UsersPanel';
 import { SchedulesPanel } from './master/SchedulesPanel';
 import { RolesPanel } from './master/RolesPanel';
+import { ParametersPanel } from './master/ParametersPanel';
 
 type TabKey = 'users' | 'schedules' | string;
 
@@ -98,6 +99,8 @@ export default function MasterDataPage() {
           <RolesPanel />
         ) : activeTab === 'schedules' ? (
           <SchedulesPanel />
+        ) : activeTab === 'business-parameters' ? (
+          <ParametersPanel path="/admin/business-parameters" label="Parameter" />
         ) : (
           (() => {
             const config = MASTER_RESOURCES.find((r) => r.key === activeTab);

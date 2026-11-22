@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { MASTER_RESOURCES, buildSchema } from './config';
-import { ApiError } from '../../lib/api';
 
 const byKey = (key: string) => {
   const config = MASTER_RESOURCES.find((r) => r.key === key);
@@ -19,7 +18,6 @@ const REQUIRED_CREATE_FIELDS: Record<string, string[]> = {
   scopes: ['userId', 'scopeType'],
   calendar: ['calendarDate', 'dayType'],
   'leave-categories': ['name', 'code'],
-  'business-parameters': ['key', 'value'],
 };
 
 describe('master resource configs match API contracts', () => {
@@ -56,12 +54,9 @@ describe('master resource configs match API contracts', () => {
     expect(form['validTo']).toBe('');
   });
 
-  it('business-parameters toPayload parses JSON value and rejects invalid JSON', () => {
+  it('business-parameters has no generic form (edited via ParametersPanel, not created via UI)', () => {
     const config = byKey('business-parameters');
-    const payload = config.toPayload?.({ value: '{"value":20}' }, 'edit') ?? {};
-    expect(payload['valueJson']).toEqual({ value: 20 });
-    expect(payload['value']).toBeUndefined();
-    expect(() => config.toPayload?.({ value: 'bukan json' }, 'edit')).toThrow(ApiError);
+    expect(config.fields).toHaveLength(0);
   });
 
   it('edit schema drops create-only fields', () => {

@@ -58,7 +58,7 @@ const calendarPatchBody = z.object({
   status: genericStatus.optional(),
 });
 
-const calendarListQuery = z.object({
+const calendarListQuery = paginationQuery.extend({
   startDate: dateOnly.optional(),
   endDateExclusive: dateOnly.optional(),
 });
@@ -312,8 +312,13 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
             }
           : {}),
       };
-      const items = await db.calendarDay.findMany({ where, orderBy: { calendarDate: 'asc' }, take: 400 });
-      return ok({ items }, req.id);
+      const items = await db.calendarDay.findMany({
+        where,
+        orderBy: { calendarDate: 'asc' },
+        ...skipTake(query),
+      });
+      const total = await db.calendarDay.count({ where });
+      return ok({ items, pagination: paginationMeta(query, total) }, req.id);
     },
   );
 

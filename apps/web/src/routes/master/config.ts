@@ -1,5 +1,4 @@
 import { z, type ZodTypeAny } from 'zod';
-import { ApiError } from '../../lib/api';
 import { asString, isRecord } from '../../lib/types';
 import {
   fetchBureauOptions,
@@ -255,27 +254,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
     key: 'business-parameters',
     label: 'Parameter',
     path: '/admin/business-parameters',
-    columns: [
-      { header: 'Kunci', field: 'key' },
-      { header: 'Nilai', render: (row) => JSON.stringify(row['valueJson'] ?? null) },
-      { header: 'Keterangan', field: 'description' },
-    ],
-    fields: [
-      { name: 'key', label: 'Kunci parameter', type: 'text', required: true, createOnly: true },
-      { name: 'value', label: 'Nilai (JSON, contoh {"value":15})', type: 'textarea', required: true },
-      { name: 'description', label: 'Keterangan', type: 'textarea' },
-    ],
-    toForm: (row) => ({ ...row, value: JSON.stringify(row['valueJson'] ?? null) }),
-    toPayload: (payload) => {
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(String(payload['value'] ?? ''));
-      } catch {
-        throw new ApiError('VALIDATION', 'Nilai harus JSON yang valid, contoh {"value":15}.', 400);
-      }
-      const next: Record<string, unknown> = { ...payload, valueJson: parsed };
-      delete next['value'];
-      return next;
-    },
+    columns: [],
+    fields: [],
   },
 ];

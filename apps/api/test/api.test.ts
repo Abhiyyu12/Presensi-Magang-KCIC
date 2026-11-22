@@ -1230,3 +1230,43 @@ describe('Fase 4: feedback error ramah (envelope validasi + 404 Indonesia)', () 
     expect(envelope(res).error.message).toBe('Data tidak ditemukan.');
   });
 });
+
+describe('Fase UAT: kontrak list Data Master konsisten (pagination wajib)', () => {
+  it('GET /admin/calendar mengembalikan pagination seperti resource master lain', async () => {
+    const create = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/calendar',
+      headers: authHeaders(admin),
+      payload: { calendarDate: '2027-01-01', dayType: 'HOLIDAY', name: 'Tahun Baru Masehi' },
+    });
+    expect(create.statusCode).toBe(200);
+
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/v1/admin/calendar?page=1&pageSize=15',
+      headers: authHeaders(admin),
+    });
+    expect(list.statusCode).toBe(200);
+    const body = envelope(list).data as { items: unknown[]; pagination: Record<string, number> };
+    expect(Array.isArray(body.items)).toBe(true);
+    expect(body.items.some((item) => (item as { calendarDate: string }).calendarDate.startsWith('2027-01-01'))).toBe(true);
+    expect(body.pagination.page).toBe(1);
+    expect(body.pagination.pageSize).toBe(15);
+    expect(body.pagination.total).toBeGreaterThanOrEqual(1);
+    expect(body.pagination.totalPages).toBeGreaterThanOrEqual(1);
+  });
+
+  it('GET /admin/calendar memakai filter rentang tanggal', async () => {
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/v1/admin/calendar?startDate=2026-12-01&endDateExclusive=2027-01-01&page=1&pageSize=15',
+      headers: authHeaders(admin),
+    });
+    expect(list.statusCode).toBe(200);
+    const body = envelope(list).data as { items: Array<{ calendarDate: string }> };
+    for (const item of body.items) {
+      expect(item.calendarDate >= '2026-12-01').toBe(true);
+      expect(item.calendarDate < '2027-01-01').toBe(true);
+    }
+  });
+});

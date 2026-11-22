@@ -4,6 +4,20 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: fix layar abu-abu tab Kalender + tab Parameter tanpa JSON
+
+### Diperbaiki
+- **Critical (bug UAT)**: buka tab Kalender di Data Master membuat seluruh aplikasi blank (layar abu-abu) — `GET /admin/calendar` mengembalikan `{items}` tanpa objek `pagination`, sedangkan panel generik selalu merender paginasi (destructure `undefined` → crash React tanpa error boundary). Kontrak list kini diselaraskan dengan resource master lain: query `page/pageSize` + filter tanggal tetap, respons `{items, pagination}`. 2 test regresi baru (API 75/75).
+- Sidebar kini mentok kiri di layar lebar (kerangka `max-w-7xl mx-auto` dilepas; header full-width agar logo sejajar) — terbukti 1920/1280/390 px.
+
+### Ditambahkan
+- **Tab Parameter tanpa JSON**: panel khusus `ParametersPanel` — editor menyesuaikan bentuk nilai (angka → kotak angka; daftar hari 0–6 → 7 checkbox Senin–Minggu; teks → kotak teks; bentuk tak dikenal → fallback JSON untuk IT). Kolom Nilai ditampilkan manusiawi ("Senin, Selasa, …") + kolom status kebijakan ("Menunggu konfirmasi KCIC"). Key tidak bisa diedit; key lain di `valueJson` (mis. `status`) tetap dipertahankan saat simpan.
+- **Tombol "Tambah Parameter" dihapus dari UI** — key parameter dieksekusi kode backend, pembuatan key baru tetap lewat seed/migrasi oleh IT (API POST tetap ada untuk IT).
+
+### Pembuktian (bukan klaim)
+- Browser: tab Kalender render + buat libur "Hari Raya Natal" 2026-12-25 via UI → tersimpan & tampil; Parameter: toleransi 15→20 via kotak angka tersimpan, checkbox Senin–Jumat + tambah Sabtu tersimpan, lalu nilai usulan (15, Sen–Jum) dikembalikan via PATCH ber-audit; 390 px aman; 0 pageerror.
+- Gate: api tsc+eslint+test **75/75**, web tsc+eslint+test **46/46**.
+
 ## [2026-11-22] — Fase 6: verifikasi berbukti akhir + laporan akhir
 
 ### Ditambahkan
