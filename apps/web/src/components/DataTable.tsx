@@ -38,7 +38,11 @@ export function DataTable<T>({
     return <EmptyState title={emptyTitle} description={emptyDescription} />;
   }
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div>
+      <p className="mb-1 text-xs text-slate-500 sm:hidden" aria-hidden="true">
+        Geser tabel ke samping untuk melihat semua kolom →
+      </p>
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
       <table className="min-w-full divide-y divide-slate-200 text-sm">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead className="bg-slate-50">
@@ -89,6 +93,7 @@ export function DataTable<T>({
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

@@ -1,23 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { isRecord } from '../lib/types';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 
-function pickNumber(source: Record<string, unknown>, ...keys: string[]): number | undefined {
-  for (const key of keys) {
-    const value = source[key];
-    if (typeof value === 'number') return value;
-    if (isRecord(value)) {
-      const inner = value['count'] ?? value['total'];
-      if (typeof inner === 'number') return inner;
-    }
-  }
-  return undefined;
-}
-
 export default function AdminDashboardPage() {
+  const { has } = useAuth();
   const dashQuery = useQuery({
     queryKey: ['dashboard', 'admin'],
     queryFn: () => api<unknown>('/dashboard/admin'),
@@ -34,21 +24,37 @@ export default function AdminDashboardPage() {
   }
 
   const raw = isRecord(dashQuery.data) ? dashQuery.data : {};
-  const metrics = isRecord(raw['metrics']) ? raw['metrics'] : raw;
+  const counts = isRecord(raw['counts']) ? raw['counts'] : {};
+  const num = (key: string): number | undefined =>
+    typeof counts[key] === 'number' ? (counts[key] as number) : undefined;
+
+  const canMonitoring = has('attendance:view:scoped') || has('report:view');
+  const canApproval = has('leave:approve');
+  const canReports = has('report:view');
+  const canMaster = [
+    'admin:users:manage',
+    'admin:org:manage',
+    'admin:placements:manage',
+    'admin:assignments:manage',
+    'admin:schedules:manage',
+    'admin:calendar:manage',
+    'admin:leave-categories:manage',
+    'admin:params:manage',
+  ].some(has);
 
   const cards: { label: string; value: number | undefined; to?: string }[] = [
-    { label: 'Izin menunggu approval', value: pickNumber(raw, 'pendingLeaveCount', 'pendingLeaves', 'pendingApprovals'), to: '/approval' },
-    { label: 'Perlu review', value: pickNumber(metrics, 'perluReview', 'needsReviewCount', 'needsReview'), to: '/monitoring' },
-    { label: 'Terjadwal hari ini', value: pickNumber(metrics, 'terjadwal', 'scheduledCount') },
-    { label: 'Hadir hari ini', value: pickNumber(metrics, 'hadir', 'presentCount') },
-    { label: 'Terlambat hari ini', value: pickNumber(metrics, 'terlambat', 'lateCount') },
-    { label: 'Koreksi hari ini', value: pickNumber(metrics, 'koreksi', 'correctionCount') },
+    { label: 'Izin menunggu approval', value: num('pendingLeaves'), to: canApproval ? '/approval' : undefined },
+    { label: 'Perlu review', value: num('needsReview'), to: canMonitoring ? '/monitoring' : undefined },
+    { label: 'Terjadwal hari ini', value: num('scheduled') },
+    { label: 'Hadir hari ini', value: num('checkedIn') },
+    { label: 'Terlambat hari ini', value: num('late') },
+    { label: 'Izin belum kembali', value: num('staleLeaves'), to: canApproval ? '/approval' : undefined },
   ];
 
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Dashboard Admin</h1>
+        <h1 className="text-lg font-bold text-slate-900">Beranda Admin</h1>
         <p className="text-sm text-slate-600">Ringkasan operasional hari ini (dihitung server).</p>
       </header>
 
@@ -69,10 +75,12 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Link to="/monitoring" className="btn-primary">Monitoring Absensi</Link>
-        <Link to="/approval" className="btn-secondary">Approval Izin</Link>
-        <Link to="/reports" className="btn-secondary">Report & Statistik</Link>
-        <Link to="/master" className="btn-secondary">Data Master</Link>
+        {canMonitoring ? <Link to="/monitoring" className="btn-primary">Monitoring</Link> : null}
+        {canApproval ? <Link to="/approval" className="btn-secondary">Approval</Link> : null}
+        {canReports ? <Link to="/reports" className="btn-secondary">Laporan</Link> : null}
+        {canMaster ? <Link to="/master" className="btn-secondary">Data Master</Link> : null}
+        {has('access:roles:manage') ? <Link to="/access" className="btn-secondary">Akses</Link> : null}
+        {has('admin:audit:view') ? <Link to="/audit" className="btn-secondary">Audit</Link> : null}
       </div>
     </div>
   );

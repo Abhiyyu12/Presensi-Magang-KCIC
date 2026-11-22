@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { formatTimeWib, formatDateWib, formatWib, dayStatusLabel, leaveStatusLabel } from '../lib/format';
+import { formatTimeWib, formatDateWib, formatWib, formatMeters, leaveStatusLabel } from '../lib/format';
 import type { TodayResponse } from '../lib/types';
 import { StatusBadge } from '../components/StatusBadge';
 import { LoadingState } from '../components/LoadingState';
@@ -29,9 +29,22 @@ export default function ParticipantDashboardPage() {
   if (!today) return <LoadingState label="Memuat status hari ini…" />;
   const day = today.attendanceDay;
   const events = day?.events ?? [];
-  const hasCheckIn = events.some((e) => e.eventType === 'CHECK_IN');
-  const hasCheckOut = events.some((e) => e.eventType === 'CHECK_OUT');
+  const checkIn = events.find((e) => e.eventType === 'CHECK_IN');
+  const checkOut = events.find((e) => e.eventType === 'CHECK_OUT');
   const workday = today.workday;
+  const isWorkingDay = Boolean(workday?.isWorkingDay);
+  const lastEvent = events[events.length - 1];
+  const nowHHmm = formatTimeWib(today.serverTime);
+  const endHHmm = (workday?.endTime ?? '').slice(0, 5);
+  const overdueCheckout = Boolean(checkIn && !checkOut && isWorkingDay && endHHmm && nowHHmm > endHHmm);
+
+  const summary = !isWorkingDay
+    ? 'Hari ini bukan hari kerja terjadwal.'
+    : !checkIn
+      ? 'Anda belum absen masuk hari ini.'
+      : !checkOut
+        ? `Sudah absen masuk pukul ${formatTimeWib(checkIn.occurredAtServer)} WIB. Jangan lupa absen pulang.`
+        : `Absensi lengkap: masuk ${formatTimeWib(checkIn.occurredAtServer)}, pulang ${formatTimeWib(checkOut.occurredAtServer)} WIB.`;
 
   return (
     <div className="space-y-4">
@@ -44,92 +57,86 @@ export default function ParticipantDashboardPage() {
         </p>
       </header>
 
-      <section className="card" aria-labelledby="schedule-heading">
-        <h2 id="schedule-heading" className="text-sm font-semibold text-slate-800">
-          Jadwal hari ini
-        </h2>
-        {workday && workday.isWorkingDay ? (
-          <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
+      <section className="card space-y-3" aria-labelledby="today-heading">
+        <div className="flex items-center justify-between gap-2">
+          <h2 id="today-heading" className="text-sm font-semibold text-slate-800">
+            Absensi hari ini
+          </h2>
+          <StatusBadge status={day?.dayStatus ?? (isWorkingDay ? 'SCHEDULED' : 'NOT_SCHEDULED')} />
+        </div>
+        <p className="text-sm text-slate-700">{summary}</p>
+
+        {isWorkingDay ? (
+          <dl className="grid grid-cols-2 gap-2 text-sm">
             <div>
               <dt className="text-slate-500">Jam masuk</dt>
-              <dd className="font-medium text-slate-800">{formatTimeWib(workday.startTime)} WIB</dd>
+              <dd className="font-medium text-slate-800">{formatTimeWib(workday?.startTime)} WIB</dd>
             </div>
             <div>
               <dt className="text-slate-500">Jam pulang</dt>
-              <dd className="font-medium text-slate-800">{formatTimeWib(workday.endTime)} WIB</dd>
+              <dd className="font-medium text-slate-800">{formatTimeWib(workday?.endTime)} WIB</dd>
             </div>
-            <div>
-              <dt className="text-slate-500">Toleransi keterlambatan</dt>
-              <dd className="font-medium text-slate-800">
-                {workday.lateToleranceMinutes ?? 0} menit
-              </dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Status hari</dt>
-              <dd>
-                <StatusBadge status={day?.dayStatus ?? 'SCHEDULED'} />
-              </dd>
-            </div>
+            {checkIn ? (
+              <div>
+                <dt className="text-slate-500">Absen masuk</dt>
+                <dd className="font-medium text-slate-800">{formatTimeWib(checkIn.occurredAtServer)} WIB</dd>
+              </div>
+            ) : null}
+            {checkOut ? (
+              <div>
+                <dt className="text-slate-500">Absen pulang</dt>
+                <dd className="font-medium text-slate-800">{formatTimeWib(checkOut.occurredAtServer)} WIB</dd>
+              </div>
+            ) : null}
+            {lastEvent?.accuracyMeters != null ? (
+              <div className="col-span-2">
+                <dt className="text-slate-500">Lokasi terakhir tercatat</dt>
+                <dd className="font-medium text-slate-800">±{formatMeters(lastEvent.accuracyMeters)} dari titik absen</dd>
+              </div>
+            ) : null}
           </dl>
         ) : (
-          <p className="mt-2 text-sm text-slate-600">
-            Hari ini tidak terjadwal ({dayStatusLabel(day?.dayStatus ?? 'NOT_SCHEDULED')}).
+          <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+            Tidak ada jadwal kerja hari ini, jadi tombol absen dinonaktifkan. Jika menurut Anda ini
+            keliru, hubungi admin HR.
           </p>
         )}
-      </section>
 
-      <section className="card" aria-labelledby="attendance-heading">
-        <h2 id="attendance-heading" className="text-sm font-semibold text-slate-800">
-          Absensi hari ini
-        </h2>
-        {day ? (
-          <div className="mt-2 space-y-2">
-            <p className="text-sm text-slate-600">
-              Status saat ini: <StatusBadge status={day.dayStatus} />
-              {day.correctionFlag ? (
-                <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">
-                  Ada koreksi
-                </span>
-              ) : null}
-            </p>
-            {events.length > 0 ? (
-              <ul className="space-y-1 text-sm text-slate-700">
-                {events.map((event) => (
-                  <li key={event.id} className="flex items-center justify-between gap-2">
-                    <span>{event.eventType === 'CHECK_IN' ? 'Check-in' : 'Check-out'}</span>
-                    <span className="font-medium">{formatWib(event.occurredAtServer)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">Belum ada event absensi hari ini.</p>
-            )}
-          </div>
+        {day?.correctionFlag ? (
+          <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
+            Ada koreksi pada catatan hari ini oleh admin.
+          </p>
+        ) : null}
+
+        {overdueCheckout ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+            Anda belum absen pulang. Jam pulang jadwal ({endHHmm} WIB) sudah lewat — segera absen
+            pulang bila masih di lokasi kerja.
+          </p>
+        ) : null}
+
+        {isWorkingDay && !checkIn ? (
+          <Link to="/absensi?action=check-in" className="btn-primary w-full min-h-[56px] text-base">
+            Absen Masuk
+          </Link>
+        ) : isWorkingDay && checkIn && !checkOut ? (
+          <Link to="/absensi?action=check-out" className="btn-primary w-full min-h-[56px] text-base">
+            Absen Pulang
+          </Link>
+        ) : isWorkingDay ? (
+          <Link to="/riwayat" className="btn-secondary w-full">
+            Lihat Riwayat Hari Ini
+          </Link>
         ) : (
-          <p className="mt-2 text-sm text-slate-500">Belum ada catatan absensi hari ini.</p>
+          <button type="button" className="btn-primary w-full min-h-[56px] text-base" disabled>
+            Absen tidak tersedia hari ini
+          </button>
         )}
-
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <Link
-            to="/absensi?action=check-in"
-            aria-disabled={hasCheckIn}
-            className={`btn ${hasCheckIn ? 'pointer-events-none opacity-40' : 'btn-primary'}`}
-          >
-            Check-in
-          </Link>
-          <Link
-            to="/absensi?action=check-out"
-            aria-disabled={!hasCheckIn || hasCheckOut}
-            className={`btn ${
-              hasCheckIn && !hasCheckOut ? 'btn-primary' : 'pointer-events-none opacity-40'
-            }`}
-          >
-            Check-out
-          </Link>
-        </div>
-        <p className="mt-2 text-xs text-slate-500">
-          Hanya aksi berikutnya yang valid yang dapat dilakukan. Status akhir ditentukan server.
-        </p>
+        {isWorkingDay && !checkIn ? (
+          <p className="text-xs text-slate-500">
+            Absen pulang terbuka setelah absen masuk berhasil. Waktu resmi memakai waktu server.
+          </p>
+        ) : null}
       </section>
 
       {today.activeLeave ? (
@@ -156,16 +163,16 @@ export default function ParticipantDashboardPage() {
       ) : null}
 
       <section className="card">
-        <h2 className="text-sm font-semibold text-slate-800">Butuh bantuan?</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Pelajari cara absensi dengan kamera dan lokasi, atau aturan izin tengah hari.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Link to="/bantuan" className="btn-secondary px-3 py-1.5 text-xs">
-            Pusat Bantuan
+        <h2 className="text-sm font-semibold text-slate-800">Menu cepat</h2>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <Link to="/riwayat" className="btn-secondary px-2 py-2 text-xs">
+            Riwayat
           </Link>
-          <Link to="/riwayat" className="btn-secondary px-3 py-1.5 text-xs">
-            Riwayat Absensi
+          <Link to="/izin" className="btn-secondary px-2 py-2 text-xs">
+            Izin
+          </Link>
+          <Link to="/bantuan" className="btn-secondary px-2 py-2 text-xs">
+            Bantuan
           </Link>
         </div>
       </section>

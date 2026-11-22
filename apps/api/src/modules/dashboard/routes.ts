@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 import type { Prisma } from '@prisma/client';
-import { z } from 'zod';
 import { getDb } from '../../infrastructure/db.js';
 import { ok } from '../../common/http.js';
 import { forbidden } from '../../common/errors.js';
@@ -88,12 +87,15 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
 
     let checkedIn = 0;
     let needsReview = 0;
+    let pendingLeaves = 0;
+    const statusByIntern = new Map<string, string>();
+    const workingByIntern = new Map<string, boolean>();
     if (assignedIds.length > 0) {
       const whereToday: Prisma.AttendanceDayWhereInput = {
         workDate: todayDate,
         internProfileId: { in: assignedIds },
       };
-      const [days, reviewCount] = await Promise.all([
+      const [days, reviewCount, pendingCount, snapshots] = await Promise.all([
         db.attendanceDay.findMany({
           where: whereToday,
           select: {
@@ -103,9 +105,17 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
           },
         }),
         db.attendanceDay.count({ where: { ...whereToday, dayStatus: 'NEEDS_REVIEW' } }),
+        db.leaveRequest.count({ where: { internProfileId: { in: assignedIds }, status: 'PENDING' } }),
+        db.workdaySnapshot.findMany({
+          where: { workDate: todayDate, internProfileId: { in: assignedIds } },
+          select: { internProfileId: true, isWorkingDay: true },
+        }),
       ]);
       checkedIn = new Set(days.filter((d) => d.events.length > 0).map((d) => d.internProfileId)).size;
       needsReview = reviewCount;
+      pendingLeaves = pendingCount;
+      for (const d of days) statusByIntern.set(d.internProfileId, d.dayStatus);
+      for (const s of snapshots) workingByIntern.set(s.internProfileId, s.isWorkingDay);
     }
 
     return ok(
@@ -119,7 +129,14 @@ export async function dashboardRoutes(app: FastifyInstance): Promise<void> {
           checkedIn,
           notCheckedIn: Math.max(0, assignedIds.length - checkedIn),
           needsReview,
+          pendingLeaves,
         },
+        todayStatus: assignments.map((a) => ({
+          name: a.internProfile.user.displayName,
+          dayStatus:
+            statusByIntern.get(a.internProfileId) ??
+            (workingByIntern.get(a.internProfileId) ? 'SCHEDULED' : 'NOT_SCHEDULED'),
+        })),
       },
       req.id,
     );

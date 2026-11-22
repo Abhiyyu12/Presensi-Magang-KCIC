@@ -70,18 +70,19 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
 };
 
 const FEATURE_NODES: { code: string; label: string; route: string | null; nodeType: 'GROUP' | 'PAGE'; requiredPermissionCode: string | null; sortOrder: number; parent?: string }[] = [
-  { code: 'nav.dashboard', label: 'Dashboard', route: '/', nodeType: 'PAGE', requiredPermissionCode: 'dashboard:view', sortOrder: 1 },
-  { code: 'nav.attendance', label: 'Absensi', route: '/absensi', nodeType: 'PAGE', requiredPermissionCode: 'attendance:submit', sortOrder: 2 },
-  { code: 'nav.leaves', label: 'Izin Tengah Hari', route: '/izin', nodeType: 'PAGE', requiredPermissionCode: 'leave:request', sortOrder: 3 },
-  { code: 'nav.history', label: 'Riwayat & Timeline', route: '/riwayat', nodeType: 'PAGE', requiredPermissionCode: 'attendance:view:own', sortOrder: 4 },
-  { code: 'nav.monitoring', label: 'Monitoring Absensi', route: '/monitoring', nodeType: 'PAGE', requiredPermissionCode: 'attendance:view:scoped', sortOrder: 5 },
-  { code: 'nav.approvals', label: 'Approval Izin', route: '/approval', nodeType: 'PAGE', requiredPermissionCode: 'leave:approve', sortOrder: 6 },
-  { code: 'nav.reports', label: 'Report & Statistik', route: '/reports', nodeType: 'PAGE', requiredPermissionCode: 'report:view', sortOrder: 7 },
-  { code: 'nav.master', label: 'Data Master', route: '/master', nodeType: 'PAGE', requiredPermissionCode: 'admin:users:manage', sortOrder: 8 },
-  { code: 'nav.access', label: 'Role & Permission', route: '/access', nodeType: 'PAGE', requiredPermissionCode: 'access:roles:manage', sortOrder: 9 },
-  { code: 'nav.audit', label: 'Audit', route: '/audit', nodeType: 'PAGE', requiredPermissionCode: 'admin:audit:view', sortOrder: 10 },
-  { code: 'nav.help', label: 'Pusat Bantuan', route: '/bantuan', nodeType: 'PAGE', requiredPermissionCode: 'help:view', sortOrder: 11 },
-  { code: 'nav.profile', label: 'Profil', route: '/profil', nodeType: 'PAGE', requiredPermissionCode: null, sortOrder: 12 },
+  { code: 'nav.dashboard', label: 'Beranda', route: '/', nodeType: 'PAGE', requiredPermissionCode: 'dashboard:view', sortOrder: 1 },
+  { code: 'nav.attendance', label: 'Absen', route: '/absensi', nodeType: 'PAGE', requiredPermissionCode: 'attendance:submit', sortOrder: 2 },
+  { code: 'nav.leaves', label: 'Izin', route: '/izin', nodeType: 'PAGE', requiredPermissionCode: 'leave:request', sortOrder: 3 },
+  { code: 'nav.history', label: 'Riwayat', route: '/riwayat', nodeType: 'PAGE', requiredPermissionCode: 'attendance:view:own', sortOrder: 4 },
+  { code: 'nav.monitoring', label: 'Monitoring', route: '/monitoring', nodeType: 'PAGE', requiredPermissionCode: 'attendance:view:scoped', sortOrder: 5 },
+  { code: 'nav.leavesScoped', label: 'Izin Peserta', route: '/izin', nodeType: 'PAGE', requiredPermissionCode: 'leave:view:scoped', sortOrder: 6 },
+  { code: 'nav.approvals', label: 'Approval', route: '/approval', nodeType: 'PAGE', requiredPermissionCode: 'leave:approve', sortOrder: 7 },
+  { code: 'nav.reports', label: 'Laporan', route: '/reports', nodeType: 'PAGE', requiredPermissionCode: 'report:view', sortOrder: 8 },
+  { code: 'nav.master', label: 'Data Master', route: '/master', nodeType: 'PAGE', requiredPermissionCode: 'admin:users:manage', sortOrder: 9 },
+  { code: 'nav.access', label: 'Akses', route: '/access', nodeType: 'PAGE', requiredPermissionCode: 'access:roles:manage', sortOrder: 10 },
+  { code: 'nav.audit', label: 'Audit', route: '/audit', nodeType: 'PAGE', requiredPermissionCode: 'admin:audit:view', sortOrder: 11 },
+  { code: 'nav.help', label: 'Bantuan', route: '/bantuan', nodeType: 'PAGE', requiredPermissionCode: 'help:view', sortOrder: 12 },
+  { code: 'nav.profile', label: 'Profil', route: '/profil', nodeType: 'PAGE', requiredPermissionCode: null, sortOrder: 13 },
 ];
 
 async function upsertPermissions() {

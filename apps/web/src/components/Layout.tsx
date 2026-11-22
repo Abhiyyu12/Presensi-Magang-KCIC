@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import type { EffectiveAccess, FeatureNode } from '../lib/types';
 import { LoadingState } from './LoadingState';
+import { MenuIcon, NavIcon } from './NavIcon';
 
 interface NavItem {
   label: string;
@@ -26,19 +27,20 @@ function fallbackNav(has: (perm: string) => boolean): NavItem[] {
   const items: NavItem[] = [];
   if (has('attendance:submit')) {
     items.push(
-      { label: 'Dashboard', route: '/' },
-      { label: 'Absensi', route: '/absensi' },
+      { label: 'Beranda', route: '/' },
+      { label: 'Absen', route: '/absensi' },
       { label: 'Izin', route: '/izin' },
       { label: 'Riwayat', route: '/riwayat' },
     );
   }
   if (has('attendance:view:scoped') || has('report:view')) {
-    items.push(
-      { label: 'Monitoring', route: '/monitoring' },
-      { label: 'Laporan', route: '/reports' },
-    );
+    items.push({ label: 'Monitoring', route: '/monitoring' });
+    if (has('leave:view:scoped') && !has('leave:request')) {
+      items.push({ label: 'Izin Peserta', route: '/izin' });
+    }
+    items.push({ label: 'Laporan', route: '/reports' });
   }
-  if (has('leave:approve')) items.push({ label: 'Approval Izin', route: '/approval' });
+  if (has('leave:approve')) items.push({ label: 'Approval', route: '/approval' });
   if (has('admin:users:manage')) items.push({ label: 'Data Master', route: '/master' });
   if (has('access:roles:manage')) items.push({ label: 'Akses', route: '/access' });
   if (has('admin:audit:view')) items.push({ label: 'Audit', route: '/audit' });
@@ -46,10 +48,13 @@ function fallbackNav(has: (perm: string) => boolean): NavItem[] {
   return items.filter((item, idx, arr) => arr.findIndex((i) => i.route === item.route) === idx);
 }
 
+const BOTTOM_SLOTS = 4;
+
 export function Layout() {
   const { user, has, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const accessQuery = useQuery({
     queryKey: ['access', 'me', 'effective'],
@@ -59,17 +64,31 @@ export function Layout() {
   });
 
   const navItems = useMemo(() => {
-    const fromTree = collectRoutes(accessQuery.data?.featureTree);
-    if (fromTree.length > 0) {
-      const extras: NavItem[] = [];
-      if (!fromTree.some((i) => i.route === '/profil')) extras.push({ label: 'Profil', route: '/profil' });
-      return [...fromTree, ...extras];
-    }
-    return fallbackNav(has);
+    const fromTree = collectRoutes(accessQuery.data?.featureTree).filter(
+      // Approver already manages leaves via /approval; the read-only list is for supervisors.
+      (i) => !(i.route === '/izin' && i.label === 'Izin Peserta' && has('leave:approve')),
+    );
+    const base = fromTree.length > 0 ? fromTree : fallbackNav(has);
+    if (!base.some((i) => i.route === '/profil')) base.push({ label: 'Profil', route: '/profil' });
+    return base;
   }, [accessQuery.data, has]);
 
-  // Nav for the mobile bottom bar: first items, max 5, always include home.
-  const bottomNav = navItems.slice(0, 5);
+  const { primary, secondary } = useMemo(() => {
+    const prim = navItems.filter((i) => i.route !== '/profil');
+    const sec = navItems.filter((i) => i.route === '/profil');
+    if (prim.length > 6) {
+      const help = prim.find((i) => i.route === '/bantuan');
+      if (help) {
+        prim.splice(prim.indexOf(help), 1);
+        sec.unshift(help);
+      }
+    }
+    return { primary: prim, secondary: sec };
+  }, [navItems]);
+
+  const bottomItems = primary.slice(0, BOTTOM_SLOTS);
+  const sheetItems = navItems;
+  const hasOverflow = navItems.length > bottomItems.length;
 
   if (loading) {
     return (
@@ -84,25 +103,30 @@ export function Layout() {
     navigate('/login', { replace: true });
   };
 
+  const linkClass = (isActive: boolean) =>
+    `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
+      isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 hover:bg-slate-50'
+    }`;
+
   return (
-    <div className="min-h-screen lg:flex">
+    <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4">
-          <NavLink to="/" className="flex items-center gap-2 font-bold text-slate-900">
-            <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-700 text-sm text-white">
+          <NavLink to="/" className="flex min-w-0 items-center gap-2 font-bold text-slate-900">
+            <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-700 text-sm text-white">
               P
             </span>
-            <span>Presensi Magang KCIC</span>
+            <span className="truncate">Presensi Magang KCIC</span>
           </NavLink>
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               type="button"
-              className="btn-secondary px-3 py-1.5 text-xs"
+              className="btn-secondary max-w-[11rem] px-3 py-1.5 text-xs"
               aria-expanded={menuOpen}
               aria-haspopup="menu"
               onClick={() => setMenuOpen((v) => !v)}
             >
-              {user?.displayName ?? user?.username ?? 'Akun'}
+              <span className="truncate">{user?.displayName ?? user?.username ?? 'Akun'}</span>
               <span aria-hidden="true">▾</span>
             </button>
             {menuOpen ? (
@@ -132,39 +156,51 @@ export function Layout() {
         </div>
       </header>
 
-      <nav
-        aria-label="Navigasi utama (desktop)"
-        className="hidden w-60 shrink-0 border-r border-slate-200 bg-white lg:block"
-      >
-        <ul className="space-y-1 p-3">
-          {navItems.map((item) => (
-            <li key={item.route}>
-              <NavLink
-                to={item.route}
-                end={item.route === '/'}
-                className={({ isActive }) =>
-                  `block rounded-lg px-3 py-2 text-sm font-medium ${
-                    isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 hover:bg-slate-50'
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div className="mx-auto max-w-7xl lg:flex">
+        <nav
+          aria-label="Navigasi utama (desktop)"
+          className="hidden w-60 shrink-0 border-r border-slate-200 bg-white lg:block"
+        >
+          <ul className="space-y-1 p-3">
+            {primary.map((item) => (
+              <li key={item.route}>
+                <NavLink to={item.route} end={item.route === '/'} className={({ isActive }) => linkClass(isActive)}>
+                  <NavIcon route={item.route} />
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+          {secondary.length > 0 ? (
+            <>
+              <p className="px-6 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Lainnya
+              </p>
+              <ul className="space-y-1 p-3 pt-0">
+                {secondary.map((item) => (
+                  <li key={item.route}>
+                    <NavLink to={item.route} end={item.route === '/'} className={({ isActive }) => linkClass(isActive)}>
+                      <NavIcon route={item.route} />
+                      {item.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </nav>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-4 lg:pb-8">
-        <Outlet />
-      </main>
+        <main className="w-full min-w-0 flex-1 px-4 pb-24 pt-4 lg:pb-8">
+          <Outlet />
+        </main>
+      </div>
 
       <nav
         aria-label="Navigasi utama (mobile)"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white lg:hidden"
       >
         <ul className="flex">
-          {bottomNav.map((item) => (
+          {bottomItems.map((item) => (
             <li key={item.route} className="flex-1">
               <NavLink
                 to={item.route}
@@ -175,31 +211,74 @@ export function Layout() {
                   }`
                 }
               >
-                <span aria-hidden="true" className="text-base">
-                  {navIcon(item.route)}
-                </span>
+                <NavIcon route={item.route} />
                 <span className="truncate">{item.label}</span>
               </NavLink>
             </li>
           ))}
+          {hasOverflow ? (
+            <li className="flex-1">
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={sheetOpen}
+                onClick={() => setSheetOpen(true)}
+                className={`flex min-h-touch w-full flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium ${
+                  sheetOpen ? 'text-brand-700' : 'text-slate-600'
+                }`}
+              >
+                <MenuIcon />
+                <span>Menu</span>
+              </button>
+            </li>
+          ) : null}
         </ul>
       </nav>
+
+      {sheetOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Tutup menu"
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={() => setSheetOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu navigasi"
+            className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-2xl bg-white p-4 pb-8 shadow-xl"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-800">Menu</p>
+              <button type="button" className="btn-secondary px-3 py-1 text-xs" onClick={() => setSheetOpen(false)}>
+                Tutup
+              </button>
+            </div>
+            <ul className="grid grid-cols-2 gap-2">
+              {sheetItems.map((item) => (
+                <li key={item.route}>
+                  <NavLink
+                    to={item.route}
+                    end={item.route === '/'}
+                    onClick={() => setSheetOpen(false)}
+                    className={({ isActive }) =>
+                      `flex min-h-touch items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium ${
+                        isActive
+                          ? 'border-brand-600 bg-brand-50 text-brand-800'
+                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`
+                    }
+                  >
+                    <NavIcon route={item.route} />
+                    <span className="truncate">{item.label}</span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
-}
-
-function navIcon(route: string): string {
-  if (route === '/') return '⌂';
-  if (route === '/absensi') return '📷';
-  if (route === '/izin') return '🗒';
-  if (route === '/riwayat') return '🕘';
-  if (route === '/monitoring') return '👁';
-  if (route === '/reports') return '📊';
-  if (route === '/approval') return '✔';
-  if (route === '/master') return '🗂';
-  if (route === '/access') return '🔑';
-  if (route === '/audit') return '🧾';
-  if (route === '/bantuan') return '?';
-  if (route === '/profil') return '👤';
-  return '•';
 }

@@ -5,7 +5,7 @@ import { ok } from '../../common/http.js';
 import { unauthorized, badRequest, forbidden } from '../../common/errors.js';
 import { writeAudit, redactForAudit } from '../../common/audit.js';
 import { verifyPassword, hashPassword, sha256, generateToken, passwordSchemaMin } from './password.js';
-import { createSession, revokeSessionByToken, revokeAllUserSessions, SESSION_COOKIE } from './sessions.js';
+import { createSession, revokeSessionByToken, SESSION_COOKIE } from './sessions.js';
 import { issueCsrfToken } from './csrf.js';
 import { loadEnv } from '../../config/env.js';
 import { authenticate, requireCtx } from '../../app/auth.js';
@@ -55,7 +55,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     '/auth/login',
     {
       schema: { body: loginBody },
-      config: { rateLimit: { max: 10, timeWindow: '15 minutes' } },
+      config: { rateLimit: { max: 30, timeWindow: '15 minutes' } },
     },
     async (req, reply) => {
       const { username, password } = loginBody.parse(req.body);

@@ -6,6 +6,7 @@ import { DataTable, type Column } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
 import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { SuccessNotice } from '../../components/SuccessNotice';
 import { buildSchema, type ResourceConfig } from './config';
 
 type Row = Record<string, unknown>;
@@ -52,6 +53,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: ['master', config.key, page],
@@ -83,7 +85,8 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
           if (key && !nextErrors[key]) nextErrors[key] = issue.message;
         }
         setErrors(nextErrors);
-        return;
+        // Throw so the dialog stays open and field errors remain visible.
+        throw new ApiError('VALIDATION', 'Periksa kembali isian yang ditandai merah.', 400);
       }
       setErrors({});
       const payload = parsePayload(values, config, mode);
@@ -94,6 +97,11 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
       }
     },
     onSuccess: () => {
+      setNotice(
+        editing
+          ? `Perubahan ${config.label.toLowerCase()} disimpan.`
+          : `${config.label} baru berhasil ditambahkan.`,
+      );
       setDialogOpen(false);
       setEditing(null);
       setFormError(null);
@@ -110,7 +118,10 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
         method: 'PATCH',
         body: { isActive: row['isActive'] === false },
       }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setNotice(`Status ${config.label.toLowerCase()} diperbarui.`);
+      invalidate();
+    },
     onError: (error: unknown) => {
       setFormError(error instanceof ApiError ? error.message : 'Gagal mengubah status.');
     },
@@ -128,7 +139,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
         <span className="flex gap-2">
           <button
             type="button"
-            className="text-xs font-semibold text-brand-700 hover:underline"
+            className="min-h-touch rounded-lg border border-slate-200 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50"
             onClick={(e) => {
               e.stopPropagation();
               setEditing(row);
@@ -140,7 +151,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
           {config.hasActiveToggle ? (
             <button
               type="button"
-              className="text-xs font-semibold text-amber-700 hover:underline"
+              className="min-h-touch rounded-lg border border-amber-200 px-3 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-50"
               disabled={toggleMutation.isPending}
               onClick={(e) => {
                 e.stopPropagation();
@@ -159,6 +170,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
 
   return (
     <div className="space-y-3">
+      {notice ? <SuccessNotice message={notice} onDismiss={() => setNotice(null)} /> : null}
       {formError && !dialogOpen ? (
         <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700" role="alert">{formError}</p>
       ) : null}

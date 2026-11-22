@@ -46,6 +46,45 @@ export async function buildApp(): Promise<FastifyInstance> {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
+  app.setErrorHandler((error, req, reply) => {
+    const requestId = req.id;
+    if (error instanceof AppError) {
+      const mapped = errorEnvelope(error, requestId);
+      reply.code(mapped.status).send(mapped.body);
+      return;
+    }
+    if (error instanceof ZodError) {
+      const fieldErrors: Record<string, string[]> = {};
+      for (const issue of error.issues) {
+        const path = issue.path.join('.') || '_';
+        fieldErrors[path] = [...(fieldErrors[path] ?? []), issue.message];
+      }
+      reply.code(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Permintaan tidak valid.', fieldErrors, requestId },
+      });
+      return;
+    }
+    if ((error as { statusCode?: number }).statusCode === 429) {
+      const mapped = errorEnvelope(tooManyRequests(), requestId);
+      reply.code(429).send(mapped.body);
+      return;
+    }
+    const fastifyStatus = (error as { statusCode?: number }).statusCode;
+    if (typeof fastifyStatus === 'number' && fastifyStatus >= 400 && fastifyStatus < 500) {
+      reply.code(fastifyStatus).send({
+        error: {
+          code: (error as { code?: string }).code ?? 'REQUEST_ERROR',
+          message: (error as Error).message || 'Permintaan tidak valid.',
+          requestId,
+        },
+      });
+      return;
+    }
+    req.log.error({ err: { message: (error as Error).message, name: (error as Error).name } }, 'unhandled error');
+    const mapped = errorEnvelope(error, requestId);
+    reply.code(mapped.status).send(mapped.body);
+  });
+
   await app.register(swagger, {
     openapi: {
       info: {
@@ -106,34 +145,6 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   app.setNotFoundHandler((req, reply) => {
     reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Endpoint tidak ditemukan.', requestId: req.id } });
-  });
-
-  app.setErrorHandler((error, req, reply) => {
-    const requestId = req.id;
-    if (error instanceof AppError) {
-      const mapped = errorEnvelope(error, requestId);
-      reply.code(mapped.status).send(mapped.body);
-      return;
-    }
-    if (error instanceof ZodError) {
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of error.issues) {
-        const path = issue.path.join('.') || '_';
-        fieldErrors[path] = [...(fieldErrors[path] ?? []), issue.message];
-      }
-      reply.code(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'Permintaan tidak valid.', fieldErrors, requestId },
-      });
-      return;
-    }
-    if ((error as { statusCode?: number }).statusCode === 429) {
-      const mapped = errorEnvelope(tooManyRequests(), requestId);
-      reply.code(429).send(mapped.body);
-      return;
-    }
-    req.log.error({ err: { message: (error as Error).message, name: (error as Error).name } }, 'unhandled error');
-    const mapped = errorEnvelope(error, requestId);
-    reply.code(mapped.status).send(mapped.body);
   });
 
   return app;

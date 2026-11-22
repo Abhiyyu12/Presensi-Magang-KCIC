@@ -72,12 +72,12 @@ export default function MonitoringPage() {
     { header: 'Biro', cell: (row) => row.bureau ?? '-' },
     { header: 'Divisi', cell: (row) => row.division ?? '-' },
     {
-      header: 'Check-in',
+      header: 'Masuk',
       cell: (row) =>
         formatTimeWib(row.events.find((e) => e.eventType === 'CHECK_IN')?.occurredAtServer),
     },
     {
-      header: 'Check-out',
+      header: 'Pulang',
       cell: (row) =>
         formatTimeWib(row.events.find((e) => e.eventType === 'CHECK_OUT')?.occurredAtServer),
     },

@@ -37,6 +37,7 @@ function HomeDashboard() {
   if (has('admin:users:manage') || has('leave:approve') || has('attendance:correct')) {
     return <AdminDashboardPage />;
   }
+  if (has('access:roles:manage') || has('admin:audit:view')) return <AdminDashboardPage />;
   if (has('attendance:view:scoped') || has('report:view')) return <SupervisorDashboardPage />;
   return <ParticipantDashboardPage />;
 }
@@ -69,7 +70,7 @@ export default function App() {
           <Route
             path="/izin"
             element={
-              <RequirePermission anyOf={['leave:request', 'leave:approve']}>
+              <RequirePermission anyOf={['leave:request', 'leave:approve', 'leave:view:scoped']}>
                 <LeavesPage />
               </RequirePermission>
             }
@@ -77,7 +78,7 @@ export default function App() {
           <Route
             path="/izin/:leaveId"
             element={
-              <RequirePermission anyOf={['leave:request', 'leave:approve']}>
+              <RequirePermission anyOf={['leave:request', 'leave:approve', 'leave:view:scoped']}>
                 <LeaveDetailPage />
               </RequirePermission>
             }

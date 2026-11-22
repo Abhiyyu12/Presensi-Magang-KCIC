@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import {
   formatDateWib,
   fromDatetimeLocalWib,
@@ -42,14 +43,17 @@ type RequestForm = z.infer<typeof requestSchema>;
 
 export default function LeavesPage() {
   const queryClient = useQueryClient();
+  const { has } = useAuth();
+  const canRequest = has('leave:request');
+  const scope = canRequest ? 'mine' : 'scoped';
   const [page, setPage] = useState(1);
   const [formError, setFormError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
   const leavesQuery = useQuery({
-    queryKey: ['leaves', 'mine', page],
+    queryKey: ['leaves', scope, page],
     queryFn: () =>
-      api<Paginated<Leave>>('/leaves', { query: { scope: 'mine', page, pageSize: 15 } }),
+      api<Paginated<Leave>>('/leaves', { query: { scope, page, pageSize: 15 } }),
   });
 
   const categoriesQuery = useQuery({
@@ -100,22 +104,26 @@ export default function LeavesPage() {
     <div className="space-y-4">
       <header className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Izin Tengah Hari</h1>
+          <h1 className="text-lg font-bold text-slate-900">{canRequest ? 'Izin' : 'Izin Peserta'}</h1>
           <p className="text-sm text-slate-600">
-            Pengajuan izin hanya dapat dilakukan setelah check-in.
+            {canRequest
+              ? 'Pengajuan izin hanya dapat dilakukan setelah absen masuk.'
+              : 'Daftar izin peserta dalam cakupan Anda (hanya baca).'}
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-primary shrink-0"
-          onClick={() => setFormOpen((v) => !v)}
-          aria-expanded={formOpen}
-        >
-          {formOpen ? 'Tutup Form' : 'Ajukan Izin'}
-        </button>
+        {canRequest ? (
+          <button
+            type="button"
+            className="btn-primary shrink-0"
+            onClick={() => setFormOpen((v) => !v)}
+            aria-expanded={formOpen}
+          >
+            {formOpen ? 'Tutup Form' : 'Ajukan Izin'}
+          </button>
+        ) : null}
       </header>
 
-      {formOpen ? (
+      {canRequest && formOpen ? (
         <form
           className="card space-y-3"
           onSubmit={form.handleSubmit((values) => createMutation.mutate(values))}
@@ -240,7 +248,11 @@ export default function LeavesPage() {
           {leavesQuery.data.items.length === 0 ? (
             <EmptyState
               title="Belum ada pengajuan izin"
-              description="Ajukan izin tengah hari bila diperlukan. Pengajuan hanya bisa dilakukan setelah check-in."
+              description={
+                canRequest
+                  ? 'Ajukan izin bila diperlukan. Pengajuan hanya bisa dilakukan setelah absen masuk.'
+                  : 'Belum ada izin dari peserta dalam cakupan Anda.'
+              }
             />
           ) : (
             <ul className="space-y-2">
@@ -251,6 +263,9 @@ export default function LeavesPage() {
                     className="card flex items-center justify-between gap-3 hover:border-brand-600"
                   >
                     <div className="min-w-0">
+                      {!canRequest && leave.participantName ? (
+                        <p className="truncate text-sm font-semibold text-slate-900">{leave.participantName}</p>
+                      ) : null}
                       <p className="truncate text-sm font-medium text-slate-800">
                         {LEAVE_TYPE_LABELS[leave.leaveType] ?? leave.leaveType}
                         {leave.categoryName ? ` · ${leave.categoryName}` : ''}

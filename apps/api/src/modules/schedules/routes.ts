@@ -189,7 +189,7 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
       }
       if (nextValidTo && nextValidTo <= before.validFrom) throw unprocessable('validTo harus setelah validFrom.');
       const updated = await db.$transaction(async (tx) => {
-        const schedule = await tx.workSchedule.update({
+        await tx.workSchedule.update({
           where: { id },
           data: {
             ...(body.name !== undefined ? { name: body.name } : {}),

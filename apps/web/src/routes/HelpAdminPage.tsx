@@ -7,8 +7,6 @@ import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
-type Row = Record<string, unknown>;
-
 interface ArticleForm {
   title: string;
   content: string;

@@ -93,6 +93,29 @@ describe('authentication and CSRF', () => {
     expect(res.body.toLowerCase()).toContain('username atau password salah');
   });
 
+  it('returns the documented error envelope on auth and business failures', async () => {
+    const unauth = await get(app, '/api/v1/attendance/today');
+    const unauthBody = JSON.parse(unauth.body) as { error?: { code?: string; message?: string; requestId?: string } };
+    expect(unauthBody.error?.code).toBe('UNAUTHORIZED');
+    expect(typeof unauthBody.error?.message).toBe('string');
+    expect(typeof unauthBody.error?.requestId).toBe('string');
+
+    const mp = buildMultipart(
+      { latitude: '-6.9147', longitude: '107.6098', accuracyMeters: '12' },
+      { field: 'image', filename: 'selfie.jpg', contentType: 'image/jpeg', content: jpeg },
+    );
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/attendance/check-out',
+      headers: authHeaders(p2, { 'content-type': mp.contentType, 'idempotency-key': `envelope-co-${Date.now()}` }),
+      payload: mp.body,
+    });
+    expect(res.statusCode).toBe(409);
+    const body = JSON.parse(res.body) as { error?: { code?: string; message?: string } };
+    expect(body.error?.code).toBe('CONFLICT');
+    expect(body.error?.message).toContain('Check-out hanya dapat dilakukan setelah check-in');
+  });
+
   it('rejects unsafe method without CSRF header', async () => {
     // Logout has no body schema, so the CSRF check in authenticate is reached
     // (routes with body schemas would fail validation first).
@@ -366,6 +389,24 @@ describe('reports and export', () => {
 
   it('denies reports to peserta', async () => {
     const res = await get(app, `/api/v1/reports/attendance?startDate=${today}&endDateExclusive=${tomorrow}`, p1);
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('exports own history CSV for peserta without coordinates', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/v1/attendance/export?startDate=${today}&endDateExclusive=${tomorrow}`,
+      headers: getHeaders(p1),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.headers['content-disposition']).toContain('attachment');
+    expect(res.body).toContain('Tanggal,Status');
+    expect(res.body).not.toContain('latitude');
+  });
+
+  it('denies personal CSV export to accounts without intern profile', async () => {
+    const res = await get(app, '/api/v1/attendance/export', admin);
     expect(res.statusCode).toBe(403);
   });
 });

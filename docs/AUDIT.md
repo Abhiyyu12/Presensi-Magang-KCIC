@@ -158,3 +158,38 @@ Placeholder brief kosong → diusulkan tiga berikut (contoh dark mode & push not
 - Alur check-in end-to-end dengan kamera palsu + geolocation: capture → konfirmasi → kirim; penolakan server (akurasi 0 / hari non-kerja) terbukti tampil generik sebelum fix F-01 (body mentah Fastify flat vs envelope).
 - curl mentah membuktikan body 400 flat `{"statusCode":400,"code":"VALIDATION_ERROR",...}` sebelum fix; inject host membuktikan handler tidak terpanggil bila didaftarkan setelah plugin.
 - Rate limit login terbukti aktif (429 setelah 10 login/15 menit dari satu IP) — dasar F-13.
+
+---
+
+## 10. Status eksekusi Fase 4 (setelah upgrade)
+
+Semua temuan F-01…F-17 selesai dikerjakan; F-18 (dokumen usang) dikerjakan di Fase 5. Tanpa perubahan skema DB, tanpa dependensi baru.
+
+| Temuan | Status | Catatan implementasi |
+|---|---|---|
+| F-01 | Selesai | `setErrorHandler` sebelum registrasi plugin + fallback 4xx Fastify ke envelope; test regresi envelope |
+| F-02 | Selesai | Layout ditulis ulang: header sticky full-width; flex hanya sidebar+main |
+| F-03 | Selesai | AdminDashboard membaca `counts.*`; 6 kartu + tautan cepat |
+| F-04 | Selesai | Backend menambah `todayStats.pendingLeaves` + `todayStatus[]` (additive); frontend memetakan langsung |
+| F-05 | Selesai | Bottom nav 4 item + tombol "Menu" membuka sheet berisi semua item role |
+| F-06 | Selesai | HomeDashboard mengarahkan ADMIN_IT ke AdminDashboardPage |
+| F-07 | Selesai | Fallback `NOT_SCHEDULED`; banner hari non-kerja; alur absen tidak ditawarkan di hari libur |
+| F-08 | Selesai | Label pendek satu sumber (seed upsert idempoten + fallback Layout + header halaman + label event "Absen Masuk/Pulang") |
+| F-09 | Selesai | Komponen `SuccessNotice` dipakai UsersPanel & ResourcePanel (buat/ubah/role/toggle) |
+| F-10 | Selesai | Aksi baris UsersPanel/ResourcePanel jadi tombol `min-h-touch` (44px) |
+| F-11 | Selesai | Node nav "Izin Peserta" (`leave:view:scoped`); LeavesPage read-only `scope=scoped` untuk pembimbing |
+| F-12 | Selesai | `.eslintrc.cjs` di kedua app memakai dependensi terpasang; 7 pelanggaran dibersihkan; lint hijau `--max-warnings 0` |
+| F-13 | Selesai | Rate limit login 10 → 30 per IP / 15 menit (asumsi NAT kantor, §8) |
+| F-14 | Selesai | `NavIcon.tsx`: 12 ikon SVG inline menggantikan emoji |
+| F-15 | Selesai | Brand & nama akun `truncate` satu baris di 360px |
+| F-16 | Selesai | DataTable: petunjuk geser khusus layar sempit (`sm:hidden`) |
+| F-17 | Selesai | Layar explain digabung ke capture; alur mulai otomatis di hari kerja (hemat 2 tap); syarat tetap terbaca di atas kamera |
+
+Bug tambahan ditemukan & diperbaiki saat eksekusi (di luar daftar audit):
+
+1. **UsersPanel menawarkan status akun `DISABLED`** yang tidak ada di enum `AccountStatus` (ACTIVE/INACTIVE/SUSPENDED) → server menolak 400. Opsi diganti Aktif/Nonaktif/Ditangguhkan sesuai enum.
+2. **ResourcePanel menutup dialog saat isian tidak valid**: validasi zod gagal di `mutationFn` melakukan `return` (bukan throw) sehingga `onSuccess` tetap jalan dan error field hilang. Kini throw `ApiError` validasi → dialog tetap terbuka dengan pesan per field.
+
+Improvement kecil (§7): **I-1** chip preset riwayat (7 hari / 30 hari / Bulan ini) selesai; **I-2** banner pengingat absen pulang di Beranda peserta selesai; **I-3** `GET /attendance/export` CSV riwayat pribadi (tanpa koordinat/foto, diaudit `ATTENDANCE_EXPORT_SELF`, ditolak untuk akun tanpa profil peserta) + tombol "Unduh CSV" di Riwayat + 2 test API baru.
+
+Verifikasi pasca-Fase 4: typecheck API & web hijau; lint kedua app hijau; **test API 36/36** (27 integrasi + 9 unit); **test web 23/23**; build web hijau. Verifikasi browser mobile 360/390 + desktop dilakukan di Fase 6.

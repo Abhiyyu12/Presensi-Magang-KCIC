@@ -3,6 +3,10 @@ import { z } from 'zod';
 import { ok, paginationQuery, dateRangeQuery } from '../../common/http.js';
 import { authenticate, requireCtx } from '../../app/auth.js';
 import { authorize } from '../../app/auth.js';
+import { forbidden } from '../../common/errors.js';
+import { writeAudit } from '../../common/audit.js';
+import { businessDate, businessHHmm } from '../../common/time.js';
+import { getDb } from '../../infrastructure/db.js';
 import { readMultipart, requireIdempotencyKey, parseCoords } from '../../common/multipart.js';
 import {
   submitAttendance, getToday, listAttendance, getAttendanceDetail, getEvidenceUrl, correctAttendance,
@@ -53,6 +57,54 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
     const { items, total } = await listAttendance(ctx, q);
     return ok({ items, pagination: { page: q.page, pageSize: q.pageSize, total, totalPages: Math.max(1, Math.ceil(total / q.pageSize)) } }, req.id);
   });
+
+  // Personal CSV export (own history only). No photos, no coordinates.
+  app.get(
+    '/attendance/export',
+    { schema: { querystring: dateRangeQuery }, preHandler: authenticate },
+    async (req, reply) => {
+      const ctx = requireCtx(req);
+      if (!ctx.internProfileId) {
+        throw forbidden('Ekspor CSV ini hanya tersedia untuk riwayat pribadi peserta.');
+      }
+      const q = dateRangeQuery.parse(req.query);
+      const { items } = await listAttendance(ctx, {
+        page: 1,
+        pageSize: 1000,
+        startDate: q.startDate,
+        endDateExclusive: q.endDateExclusive,
+      });
+      const esc = (v: string | number) => {
+        const s = String(v);
+        return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const lines = ['Tanggal,Status,Jam Masuk (WIB),Jam Pulang (WIB),Jumlah Catatan,Koreksi'];
+      for (const d of items) {
+        const ci = d.events.find((e) => e.eventType === 'CHECK_IN' && e.status !== 'VOIDED');
+        const co = d.events.find((e) => e.eventType === 'CHECK_OUT' && e.status !== 'VOIDED');
+        lines.push(
+          [
+            esc(d.workDate),
+            esc(d.dayStatus),
+            esc(ci ? businessHHmm(new Date(ci.occurredAtServer)) : ''),
+            esc(co ? businessHHmm(new Date(co.occurredAtServer)) : ''),
+            esc(d.events.length),
+            esc(d.correctionFlag ? 'YA' : 'TIDAK'),
+          ].join(','),
+        );
+      }
+      await writeAudit(getDb(), {
+        actorUserId: ctx.user.id,
+        action: 'ATTENDANCE_EXPORT_SELF',
+        objectType: 'attendance_day',
+        after: { rows: items.length, startDate: q.startDate ?? null, endDateExclusive: q.endDateExclusive ?? null },
+        requestId: req.id,
+      });
+      reply.header('Content-Type', 'text/csv; charset=utf-8');
+      reply.header('Content-Disposition', `attachment; filename="riwayat-absensi-${businessDate()}.csv"`);
+      return reply.send(lines.join('\n'));
+    },
+  );
 
   app.get(
     '/attendance/:attendanceId',

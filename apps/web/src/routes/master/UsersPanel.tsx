@@ -6,6 +6,7 @@ import { DataTable, type Column } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
 import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { SuccessNotice } from '../../components/SuccessNotice';
 
 type Row = Record<string, unknown>;
 
@@ -23,6 +24,7 @@ export function UsersPanel() {
   const [rolesRow, setRolesRow] = useState<Row | null>(null);
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [createForm, setCreateForm] = useState({
     username: '',
@@ -76,6 +78,7 @@ export function UsersPanel() {
     onSuccess: () => {
       setCreateOpen(false);
       setFormError(null);
+      setNotice('Pengguna baru berhasil dibuat.');
       setCreateForm({ username: '', displayName: '', password: '', email: '', phone: '', roleIds: [] });
       invalidate();
     },
@@ -98,6 +101,7 @@ export function UsersPanel() {
     onSuccess: () => {
       setEditRow(null);
       setFormError(null);
+      setNotice('Perubahan data pengguna disimpan.');
       invalidate();
     },
     onError: (error: unknown) => {
@@ -114,6 +118,7 @@ export function UsersPanel() {
     onSuccess: () => {
       setRolesRow(null);
       setFormError(null);
+      setNotice('Role pengguna diperbarui.');
       invalidate();
     },
     onError: (error: unknown) => {
@@ -155,7 +160,7 @@ export function UsersPanel() {
         <span className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="text-xs font-semibold text-brand-700 hover:underline"
+            className="min-h-touch rounded-lg border border-slate-200 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50"
             onClick={() => {
               setEditRow(row);
               setEditForm({
@@ -171,7 +176,7 @@ export function UsersPanel() {
           </button>
           <button
             type="button"
-            className="text-xs font-semibold text-brand-700 hover:underline"
+            className="min-h-touch rounded-lg border border-slate-200 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50"
             onClick={() => {
               setRolesRow(row);
               setSelectedRoleIds(
@@ -189,7 +194,7 @@ export function UsersPanel() {
           </button>
           <button
             type="button"
-            className="text-xs font-semibold text-amber-700 hover:underline"
+            className="min-h-touch rounded-lg border border-amber-200 px-3 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-50"
             disabled={resetMutation.isPending}
             onClick={() => resetMutation.mutate(row)}
           >
@@ -226,6 +231,7 @@ export function UsersPanel() {
 
   return (
     <div className="space-y-3">
+      {notice ? <SuccessNotice message={notice} onDismiss={() => setNotice(null)} /> : null}
       {formError ? (
         <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700" role="alert">{formError}</p>
       ) : null}
@@ -345,9 +351,9 @@ export function UsersPanel() {
               value={editForm.accountStatus}
               onChange={(e) => setEditForm((f) => ({ ...f, accountStatus: e.target.value }))}
             >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="SUSPENDED">SUSPENDED</option>
-              <option value="DISABLED">DISABLED</option>
+              <option value="ACTIVE">Aktif</option>
+              <option value="INACTIVE">Nonaktif</option>
+              <option value="SUSPENDED">Ditangguhkan</option>
             </select>
           </div>
         </div>

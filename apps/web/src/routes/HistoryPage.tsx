@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../lib/api';
+import { api, API_BASE, buildQuery } from '../lib/api';
 import { formatDateWib, formatTimeWib, nextDay, todayWibDateString } from '../lib/format';
 import type { AttendanceDay, Paginated } from '../lib/types';
 import { DataTable, type Column } from '../components/DataTable';
@@ -15,15 +15,24 @@ interface HistoryFilters {
   endDate: string;
 }
 
+const PRESETS = [
+  { key: '7d', label: '7 hari terakhir' },
+  { key: '30d', label: '30 hari terakhir' },
+  { key: 'month', label: 'Bulan ini' },
+] as const;
+
+function presetRange(kind: (typeof PRESETS)[number]['key']): HistoryFilters {
+  const today = todayWibDateString();
+  if (kind === 'month') return { startDate: `${today.slice(0, 7)}-01`, endDate: today };
+  const start = new Date(`${today}T00:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - (kind === '7d' ? 6 : 29));
+  return { startDate: start.toISOString().slice(0, 10), endDate: today };
+}
+
 export default function HistoryPage() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState<HistoryFilters>(() => {
-    const today = todayWibDateString();
-    const start = new Date(`${today}T00:00:00Z`);
-    start.setUTCDate(start.getUTCDate() - 29);
-    return { startDate: start.toISOString().slice(0, 10), endDate: today };
-  });
+  const [filters, setFilters] = useState<HistoryFilters>(() => presetRange('30d'));
   const [applied, setApplied] = useState(filters);
 
   const historyQuery = useQuery({
@@ -59,24 +68,61 @@ export default function HistoryPage() {
       ),
     },
     {
-      header: 'Check-in',
+      header: 'Masuk',
       cell: (row) =>
         formatTimeWib(row.events.find((e) => e.eventType === 'CHECK_IN')?.occurredAtServer),
     },
     {
-      header: 'Check-out',
+      header: 'Pulang',
       cell: (row) =>
         formatTimeWib(row.events.find((e) => e.eventType === 'CHECK_OUT')?.occurredAtServer),
     },
-    { header: 'Event', cell: (row) => `${row.events.length} event` },
+    { header: 'Catatan', cell: (row) => `${row.events.length} catatan` },
   ];
+
+  const exportHref = `${API_BASE}/attendance/export${buildQuery({
+    startDate: applied.startDate,
+    endDateExclusive: nextDay(applied.endDate),
+  })}`;
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-lg font-bold text-slate-900">Riwayat Absensi</h1>
-        <p className="text-sm text-slate-600">Data riwayat milik Anda sendiri.</p>
+      <header className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-lg font-bold text-slate-900">Riwayat Absensi</h1>
+          <p className="text-sm text-slate-600">Data riwayat milik Anda sendiri.</p>
+        </div>
+        <a className="btn-secondary" href={exportHref} download>
+          Unduh CSV
+        </a>
       </header>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter cepat riwayat">
+        {PRESETS.map((preset) => {
+          const range = presetRange(preset.key);
+          const active =
+            applied.startDate === range.startDate && applied.endDate === range.endDate;
+          return (
+            <button
+              key={preset.key}
+              type="button"
+              aria-pressed={active}
+              className={`min-h-touch rounded-full border px-4 text-sm font-medium ${
+                active
+                  ? 'border-brand-600 bg-brand-600 text-white'
+                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+              onClick={() => {
+                setFilters(range);
+                setApplied(range);
+                setPage(1);
+              }}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
 
       <form
         className="card grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"

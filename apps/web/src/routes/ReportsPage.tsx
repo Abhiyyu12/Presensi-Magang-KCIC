@@ -87,8 +87,8 @@ export default function ReportsPage() {
     { header: 'Nama', cell: (row) => row.participantName },
     { header: 'Biro', cell: (row) => row.bureau ?? '-' },
     { header: 'Divisi', cell: (row) => row.division ?? '-' },
-    { header: 'Check-in', cell: (row) => formatTimeWib(row.checkIn) },
-    { header: 'Check-out', cell: (row) => formatTimeWib(row.checkOut) },
+    { header: 'Masuk', cell: (row) => formatTimeWib(row.checkIn) },
+    { header: 'Pulang', cell: (row) => formatTimeWib(row.checkOut) },
     {
       header: 'Status',
       cell: (row) => (

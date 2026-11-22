@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
@@ -11,12 +11,12 @@ import { CameraCapture } from '../components/CameraCapture';
 import { LocationStatus, useGeolocation, type LocationFix } from '../components/LocationStatus';
 import { useAttendanceSubmit } from '../hooks/useAttendanceSubmit';
 
-type FlowStep = 'explain' | 'capture' | 'confirm' | 'done';
+type FlowStep = 'capture' | 'confirm' | 'done';
 
 export default function AttendancePage() {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<FlowStep>('explain');
+  const [step, setStep] = useState<FlowStep>('capture');
   const [action, setAction] = useState<EventType>('CHECK_IN');
   const [photo, setPhoto] = useState<{ blob: Blob; previewUrl: string } | null>(null);
 
@@ -29,6 +29,8 @@ export default function AttendancePage() {
   const events = today?.attendanceDay?.events ?? [];
   const hasCheckIn = events.some((e) => e.eventType === 'CHECK_IN');
   const hasCheckOut = events.some((e) => e.eventType === 'CHECK_OUT');
+  const isWorkingDay = today?.workday?.isWorkingDay ?? false;
+  const completeToday = hasCheckIn && hasCheckOut;
 
   // Only the next valid action is offered (server day status remains truth).
   useEffect(() => {
@@ -48,11 +50,15 @@ export default function AttendancePage() {
     },
   });
 
-  const startFlow = useCallback(() => {
+  // Start the capture flow automatically on working days so absen is
+  // camera-ready without an extra "Mulai" tap. One attempt per page visit.
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (!today || startedRef.current || !isWorkingDay || completeToday) return;
+    startedRef.current = true;
     submitter.beginAttempt();
-    setStep('capture');
     void geolocation.acquire().then(setLocation);
-  }, [submitter, geolocation]);
+  }, [today, isWorkingDay, completeToday, submitter, geolocation]);
 
   const onCaptured = useCallback((blob: Blob, previewUrl: string) => {
     setPhoto({ blob, previewUrl });
@@ -79,7 +85,7 @@ export default function AttendancePage() {
     );
   }
 
-  const completeToday = hasCheckIn && hasCheckOut;
+  const actionLabel = action === 'CHECK_IN' ? 'Absen Masuk' : 'Absen Pulang';
   const uploadState =
     submitter.phase === 'submitting'
       ? 'uploading'
@@ -94,20 +100,34 @@ export default function AttendancePage() {
       <header>
         <h1 className="text-lg font-bold text-slate-900">Absensi</h1>
         <p className="text-sm text-slate-600">
-          Status hari ini: <StatusBadge status={today.attendanceDay?.dayStatus ?? 'SCHEDULED'} />
-          {today.workday?.isWorkingDay ? (
+          Status hari ini:{' '}
+          <StatusBadge
+            status={today.attendanceDay?.dayStatus ?? (isWorkingDay ? 'SCHEDULED' : 'NOT_SCHEDULED')}
+          />
+          {isWorkingDay && today.workday ? (
             <>
               {' '}
               · Jadwal {formatTimeWib(today.workday.startTime)}–{formatTimeWib(today.workday.endTime)}{' '}
               WIB
             </>
-          ) : (
-            ' · Hari ini tidak terjadwal'
-          )}
+          ) : null}
         </p>
       </header>
 
-      {step === 'done' && submitter.result ? (
+      {!isWorkingDay ? (
+        <section className="card border-slate-200 bg-slate-50">
+          <p className="text-sm font-semibold text-slate-800">
+            Hari ini bukan hari kerja terjadwal.
+          </p>
+          <p className="mt-1 text-sm text-slate-600">
+            Absen masuk dan absen pulang tidak tersedia. Jika jadwal Anda seharusnya berbeda,
+            hubungi admin HR.
+          </p>
+          <Link to="/riwayat" className="btn-secondary mt-3">
+            Lihat Riwayat
+          </Link>
+        </section>
+      ) : step === 'done' && submitter.result ? (
         <section className="card border-green-200 bg-green-50" aria-live="polite">
           <p className="text-sm font-semibold text-green-800">Absensi berhasil disimpan.</p>
           <dl className="mt-3 space-y-1 text-sm text-green-900">
@@ -142,7 +162,7 @@ export default function AttendancePage() {
           ) : null}
           <div className="mt-4 flex gap-2">
             <Link to="/" className="btn-secondary flex-1">
-              Kembali ke Dashboard
+              Kembali ke Beranda
             </Link>
             <Link to="/riwayat" className="btn-primary flex-1">
               Lihat Riwayat
@@ -152,7 +172,7 @@ export default function AttendancePage() {
       ) : completeToday ? (
         <section className="card">
           <p className="text-sm text-slate-700">
-            Absensi hari ini sudah lengkap (check-in dan check-out tercatat). Status:{' '}
+            Absensi hari ini sudah lengkap (absen masuk dan absen pulang tercatat). Status:{' '}
             <StatusBadge status={today.attendanceDay?.dayStatus} />
           </p>
           {today.attendanceDay?.dayStatus === 'NEEDS_REVIEW' ? (
@@ -164,27 +184,15 @@ export default function AttendancePage() {
             Lihat Riwayat
           </Link>
         </section>
-      ) : step === 'explain' ? (
-        <section className="card space-y-3">
-          <p className="text-sm text-slate-700">
-            Aksi berikutnya: <strong>{action === 'CHECK_IN' ? 'Check-in' : 'Check-out'}</strong>.
-            Sebelum mulai, perhatikan persyaratan berikut:
-          </p>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
-            <li>Izinkan akses kamera untuk mengambil selfie absensi.</li>
-            <li>
-              Lokasi diperlukan sebagai bukti saat absensi. Lokasi tidak digunakan untuk melacak
-              Anda terus-menerus.
-            </li>
-            <li>Waktu resmi menggunakan waktu server, bukan waktu perangkat.</li>
-            <li>Jangan tutup halaman selama proses pengiriman berlangsung.</li>
-          </ul>
-          <button type="button" className="btn-primary w-full" onClick={startFlow}>
-            Mulai {action === 'CHECK_IN' ? 'Check-in' : 'Check-out'}
-          </button>
-        </section>
       ) : (
         <section className="card space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">{actionLabel}</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Ambil selfie, lalu izinkan lokasi saat diminta. Waktu resmi memakai waktu server.
+              Jangan tutup halaman selama pengiriman berlangsung.
+            </p>
+          </div>
           <CameraCapture
             onCaptured={onCaptured}
             uploadState={uploadState}
@@ -210,7 +218,7 @@ export default function AttendancePage() {
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt>Aksi</dt>
-                  <dd className="font-medium">{action === 'CHECK_IN' ? 'Check-in' : 'Check-out'}</dd>
+                  <dd className="font-medium">{actionLabel}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt>Akurasi lokasi</dt>
@@ -235,11 +243,12 @@ export default function AttendancePage() {
                     setPhoto(null);
                     setLocation(null);
                     geolocation.reset();
-                    setStep('explain');
+                    setStep('capture');
+                    void geolocation.acquire().then(setLocation);
                   }}
                   disabled={submitter.phase === 'submitting'}
                 >
-                  Batalkan
+                  Ulangi Foto
                 </button>
                 <button
                   type="button"
@@ -251,13 +260,6 @@ export default function AttendancePage() {
                 </button>
               </div>
             </div>
-          ) : null}
-
-          {step === 'capture' ? (
-            <p className="text-xs text-slate-500">
-              Ambil foto selfie dan tunggu lokasi diperoleh, lalu periksa ringkasan sebelum
-              mengirim.
-            </p>
           ) : null}
         </section>
       )}

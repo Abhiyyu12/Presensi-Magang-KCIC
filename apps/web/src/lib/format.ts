@@ -120,8 +120,8 @@ export const LEAVE_TYPE_LABELS: Record<string, string> = {
 };
 
 export const EVENT_TYPE_LABELS: Record<string, string> = {
-  CHECK_IN: 'Check-in',
-  CHECK_OUT: 'Check-out',
+  CHECK_IN: 'Absen Masuk',
+  CHECK_OUT: 'Absen Pulang',
   DEPARTURE: 'Keluar',
   RETURN: 'Kembali',
   EARLY_CHECKOUT: 'Pulang Lebih Awal',

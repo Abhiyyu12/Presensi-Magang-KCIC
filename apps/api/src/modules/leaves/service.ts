@@ -8,8 +8,6 @@ import { findReplay, computeRequestHash, idempotencyRecordData } from '../../com
 import { validateAndProcessImage, generateObjectKey, uploadEvidence, compensateRemove } from '../files/service.js';
 import type { AccessContext } from '../access/context.js';
 import { requirePermission, internScopeWhere, internAccessKind, adminScopeCovers } from '../access/scope.js';
-import { eventView } from '../attendance/service.js';
-import { zonedTimeToUtc } from '../../common/time.js';
 
 const ACTIVE_TEMPORARY_STATUSES = ['PENDING', 'APPROVED', 'DEPARTED', 'RETURNED'] as const;
 
@@ -375,7 +373,7 @@ export async function listLeaves(ctx: AccessContext, query: {
   scope?: 'mine' | 'all';
 }) {
   const db = getDb();
-  let where: Prisma.LeaveRequestWhereInput = {};
+  const where: Prisma.LeaveRequestWhereInput = {};
   if (query.scope === 'mine' || !ctx.permissions.has('leave:view:scoped')) {
     if (!ctx.internProfileId) throw forbidden('Anda tidak memiliki data izin untuk ditampilkan.');
     requirePermission(ctx, 'leave:view:own');

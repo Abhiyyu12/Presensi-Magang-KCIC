@@ -168,7 +168,7 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
           </h2>
           {checkIn ? (
             <p className="mt-1 text-xs text-slate-500">
-              Nilai saat ini (check-in): {formatWib(checkIn.occurredAtServer)}
+              Nilai saat ini (absen masuk): {formatWib(checkIn.occurredAtServer)}
             </p>
           ) : null}
           {correctionDone ? (

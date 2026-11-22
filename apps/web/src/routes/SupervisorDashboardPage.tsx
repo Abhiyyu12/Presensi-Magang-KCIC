@@ -12,34 +12,29 @@ interface DashboardData {
   notCheckedInCount?: number;
   needsReviewCount?: number;
   pendingLeaveCount?: number;
-  todayStatus?: { name: string; dayStatus: string }[];
+  todayStatus: { name: string; dayStatus: string }[];
 }
 
 function parseDashboard(raw: unknown): DashboardData {
-  if (!isRecord(raw)) return {};
-  const num = (key: string): number | undefined => {
-    const value = raw[key];
-    if (typeof value === 'number') return value;
-    if (isRecord(value) && typeof value['count'] === 'number') return value['count'];
-    if (isRecord(value) && typeof value['total'] === 'number') return value['total'];
-    return undefined;
-  };
-  const todayRaw = raw['todayStatus'] ?? raw['today'] ?? raw['participants'];
-  const todayStatus = Array.isArray(todayRaw)
-    ? todayRaw
+  if (!isRecord(raw)) return { todayStatus: [] };
+  const assigned = isRecord(raw['assignedInterns']) ? raw['assignedInterns'] : {};
+  const stats = isRecord(raw['todayStats']) ? raw['todayStats'] : {};
+  const num = (v: unknown): number | undefined => (typeof v === 'number' ? v : undefined);
+  const todayStatus = Array.isArray(raw['todayStatus'])
+    ? raw['todayStatus']
         .filter(isRecord)
         .slice(0, 25)
         .map((row) => ({
-          name: asString(row['participantName'] ?? row['name']),
-          dayStatus: asString(row['dayStatus'] ?? row['status'], 'SCHEDULED'),
+          name: asString(row['name']),
+          dayStatus: asString(row['dayStatus'], 'SCHEDULED'),
         }))
-    : undefined;
+    : [];
   return {
-    assignedCount: num('assignedCount') ?? num('assignedInterns'),
-    checkedInCount: num('checkedInCount') ?? num('checkedIn'),
-    notCheckedInCount: num('notCheckedInCount') ?? num('notCheckedIn'),
-    needsReviewCount: num('needsReviewCount') ?? num('needsReview'),
-    pendingLeaveCount: num('pendingLeaveCount') ?? num('pendingLeaves'),
+    assignedCount: num(assigned['count']),
+    checkedInCount: num(stats['checkedIn']),
+    notCheckedInCount: num(stats['notCheckedIn']),
+    needsReviewCount: num(stats['needsReview']),
+    pendingLeaveCount: num(stats['pendingLeaves']),
     todayStatus,
   };
 }
@@ -64,8 +59,8 @@ export default function SupervisorDashboardPage() {
 
   const cards: { label: string; value: number | undefined }[] = [
     { label: 'Peserta bimbingan', value: data.assignedCount },
-    { label: 'Sudah check-in hari ini', value: data.checkedInCount },
-    { label: 'Belum check-in hari ini', value: data.notCheckedInCount },
+    { label: 'Sudah absen masuk', value: data.checkedInCount },
+    { label: 'Belum absen masuk', value: data.notCheckedInCount },
     { label: 'Perlu review', value: data.needsReviewCount },
     { label: 'Izin menunggu', value: data.pendingLeaveCount },
   ];
@@ -73,9 +68,9 @@ export default function SupervisorDashboardPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Dashboard Pembimbing</h1>
+        <h1 className="text-lg font-bold text-slate-900">Beranda Pembimbing</h1>
         <p className="text-sm text-slate-600">
-          Ringkasan peserta binaan Anda hari ini (data dari server, sesuai cakupan).
+          Ringkasan peserta binaan Anda hari ini.
         </p>
       </header>
 
@@ -90,7 +85,7 @@ export default function SupervisorDashboardPage() {
         ))}
       </div>
 
-      {data.todayStatus && data.todayStatus.length > 0 ? (
+      {data.todayStatus.length > 0 ? (
         <section className="card" aria-labelledby="today-list">
           <h2 id="today-list" className="text-sm font-semibold text-slate-800">
             Status peserta hari ini
