@@ -58,7 +58,7 @@ export default function ApprovalsPage() {
   const columns: Column<Leave>[] = [
     { header: 'Tanggal', cell: (row) => formatDateWib(row.createdAt ?? row.estimatedDepartureAt) },
     { header: 'Peserta', cell: (row) => row.participantName ?? '-' },
-    { header: 'Biro/Divisi', cell: (row) => [row.bureau, row.division].filter(Boolean).join(' / ') || '-' },
+    { header: 'Direktorat/Biro', cell: (row) => [row.bureau, row.division].filter(Boolean).join(' / ') || '-' },
     { header: 'Jenis', cell: (row) => LEAVE_TYPE_LABELS[row.leaveType] ?? row.leaveType },
     {
       header: 'Estimasi keluar',

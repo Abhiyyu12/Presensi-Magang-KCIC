@@ -295,8 +295,8 @@ export default function ProfilePage() {
               label="Status peserta"
               value={INTERN_STATUS_LABEL[intern.status] ?? intern.status}
             />
-            <DetailRow label="Biro" value={intern.bureauName ?? '-'} />
-            <DetailRow label="Divisi" value={intern.divisionName ?? '-'} />
+            <DetailRow label="Direktorat" value={intern.bureauName ?? '-'} />
+            <DetailRow label="Biro" value={intern.divisionName ?? '-'} />
             <DetailRow label="Penempatan" value={intern.placementName ?? '-'} />
             <DetailRow
               label="Periode magang"

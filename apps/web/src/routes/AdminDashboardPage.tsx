@@ -333,7 +333,7 @@ export default function AdminDashboardPage() {
             <>
               <MasterCombobox
                 id="dash-bureau"
-                label="Biro"
+                label="Direktorat"
                 value={bureauId}
                 valueLabel={bureauLabel}
                 onChange={(value, label) => {
@@ -348,7 +348,7 @@ export default function AdminDashboardPage() {
               />
               <MasterCombobox
                 id="dash-division"
-                label="Divisi"
+                label="Biro"
                 value={divisionId}
                 valueLabel={divisionLabel}
                 onChange={(value, label) => {

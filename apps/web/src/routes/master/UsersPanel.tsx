@@ -103,7 +103,7 @@ function validateProfileForm(f: ProfileFormState, creating: boolean): string | n
   if (!f.asIntern) return null;
   if (creating || f.participantNumber === '') {
     if (!f.participantNumber.trim()) return 'Nomor peserta wajib diisi untuk peserta magang.';
-    if (!f.bureauId) return 'Biro wajib dipilih untuk peserta magang.';
+    if (!f.bureauId) return 'Direktorat wajib dipilih untuk peserta magang.';
     if (!f.startDate) return 'Tanggal mulai magang wajib diisi untuk peserta magang.';
   }
   if (f.startDate && f.endDate && f.endDate < f.startDate) {
@@ -358,7 +358,7 @@ export function UsersPanel() {
       },
     },
     {
-      header: 'Biro / Divisi',
+      header: 'Direktorat / Biro',
       cell: (row) => {
         const profile = isRecord(row['internProfile']) ? row['internProfile'] : undefined;
         if (!profile) return '-';
@@ -500,7 +500,7 @@ export function UsersPanel() {
       </div>
       <MasterCombobox
         id="profile-bureau"
-        label="Biro"
+        label="Direktorat"
         required
         value={f.bureauId}
         valueLabel={f.bureauLabel}
@@ -510,12 +510,12 @@ export function UsersPanel() {
       />
       <MasterCombobox
         id="profile-division"
-        label="Divisi"
+        label="Biro"
         value={f.divisionId}
         valueLabel={f.divisionLabel}
         allowClear
         queryExtra={f.bureauId || null}
-        depHint="Pilih biro terlebih dahulu."
+        depHint="Pilih direktorat terlebih dahulu."
         fetchOptions={(s) => fetchDivisionOptions(s, f.bureauId)}
         onChange={(value, label) => set({ ...f, divisionId: value, divisionLabel: label })}
       />
@@ -618,19 +618,19 @@ export function UsersPanel() {
           value={bureauId}
           onChange={(e) => { setBureauId(e.target.value); setPage(1); }}
         >
-          <option value="">Semua biro</option>
+          <option value="">Semua direktorat</option>
           {bureaus.map((b) => (
             <option key={asString(b['id'])} value={asString(b['id'])}>{asString(b['name'])}</option>
           ))}
         </select>
         <select
-          aria-label="Filter divisi"
+          aria-label="Filter biro"
           className="input min-h-touch"
           value={divisionId}
           disabled={!bureauId}
           onChange={(e) => { setDivisionId(e.target.value); setPage(1); }}
         >
-          <option value="">Semua divisi</option>
+          <option value="">Semua biro</option>
           {divisions.map((d) => (
             <option key={asString(d['id'])} value={asString(d['id'])}>{asString(d['name'])}</option>
           ))}
@@ -858,8 +858,8 @@ export function UsersPanel() {
                 {detailProfile ? (
                   <dl className="mt-1 grid grid-cols-[8rem_1fr] gap-y-1 text-sm">
                     <dt className="text-slate-500">No. peserta</dt><dd className="font-medium">{asString(detailProfile['participantNumber'])}</dd>
-                    <dt className="text-slate-500">Biro</dt><dd>{isRecord(detailProfile['bureau']) ? asString(detailProfile['bureau']['name']) : '-'}</dd>
-                    <dt className="text-slate-500">Divisi</dt><dd>{isRecord(detailProfile['division']) ? asString(detailProfile['division']['name']) : '-'}</dd>
+                    <dt className="text-slate-500">Direktorat</dt><dd>{isRecord(detailProfile['bureau']) ? asString(detailProfile['bureau']['name']) : '-'}</dd>
+                    <dt className="text-slate-500">Biro</dt><dd>{isRecord(detailProfile['division']) ? asString(detailProfile['division']['name']) : '-'}</dd>
                     <dt className="text-slate-500">Penempatan</dt><dd>{isRecord(detailProfile['placement']) ? asString(detailProfile['placement']['name']) : '-'}</dd>
                     <dt className="text-slate-500">Periode</dt><dd>{datePart(detailProfile['startDate'])} s/d {datePart(detailProfile['endDate']) || '-'}</dd>
                     <dt className="text-slate-500">Status</dt><dd>{asString(detailProfile['status'])}</dd>

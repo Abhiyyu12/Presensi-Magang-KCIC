@@ -81,7 +81,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
     }
   }, [dialogOpen, editing, config]);
 
-  // Mengganti nilai field dependensi (mis. Biro) mengosongkan field turunannya (Divisi).
+  // Mengganti nilai field dependensi (mis. Direktorat) mengosongkan field turunannya (Biro).
   const handleComboboxChange = (field: FieldConfig, value: string, label: string) => {
     setValues((v) => ({ ...v, [field.name]: value }));
     setLabels((l) => ({ ...l, [field.name]: label }));

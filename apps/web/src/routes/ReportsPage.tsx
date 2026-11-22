@@ -92,8 +92,8 @@ export default function ReportsPage() {
     { header: 'Tanggal', cell: (row) => formatDateWib(row.workDate) },
     { header: 'No. ID', cell: (row) => row.participantNumber ?? '-' },
     { header: 'Nama', cell: (row) => row.participantName },
-    { header: 'Biro', cell: (row) => row.bureau ?? '-' },
-    { header: 'Divisi', cell: (row) => row.division ?? '-' },
+    { header: 'Direktorat', cell: (row) => row.bureau ?? '-' },
+    { header: 'Biro', cell: (row) => row.division ?? '-' },
     { header: 'Masuk', cell: (row) => formatTimeWib(row.checkIn) },
     { header: 'Pulang', cell: (row) => formatTimeWib(row.checkOut) },
     {
@@ -185,7 +185,7 @@ export default function ReportsPage() {
             />
           )}
         </FormField>
-        <FormField label="Biro">
+        <FormField label="Direktorat">
           {(props) => (
             <select
               {...props}
@@ -194,7 +194,7 @@ export default function ReportsPage() {
               onChange={(e) => set({ bureauId: e.target.value })}
               disabled={bureausQuery.isError}
             >
-              <option value="">Semua biro</option>
+              <option value="">Semua direktorat</option>
               {(bureausQuery.data?.items ?? []).map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -203,7 +203,7 @@ export default function ReportsPage() {
             </select>
           )}
         </FormField>
-        <FormField label="Divisi">
+        <FormField label="Biro">
           {(props) => (
             <select
               {...props}
@@ -212,7 +212,7 @@ export default function ReportsPage() {
               onChange={(e) => set({ divisionId: e.target.value })}
               disabled={divisionsQuery.isError}
             >
-              <option value="">Semua divisi</option>
+              <option value="">Semua biro</option>
               {(divisionsQuery.data?.items ?? []).map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}

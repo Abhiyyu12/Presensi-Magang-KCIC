@@ -181,7 +181,7 @@ export function ImportUsersDialog({ open, onClose, onImported }: ImportUsersDial
                 200 baris).
               </li>
               <li>Kolom wajib: Username, Nama Lengkap, Kode Role. Pilih nilai dari dropdown.</li>
-              <li>Peserta magang (role INTERN) wajib mengisi Nomor Peserta, Biro, dan Tanggal Mulai.</li>
+              <li>Peserta magang (role INTERN) wajib mengisi Nomor Peserta, Direktorat, dan Tanggal Mulai.</li>
               <li>Klik Periksa File untuk melihat hasil validasi sebelum disimpan.</li>
             </ol>
             <div className="flex flex-wrap gap-2">

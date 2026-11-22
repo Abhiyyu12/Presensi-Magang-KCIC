@@ -146,8 +146,8 @@ export default function ParticipantDashboardPage() {
         ) : (
           <dl className="mt-1 text-sm">
             <DetailRow label="Nomor peserta" value={intern.participantNumber} />
-            <DetailRow label="Biro" value={intern.bureauName ?? '-'} />
-            <DetailRow label="Divisi" value={intern.divisionName ?? '-'} />
+            <DetailRow label="Direktorat" value={intern.bureauName ?? '-'} />
+            <DetailRow label="Biro" value={intern.divisionName ?? '-'} />
             <DetailRow label="Penempatan" value={intern.placementName ?? '-'} />
             <DetailRow label="Pembimbing" value={supervisorNames && supervisorNames.length > 0 ? supervisorNames : '-'} />
             <DetailRow

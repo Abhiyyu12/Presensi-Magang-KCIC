@@ -28,8 +28,8 @@ interface FormDefaults {
 const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
 const SCOPE_LABELS: Record<string, string> = {
-  BUREAU: 'Biro',
-  DIVISION: 'Divisi',
+  BUREAU: 'Direktorat',
+  DIVISION: 'Biro',
   INDIVIDUAL: 'Peserta (individu)',
 };
 

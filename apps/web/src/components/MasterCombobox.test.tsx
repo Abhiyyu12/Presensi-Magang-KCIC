@@ -12,13 +12,13 @@ import { MasterCombobox, type ComboboxOption } from './MasterCombobox';
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 
 const OPTIONS: ComboboxOption[] = [
-  { value: 'u1', label: 'Biro Operasi', description: 'BIO-OPS' },
-  { value: 'u2', label: 'Biro Teknik', description: 'BIO-TEK' },
-  { value: 'u3', label: 'Divisi A', description: 'DIV-A' },
-  { value: 'u4', label: 'Divisi B', description: 'DIV-B' },
-  { value: 'u5', label: 'Divisi C', description: 'DIV-C' },
-  { value: 'u6', label: 'Divisi D', description: 'DIV-D' },
-  { value: 'u7', label: 'Divisi E', description: 'DIV-E' },
+  { value: 'u1', label: 'Direktorat Operasi', description: 'BIO-OPS' },
+  { value: 'u2', label: 'Direktorat Teknik', description: 'BIO-TEK' },
+  { value: 'u3', label: 'Biro A', description: 'DIV-A' },
+  { value: 'u4', label: 'Biro B', description: 'DIV-B' },
+  { value: 'u5', label: 'Biro C', description: 'DIV-C' },
+  { value: 'u6', label: 'Biro D', description: 'DIV-D' },
+  { value: 'u7', label: 'Biro E', description: 'DIV-E' },
 ];
 
 function typeValue(input: HTMLInputElement, value: string): void {
@@ -39,7 +39,7 @@ function Harness(props: {
       <p data-testid="picked">{picked}</p>
       <MasterCombobox
         id="cb"
-        label="Biro"
+        label="Direktorat"
         value=""
         onChange={(_v, label) => setPicked(label)}
         fetchOptions={(term) => {
@@ -101,9 +101,9 @@ describe('MasterCombobox', () => {
     expect(container.textContent).toContain('Data tidak dimukan');
 
     act(() => {
-      typeValue(search, 'Biro');
+      typeValue(search, 'Direktorat');
     });
-    expect(optionsOf(container)).toEqual(['Biro OperasiBIO-OPS', 'Biro TeknikBIO-TEK']);
+    expect(optionsOf(container)).toEqual(['Direktorat OperasiBIO-OPS', 'Direktorat TeknikBIO-TEK']);
     act(() => {
       root.unmount();
     });
@@ -119,7 +119,7 @@ describe('MasterCombobox', () => {
     act(() => {
       search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     });
-    expect((container.querySelector('[data-testid="picked"]') as HTMLElement).textContent).toBe('Biro Teknik');
+    expect((container.querySelector('[data-testid="picked"]') as HTMLElement).textContent).toBe('Direktorat Teknik');
     expect(container.querySelector('[role="listbox"]')).toBeNull();
     act(() => {
       root.unmount();

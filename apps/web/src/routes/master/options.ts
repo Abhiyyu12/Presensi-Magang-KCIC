@@ -65,7 +65,7 @@ export async function fetchInternProfileOptions(search: string): Promise<Combobo
   });
 }
 
-/** scopeId untuk Data Master > Cakupan: BUREAU → biro, DIVISION → divisi. */
+/** scopeId untuk Data Master > Cakupan: BUREAU → direktorat, DIVISION → biro. */
 export function fetchScopeIdOptions(search: string, scopeType: string): Promise<ComboboxOption[]> {
   if (scopeType === 'BUREAU') return fetchBureauOptions(search);
   if (scopeType === 'DIVISION') return fetchDivisionOptions(search, '');

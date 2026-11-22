@@ -103,7 +103,7 @@ function withIsoDates(payload: Row, keys: string[]): Row {
 export const MASTER_RESOURCES: ResourceConfig[] = [
   {
     key: 'bureaus',
-    label: 'Biro',
+    label: 'Direktorat',
     hasDelete: true,
     path: '/admin/organizations/bureaus',
     hasStatusToggle: true,
@@ -113,29 +113,29 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
       { header: 'Status', render: statusText },
     ],
     fields: [
-      { name: 'name', label: 'Nama biro', type: 'text', required: true },
+      { name: 'name', label: 'Nama direktorat', type: 'text', required: true },
       { name: 'code', label: 'Kode', type: 'text', required: true },
       { name: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS },
     ],
   },
   {
     key: 'divisions',
-    label: 'Divisi',
+    label: 'Biro',
     hasDelete: true,
     path: '/admin/organizations/divisions',
     hasStatusToggle: true,
     columns: [
       { header: 'Nama', field: 'name' },
       { header: 'Kode', field: 'code' },
-      { header: 'Biro', render: (row) => nestedName(row, 'bureau') },
+      { header: 'Direktorat', render: (row) => nestedName(row, 'bureau') },
       { header: 'Status', render: statusText },
     ],
     fields: [
-      { name: 'name', label: 'Nama divisi', type: 'text', required: true },
+      { name: 'name', label: 'Nama biro', type: 'text', required: true },
       { name: 'code', label: 'Kode', type: 'text', required: true },
       {
         name: 'bureauId',
-        label: 'Biro',
+        label: 'Direktorat',
         type: 'combobox',
         required: true,
         combobox: { fetchOptions: fetchBureauOptions, serverSearch: true, labelFromRow: (row) => nestedName(row, 'bureau') },
@@ -195,7 +195,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
       },
       {
         name: 'scopeId',
-        label: 'Objek scope (biro/divisi)',
+        label: 'Objek scope (direktorat/biro)',
         type: 'combobox',
         createOnly: true,
         combobox: {
