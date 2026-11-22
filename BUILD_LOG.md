@@ -120,6 +120,35 @@ Catat setiap fase pembangunan. Jangan menghapus catatan kegagalan; tambahkan has
 - **Known limitations:** E2E dalam repo belum diotomasi (BELUM DIOTOMASI, lihat TESTING.md); bucket MinIO bersama dev/test → objek yatim run test (privat, lokal; isolasi direncanakan); Swagger UI tidak ada; satu user Postgres untuk runtime+migrasi (SECURITY.md §8); uji perangkat kamera/GPS nyata menunggu pilot.
 - **Next task:** pilot perangkat nyata + keputusan kebijakan KCIC yang PENDING; otomasi suite E2E dalam repo; isolasi bucket MinIO test; pemisahan kredensial DB runtime/migrasi.
 
+## 2026-11-22 — Fase A1–A2 — Audit integritas data (scan hardcode + peta koneksi)
+
+- **Status:** DONE (audit; perbaikan di Fase A3).
+- **A1 scan 7 kategori** (frontend+backend): 13 temuan terklasifikasi; 2 **P1 backend**: (1) toleransi telat default diliteral `15` mengabaikan `business_parameters.late_tolerance_default_minutes` yang di-seed; (2) compose menjalankan seed dummy tanpa syarat. Sisanya: default form jadwal hardcode (08:00/17:00/15), field `value` palsu di tab Parameter, enum scope `PLACEMENT` tidak dikenal backend, filter Monitoring tidak terkirim server-side, fallback angka palsu (`-` vs karangan), scope LeavesPage `scoped` → 400 untuk pembimbing/admin, dan konstanta sah (label UI, debounce, preset riwayat) yang dicatat alasannya, bukan dipindah.
+- **A2 audit koneksi**: peta halaman→endpoint→tabel DB semua role (hasil akhir didokumentasikan di `docs/DATA_FLOW.md`); kontrak request/response vs schema zod server; auth/CSRF/Origin; pagination & scope; integritas absensi (waktu server otoritatif, snapshot immutable, idempotency, bukti MinIO privat).
+
+## 2026-11-22 — Fase A3 — Perbaikan integritas data (commit eaedfbc)
+
+- **Status:** VERIFIED.
+- **Backend:** `common/params.ts` membaca toleransi default dari business_parameters; `GET /admin/schedules/form-defaults` (default_workdays + toleransi, bukan hardcode); seed opt-in `SEED_DEV_DATA=true` (tolak production); `BUSINESS_TIMEZONE` benar-benar dipakai `common/time.ts`; Origin dev localhost:5173 hanya saat dev/test; `clientSubmittedAt` ISO invalid → 400; akurasi lokasi pergerakan izin divalidasi sama seperti absensi; dashboard admin menghitung "terjadwal" via resolveWorkday bila tanpa snapshot; route baru `GET /admin/access/roles/:id` + `PATCH /admin/business-parameters/:id` (audit, tolak key eksekusi); `GET /attendance` filter bureauId/divisionId/search server-side.
+- **Frontend:** SchedulesPanel default dari API + enum INDIVIDUAL; tab Parameter render/edit valueJson via PATCH per-id; LeavesPage scope `all` untuk pembimbing/admin; fallback palsu → state jujur (`-`/badge netral); vite `API_PROXY_TARGET`.
+- **Verifikasi:** 8 test baru → **API 46/46, web 24/24**; build + lint kedua app hijau. Tanpa perubahan skema DB (semua additive; rollback = revert commit, parameter kembali dibaca literal — tidak disarankan).
+
+## 2026-11-22 — Fase A4 — Pembuktian E2E + perbaikan celah yang ditemukan (commit 974f9b0)
+
+- **Status:** VERIFIED (bukti, bukan klaim).
+- **Pembuktian browser 24/24** (Playwright Python, skrip ad-hoc di luar repo; mobile 390 + desktop; hasil JSON + screenshot di folder temp ux-audit): buat user `peserta-uji-*` via UI Pengguna (role INTERN, wajib ganti password dipaksa di mobile) → profil via tab Peserta → jadwal INDIVIDUAL toleransi KOSONG → check-in foto+GPS → `workday_snapshots.late_tolerance_minutes` = nilai parameter (20) → riwayat ≥1 baris → izin TEMPORARY PENDING → admin-hr tolak ber-catatan via /approval → DB REJECTED + decisionNote → catatan tampil di detail izin peserta. Parameter diubah via UI 15→20, lalu langsung di DB →30 dan tampil di UI, dikembalikan 15 via UI. `display_name` diubah langsung di DB → tampil di Monitoring → dikembalikan. `docker compose stop api` → /riwayat menampilkan ErrorState "Coba lagi" ≤25 dtk, 0 baris (bukan data palsu) → start → retry memulihkan.
+- **Pembuktian keamanan live 12/12** (HTTP langsung ke API): peserta → /admin/users & /admin/audit 403; sid palsu 401; POST /leaves body valid tanpa x-csrf-token 403; password salah 401 generik; check-out dengan `clientSubmittedAt=2020-01-01` → 201 dengan occurredAtServer = hari ini (waktu klien diabaikan); double check-in 409; accuracyMeters=0 → 400; admin PATCH parameter dengan Origin `http://evil.example` → 403 "Origin tidak diizinkan." dan parameter tidak berubah.
+- **Celah yang ditemukan SAAT proof dan diperbaiki (9 file, +259/−64):** (1) 8 form Master mengirim field di luar kontrak API (isActive vs status, date vs calendarDate, fullName tak ada, FK wajib hilang, placement divisionId/validFrom tak dikenal) → create selalu 400; `master/config.ts` ditulis ulang selaras zod server + `config.test.ts` 14 test. (2) Toggle ResourcePanel kirim boolean isActive → kini `{status}`. (3) Catatan keputusan izin tak tampil (web baca `approvalNote`, API kirim `decisionNote`) → types + LeaveDetailPage. (4) Backend mati = loading abadi: nginx cache IP upstream (~60 dtk connect hang) + fetch tanpa deadline → `proxy_connect_timeout 5s`, deadline fetch 15s GET/60s mutasi/10s CSRF, `bootError` + ErrorState di RequireAuth (401 tetap redirect login).
+- **Verifikasi akhir:** API lint + **46/46**, web lint + **38/38**, build web + Docker rebuild healthy, **doctor PASS**, scan ulang hardcode bersih (sisa hanya konstanta sah terdokumentasi di DATA_FLOW §6).
+- **Cleanup (tanpa hapus data):** 5 jadwal uji "Uji Dinamis" → INACTIVE via PATCH admin ber-audit (6 baris audit ADMIN_SCHEDULE_UPDATE); parameter toleransi kembali 15 `PENDING_KCIC_CONFIRMATION`. Artefak dummy dibiarkan: 4 akun peserta-uji-* + profil + absensi hari ini, 1 izin REJECTED, 1 early-checkout NEEDS_REVIEW (dari uji keamanan), contoh NEEDS_REVIEW peserta3 sebelumnya.
+
+## 2026-11-22 — Fase A5 — Dokumentasi integritas data (entri ini)
+
+- **Status:** DONE.
+- **Baru:** `docs/DATA_FLOW.md` (peta halaman→API→DB per role, rantai data, pengaturan yang bisa diubah tanpa deploy, konstanta sah + alasan, endpoint belum dipakai UI, cara verifikasi mandiri).
+- **Sinkronisasi:** README (tabel env lengkap + migrate/seed manual vs api-migrate + tautan DATA_FLOW); `.env.example` (SESSION_TTL_HOURS, MAX_UPLOAD_BYTES, SIGNED_URL_TTL_SECONDS, BUSINESS_TIMEZONE, API_PROXY_TARGET sebagai opsi berkomentar); API_CONTRACT (§4 filter + clientSubmittedAt 400; §6 form-defaults/schedules/:id/PATCH params/:id; §9 GET roles/:id); docker-compose `TZ: ${BUSINESS_TIMEZONE:-Asia/Jakarta}`; CHANGELOG entri A3/A4/A5; DECISIONS D-030/D-031.
+- **Verifikasi:** klaim dokumen dicocokkan dengan kode (grep endpoint web, schema.prisma @@map, env.ts, seed.ts, compose env_file); tanpa perubahan perilaku aplikasi kecuali TZ compose yang default-nya identik.
+
 ## Keputusan pending (TIDAK dikarang)
 
 

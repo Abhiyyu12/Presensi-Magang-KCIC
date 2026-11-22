@@ -4,6 +4,53 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — Fase A5: Dokumentasi integritas data
+
+### Ditambahkan
+- `docs/DATA_FLOW.md` — peta halaman → API → tabel DB per role, rantai data (snapshot, bukti, izin, laporan), daftar pengaturan yang bisa diubah tanpa deploy, konstanta frontend yang sah beserta alasannya, endpoint yang belum dipakai UI, dan cara verifikasi mandiri.
+- README: tabel lengkap variabel environment (wajib/opsional + default), instruksi migrate & seed manual vs otomatis (api-migrate), tautan DATA_FLOW.
+- `.env.example`: opsi `SESSION_TTL_HOURS`, `MAX_UPLOAD_BYTES`, `SIGNED_URL_TTL_SECONDS`, `BUSINESS_TIMEZONE`, `API_PROXY_TARGET` (default dikomentari).
+- `API_CONTRACT.md`: filter `GET /attendance` (bureauId/divisionId/search), validasi ISO `clientSubmittedAt` → 400, `GET /admin/schedules/form-defaults` + `GET /admin/schedules/:id`, `PATCH /admin/business-parameters/:id`, `GET /admin/access/roles/:id`.
+- Keputusan D-030 (penyelarasan kontrak form Master) dan D-031 (error state boot + deadline fetch + timeout koneksi nginx) di `DECISIONS.md`; entri BUILD_LOG Fase A1–A5.
+
+### Diubah
+- `docker-compose.yml`: `TZ` container api/api-migrate kini `${BUSINESS_TIMEZONE:-Asia/Jakarta}` (sebelumnya literal).
+
+## [2026-11-22] — Fase A4: Pembuktian E2E integritas data + perbaikan celah (commit `974f9b0`)
+
+### Diperbaiki
+- **Critical**: 8 form Data Master (Biro, Divisi, Penempatan, Peserta, Penugasan, Cakupan, Kalender, Kategori Izin) mengirim field yang tidak sesuai kontrak API (mis. `isActive` vs `status`, `date` vs `calendarDate`, `fullName` yang tidak ada, FK wajib hilang) → create selalu 400. `master/config.ts` ditulis ulang selaras schema zod server + 14 test unit baru (`config.test.ts`).
+- Toggle aktif/nonaktif ResourcePanel kini mengirim `{status: ACTIVE|INACTIVE}` (sebelumnya boolean `isActive` yang diabaikan server).
+- Catatan keputusan izin tidak tampil di peserta: web membaca `approvalNote`, API mengembalikan `decisionNote` → types + LeaveDetailPage diperbaiki ("Catatan keputusan:").
+- **Backend mati = UI menggantung abadi**: nginx meng-cache IP upstream saat start sehingga koneksi ke container berhenti menggantung ~60 dtk, dan fetch tanpa deadline. Fix: `proxy_connect_timeout 5s` (nginx), deadline fetch 15 dtk GET / 60 dtk mutasi + CSRF 10 dtk (`lib/api.ts`), `bootError` di auth provider + ErrorState "Coba lagi" di RequireAuth (401 tetap redirect login; error jaringan tidak dianggap logout).
+
+### Pembuktian (bukan klaim)
+- **24/24 langkah browser** (Playwright, mobile 390 + desktop): buat peserta baru via UI → profil → jadwal INDIVIDUAL toleransi kosong → check-in foto+GPS → snapshot DB memakai toleransi parameter (20) → riwayat → izin PENDING → admin tolak ber-catatan → catatan terlihat di peserta & DB; ubah parameter via UI 15→20, ubah langsung DB →30 tampil di UI, kembalikan 15; rename display_name langsung di DB → tampil di Monitoring; stop API → ErrorState ≤25 dtk tanpa data palsu → start → retry pulih.
+- **12/12 uji keamanan live**: peserta akses /admin/users & /admin/audit → 403; sid palsu → 401; POST tanpa CSRF → 403; password salah → 401 generik; `clientSubmittedAt=2020-01-01` diabaikan (occurredAtServer = hari ini); double check-in → 409; accuracy 0 → 400; Origin asing → 403 dan parameter tidak berubah.
+- `pnpm --filter api test` 46/46, `pnpm --filter web test` 38/38, lint kedua app hijau, doctor PASS, scan ulang hardcode bersih.
+
+### Diketahui / belum
+- Artefak dummy uji dibiarkan (tidak ada data dihapus tanpa konfirmasi): 4 akun `peserta-uji-*` beserta profil/absensi hari ini, 1 izin REJECTED + 1 early-checkout NEEDS_REVIEW, 5 jadwal uji "Uji Dinamis" INACTIVE (PATCH ber-audit). Parameter toleransi dikembalikan ke usulan 15 (`PENDING_KCIC_CONFIRMATION`).
+
+## [2026-11-22] — Fase A3: Integritas data — hapus hardcode kebijakan (commit `eaedfbc`)
+
+### Diperbaiki
+- **P1**: toleransi telat default diliteral `15` di backend, mengabaikan `business_parameters.late_tolerance_default_minutes` yang sudah di-seed. Kini dibaca dari parameter via `common/params.ts` (snapshot baru saja yang terpengaruh; riwayat immutable).
+- **P1**: compose menjalankan seed dummy tanpa syarat. Kini seed hanya jalan bila `SEED_DEV_DATA=true` (ditolak di production).
+- Form Jadwal tidak lagi menyalin angka default hardcode (08:00/17:00/15): endpoint baru `GET /admin/schedules/form-defaults` menurunkan default dari parameter (`default_workdays` + toleransi); enum scope `PLACEMENT` yang tidak dikenal backend diganti `INDIVIDUAL`.
+- Tab Parameter sebelumnya mengirim field `value` palsu ke PATCH yang tidak ada → kini render `valueJson` + `PATCH /admin/business-parameters/:id` (ber-audit, key eksekusi ditolak).
+- Filter Monitoring (biro/divisi/pencarian) tidak berfungsi karena `GET /attendance` tidak menerima parameternya → filter `bureauId`, `divisionId`, `search` ditambahkan (tervalidasi + ter-scope).
+- Detail role di panel Akses 404: `GET /admin/access/roles/:id` ditambahkan.
+- `clientSubmittedAt` invalid kini 400 (bukan 500); pergerakan izin memvalidasi akurasi lokasi sama seperti absensi.
+- Dashboard admin: tanpa snapshot, "terjadwal" dihitung via resolveWorkday (tidak mengasumsikan semua peserta aktif terjadwal).
+- LeavesPage pembimbing/admin memakai scope `all` (sebelumnya `scoped` → 400).
+- Fallback palsu diganti state jujur: toleransi `-` bila tak tercatat, metrik laporan `-`, badge status netral bila `dayStatus` hilang.
+
+### Ditambahkan
+- Env `BUSINESS_TIMEZONE` (default Asia/Jakarta) benar-benar dipakai `common/time.ts`; `API_PROXY_TARGET` untuk proxy vite dev; Origin dev localhost:5173 hanya diizinkan saat NODE_ENV dev/test.
+- SchedulesPanel/ResourcePanel/config Master membaca bentuk respons server yang benar (objek bersarang, tanggal ISO, status string).
+- 8 test baru (API 46, web 24): parameter dinamis, form-defaults, clientSubmittedAt invalid, akurasi pergerakan, detail role, PATCH parameter, scope=all, filter monitoring.
+
 ## [2026-11-22] — Fase 6: Perbaikan alur inti hasil uji browser (commit `18a20a6`)
 
 ### Diperbaiki

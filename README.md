@@ -37,7 +37,7 @@ Akses:
 ```bash
 pnpm install                     # semua workspace
 pnpm --filter api dev            # API dev (tsx watch, butuh apps/api/.env dari gen-host-env.sh)
-pnpm --filter web dev            # web dev (proxy /api → 127.0.0.1:3000)
+pnpm --filter web dev            # web dev (proxy /api → API_PROXY_TARGET, default 127.0.0.1:3000)
 pnpm --filter api build          # prisma generate + tsc
 pnpm --filter api exec prisma migrate deploy
 pnpm --filter api exec tsx prisma/seed.ts
@@ -52,6 +52,39 @@ docker compose down              # stop (data tetap)
 bash infra/scripts/reset.sh      # HAPUS volume (ketik RESET untuk konfirmasi)
 bash infra/scripts/backup.sh     # pg_dump + mirror MinIO ke backups/
 ```
+
+## Variabel environment
+
+Semua config runtime lewat env (divalidasi zod, fail-fast tanpa membocorkan secret). `.env` di-gitignore; salin dari `.env.example`. Compose meneruskan seluruh `.env` ke container API (`env_file`).
+
+| Variabel | Default | Keterangan |
+|---|---|---|
+| `NODE_ENV` | `development` | `production` menolak seed kecuali `SEED_DEV_DATA=true` |
+| `SEED_DEV_DATA` | — (wajib diisi) | `true` = api-migrate menjalankan seed dummy; hanya dev/test |
+| `DATABASE_URL` | — (wajib) | Postgres; container memakai host `db`, host-dev memakai `127.0.0.1:5433` |
+| `SESSION_SECRET` | — (wajib, ≥32 char) | Secret sesi; ganti dengan nilai acak panjang |
+| `SESSION_TTL_HOURS` | `12` | Umur sesi cookie |
+| `COOKIE_SECURE` | `false` | `true` bila HTTPS |
+| `CORS_ORIGIN` | `http://localhost:5173` | Origin yang diizinkan (nilai tunggal; `APP_URL` selalu ikut diizinkan; dev menambah localhost:5173 otomatis) |
+| `APP_URL` | `http://localhost:5173` | URL web untuk link/redirect |
+| `API_PORT` / `WEB_PORT` | `3000` / `5173` (compose remap `3002`/`5174`) | Port host API/web |
+| `DB_HOST_PORT` | `5432` (remap `5433`) | Port host Postgres |
+| `MINIO_HOST_PORT` / `MINIO_CONSOLE_HOST_PORT` | `9000`/`9001` (remap `9002`/`9003`) | Port host MinIO |
+| `MINIO_ENDPOINT` / `MINIO_PORT` / `MINIO_USE_SSL` | — / `9000` / `false` | Koneksi MinIO dari API |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | — (wajib) | Kredensial aplikasi MinIO |
+| `MINIO_BUCKET_ATTENDANCE` / `MINIO_BUCKET_HELP` | `attendance-evidence` / `help-media` | Bucket privat |
+| `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | — (wajib) | Kredensial root container MinIO |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | — (wajib) | Init container db |
+| `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` | `dev-admin` / kosong | Akun admin pertama (wajib ganti password) |
+| `MAX_UPLOAD_BYTES` | `8388608` (8 MB) | Batas upload bukti |
+| `SIGNED_URL_TTL_SECONDS` | `120` | Umur presigned URL bukti |
+| `BUSINESS_TIMEZONE` | `Asia/Jakarta` | Zona waktu bisnis (hari/jam kerja); juga TZ container |
+| `LOG_LEVEL` | `info` | Level log API |
+| `API_PROXY_TARGET` | `http://127.0.0.1:3000` | Khusus host-dev: target proxy `/api` vite |
+
+Migrate & seed manual (host-dev): `pnpm --filter api exec prisma migrate deploy` lalu `pnpm --filter api exec tsx prisma/seed.ts` (butuh `apps/api/.env`; dibuat oleh `infra/scripts/gen-host-env.sh`). Di Docker, keduanya otomatis via service `api-migrate`.
+
+Peta lengkap halaman → API → tabel DB dan daftar pengaturan yang bisa diubah tanpa deploy: [docs/DATA_FLOW.md](docs/DATA_FLOW.md).
 
 ## Arsitektur singkat
 

@@ -56,7 +56,7 @@ Each dashboard response must be scoped to the authenticated user and permissions
 - `GET /attendance/today`
 - `POST /attendance/check-in`
 - `POST /attendance/check-out`
-- `GET /attendance`
+- `GET /attendance` (filters: date range, `dayStatus`, `internProfileId`, `bureauId`, `divisionId`, `search` — all validated and scoped; added 2026-11-22 for Monitoring)
 - `GET /attendance/:attendanceId`
 - `GET /attendance/:attendanceId/evidence`
 - `GET /attendance/export` (personal history CSV; authenticated users with an intern profile only — rejected 403 otherwise; no photos/coordinates; audited as `ATTENDANCE_EXPORT_SELF`)
@@ -66,7 +66,7 @@ Submission requires:
 - Multipart image field.
 - Latitude, longitude, accuracy.
 - No client-supplied official timestamp.
-- Optional client-submitted timestamp may be retained only as untrusted diagnostic metadata if approved.
+- Optional client-submitted timestamp (`clientSubmittedAt`) may be retained only as untrusted diagnostic metadata; it must be a valid ISO-8601 datetime (otherwise 400) and never influences lateness or official time.
 
 Backend must validate the expected next event and unique attendance day/event constraints. Evidence endpoint must authorize the underlying attendance record before returning a short-lived signed URL or streaming the file.
 
@@ -95,10 +95,10 @@ Approval/rejection requires permission and scope. Rejection requires a note. Mov
 - `/admin/organizations/divisions`
 - `/admin/placements`
 - `/admin/assignments`
-- `/admin/schedules`
+- `/admin/schedules` (plus `GET /admin/schedules/form-defaults` — defaults derived from business parameters/timezone, and `GET /admin/schedules/:id`; added 2026-11-22)
 - `/admin/calendar`
 - `/admin/leave-categories`
-- `/admin/business-parameters`
+- `/admin/business-parameters` (plus `PATCH /admin/business-parameters/:id` for value/description edits; added 2026-11-22)
 - `/admin/roles` (read-only ACTIVE role catalog for user management; guard `admin:users:manage`)
 - `/admin/attendance/:attendanceId/correction` (correction with mandatory reason, audited before/after)
 - `/admin/audit` (read-only audit trail; guard `admin:audit:view`)
@@ -133,6 +133,7 @@ Draft content must not be visible to users without appropriate permission.
 - `GET /access/me/effective`
 - `GET /admin/access/roles`
 - `POST /admin/access/roles`
+- `GET /admin/access/roles/:id` (role detail incl. permissions; added 2026-11-22)
 - `PATCH /admin/access/roles/:id`
 - `PUT /admin/access/roles/:id/permissions`
 - `GET /admin/access/permissions`
