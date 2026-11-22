@@ -28,8 +28,8 @@ const IMPORT_COLUMNS = [
   { key: 'phone', header: 'No. HP', width: 18 },
   { key: 'roleCode', header: 'Kode Role', width: 14 },
   { key: 'participantNumber', header: 'Nomor Peserta', width: 18 },
-  { key: 'bureauName', header: 'Biro', width: 26 },
-  { key: 'divisionName', header: 'Divisi', width: 26 },
+  { key: 'bureauName', header: 'Direktorat', width: 26 },
+  { key: 'divisionName', header: 'Biro', width: 26 },
   { key: 'placementName', header: 'Penempatan', width: 26 },
   { key: 'startDate', header: 'Tanggal Mulai (YYYY-MM-DD)', width: 24 },
   { key: 'endDate', header: 'Tanggal Selesai (YYYY-MM-DD)', width: 26 },
@@ -150,9 +150,9 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
     'PETUNJUK IMPORT PENGGUNA',
     '1. Isi data di sheet "Pengguna" mulai baris 2. Jangan mengubah atau menghapus baris header.',
     '2. Kolom wajib: Username, Nama Lengkap, Kode Role.',
-    '3. Kode Role, Biro, Divisi, Penempatan, dan Status Peserta memiliki dropdown dari data master terkini.',
-    '4. Peserta magang (role INTERN) wajib mengisi Nomor Peserta, Biro, dan Tanggal Mulai.',
-    '5. Jika Divisi diisi, kolom Biro juga wajib diisi dan divisi harus milik biro tersebut.',
+    '3. Kode Role, Direktorat, Biro, Penempatan, dan Status Peserta memiliki dropdown dari data master terkini.',
+    '4. Peserta magang (role INTERN) wajib mengisi Nomor Peserta, Direktorat, dan Tanggal Mulai.',
+    '5. Jika Biro diisi, kolom Direktorat juga wajib diisi dan biro harus milik direktorat tersebut.',
     '6. Kolom tanggal bertipe tanggal (tampil YYYY-MM-DD) dengan validasi rentang 2020-2035 — Excel menolak nilai salah. Kolom No. HP bertipe teks (Excel tidak menghapus 0 di depan): isi 08xxxxxxxxxx atau kode negara apa pun, mis. +6281234567890.',
     '7. Setiap pengguna baru mendapat password sementara yang tampil sekali pada laporan setelah import.',
     `8. Maksimal ${MAX_IMPORT_ROWS} baris per file, ukuran file maksimal 2 MB.`,
@@ -164,12 +164,12 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
   }
   guide.getRow(1).font = { bold: true, size: 12 };
   guide.addRow([]);
-  const exampleHeader = ['Username', 'Nama Lengkap', 'Email', 'No. HP', 'Kode Role', 'Nomor Peserta', 'Biro', 'Divisi', 'Penempatan', 'Tanggal Mulai', 'Tanggal Selesai', 'Status Peserta'];
+  const exampleHeader = ['Username', 'Nama Lengkap', 'Email', 'No. HP', 'Kode Role', 'Nomor Peserta', 'Direktorat', 'Biro', 'Penempatan', 'Tanggal Mulai', 'Tanggal Selesai', 'Status Peserta'];
   const exampleRow = guide.addRow(exampleHeader);
   exampleRow.font = { bold: true };
   guide.addRow([
     'rina.wijaya', 'Rina Wijaya', 'rina.wijaya@kcic.co.id', '081234567890', 'INTERN',
-    'MG-2026-001', 'Biro Operasi', '', '', '2026-01-15', '', 'AKTIF',
+    'MG-2026-001', 'Direktorat Operasi', '', '', '2026-01-15', '', 'AKTIF',
   ]);
   guide.addRow([
     'bagus.pratama', 'Bagus Pratama', '', '', 'SUPERVISOR', '', '', '', '', '', '', '',
@@ -182,8 +182,8 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
   master.columns = [
     { header: 'Kode Role', width: 16 },
     { header: 'Nama Role', width: 26 },
+    { header: 'Direktorat', width: 28 },
     { header: 'Biro', width: 28 },
-    { header: 'Divisi', width: 28 },
     { header: 'Penempatan', width: 28 },
   ];
   const masterRowCount = Math.max(roles.length, bureaus.length, divisions.length, placements.length);
@@ -456,27 +456,27 @@ async function validateImportRows(
         || row.placementName || row.endDate || row.internStatus,
     );
     if (row.roleCode && role && role.code === 'INTERN' && !trioFilled) {
-      errors.push('Peserta magang wajib mengisi Nomor Peserta, Biro, dan Tanggal Mulai.');
+      errors.push('Peserta magang wajib mengisi Nomor Peserta, Direktorat, dan Tanggal Mulai.');
     } else if (anyProfileField && !trioFilled) {
-      errors.push('Profil peserta butuh Nomor Peserta, Biro, dan Tanggal Mulai diisi lengkap.');
+      errors.push('Profil peserta butuh Nomor Peserta, Direktorat, dan Tanggal Mulai diisi lengkap.');
     }
 
     let bureauId: string | null = null;
     if (row.bureauName && trioFilled) {
       const bureau = bureaus.find((b) => b.name.toLowerCase() === row.bureauName.toLowerCase());
-      if (!bureau) errors.push(`Biro "${row.bureauName}" tidak ada di daftar.`);
+      if (!bureau) errors.push(`Direktorat "${row.bureauName}" tidak ada di daftar.`);
       else bureauId = bureau.id;
     }
 
     let divisionId: string | null = null;
     if (row.divisionName && !row.bureauName) {
-      errors.push('Divisi diisi tanpa Biro — isi kolom Biro juga.');
+      errors.push('Biro diisi tanpa Direktorat — isi kolom Direktorat juga.');
     } else if (row.divisionName && bureauId) {
       const candidates = divisions.filter((d) => d.name.toLowerCase() === row.divisionName.toLowerCase());
       const inBureau = candidates.filter((d) => d.bureauId === bureauId);
       if (inBureau.length === 1 && inBureau[0]) divisionId = inBureau[0].id;
-      else if (candidates.length === 0) errors.push(`Divisi "${row.divisionName}" tidak ada di daftar.`);
-      else errors.push(`Divisi "${row.divisionName}" bukan milik biro tersebut.`);
+      else if (candidates.length === 0) errors.push(`Biro "${row.divisionName}" tidak ada di daftar.`);
+      else errors.push(`Biro "${row.divisionName}" bukan milik direktorat tersebut.`);
     }
 
     let placementId: string | null = null;

@@ -469,7 +469,7 @@ describe('dynamic business parameters (no hardcoded policy)', () => {
     const profile = await db.internProfile.findUniqueOrThrow({ where: { id: p1ProfileId } });
     const days = [{ weekday: 1, isWorkingDay: true, startTime: '09:00', endTime: '18:00' }];
     const created = await post(app, '/api/v1/admin/schedules', admin, {
-      name: `Jadwal Divisi Uji Param ${Date.now()}`,
+      name: `Jadwal Biro Uji Param ${Date.now()}`,
       scopeType: 'DIVISION',
       scopeId: profile.divisionId,
       validFrom: yesterday,
@@ -889,7 +889,7 @@ describe('Fase 1.5f: import pengguna via Excel', () => {
     const sheet = wb.addWorksheet('Pengguna');
     sheet.addRow([
       'Username', 'Nama Lengkap', 'Email', 'No. HP', 'Kode Role', 'Nomor Peserta',
-      'Biro', 'Divisi', 'Penempatan', 'Tanggal Mulai (YYYY-MM-DD)', 'Tanggal Selesai (YYYY-MM-DD)', 'Status Peserta',
+      'Direktorat', 'Biro', 'Penempatan', 'Tanggal Mulai (YYYY-MM-DD)', 'Tanggal Selesai (YYYY-MM-DD)', 'Status Peserta',
     ]);
     for (const row of rows) sheet.addRow(row);
     return Buffer.from(await wb.xlsx.writeBuffer() as ArrayBuffer);
@@ -1316,7 +1316,7 @@ describe('Fase 4: feedback error ramah (envelope validasi + 404 Indonesia)', () 
       method: 'POST',
       url: '/api/v1/admin/organizations/bureaus',
       headers: authHeaders(admin),
-      payload: { code: 'X', name: 'Biro '.repeat(40) },
+      payload: { code: 'X', name: 'Direktorat '.repeat(40) },
     });
     expect(tooLong.statusCode).toBe(400);
     expect(((envelope(tooLong).error.fieldErrors?.name as string[] | undefined) ?? []).join(' ')).toContain(
@@ -1417,7 +1417,7 @@ describe('Data Master CRUD: create + delete dengan guard referensi', () => {
   it('bureau/division/placement: create → hapus berurutan; bureau dipakai divisi ditolak 422', async () => {
     const bureau = await post(app, '/api/v1/admin/organizations/bureaus', admin, {
       code: `BQ${uniq}`,
-      name: `Biro Uji CRUD ${uniq}`,
+      name: `Direktorat Uji CRUD ${uniq}`,
     });
     expect(bureau.statusCode).toBe(200);
     const bureauId = envelope(bureau).data.id as string;
@@ -1425,7 +1425,7 @@ describe('Data Master CRUD: create + delete dengan guard referensi', () => {
     const division = await post(app, '/api/v1/admin/organizations/divisions', admin, {
       bureauId,
       code: `DQ${uniq}`,
-      name: `Divisi Uji CRUD ${uniq}`,
+      name: `Biro Uji CRUD ${uniq}`,
     });
     expect(division.statusCode).toBe(200);
     const divisionId = envelope(division).data.id as string;

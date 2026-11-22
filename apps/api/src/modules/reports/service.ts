@@ -225,7 +225,7 @@ export function computeMetrics(rows: ReportRow[]): ReportMetrics {
 
 /** CSV/XLSX export follows the same filter+scope as the list. No photos, no coordinates. */
 export function rowsToCsv(rows: ReportRow[]): string {
-  const header = ['Tanggal', 'Nomor ID', 'Nama', 'Biro', 'Divisi', 'Check-in (WIB)', 'Check-out (WIB)', 'Status', 'Izin', 'Durasi Izin (menit)', 'Koreksi'];
+  const header = ['Tanggal', 'Nomor ID', 'Nama', 'Direktorat', 'Biro', 'Check-in (WIB)', 'Check-out (WIB)', 'Status', 'Izin', 'Durasi Izin (menit)', 'Koreksi'];
   const esc = (v: string | number | null | boolean) => {
     const s = v === null || v === undefined ? '' : String(v);
     return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -249,8 +249,8 @@ export async function rowsToXlsx(rows: ReportRow[]): Promise<Buffer> {
     { header: 'Tanggal', key: 'workDate', width: 12 },
     { header: 'Nomor ID', key: 'participantNumber', width: 16 },
     { header: 'Nama', key: 'participantName', width: 28 },
-    { header: 'Biro', key: 'bureau', width: 24 },
-    { header: 'Divisi', key: 'division', width: 24 },
+    { header: 'Direktorat', key: 'bureau', width: 24 },
+    { header: 'Biro', key: 'division', width: 24 },
     { header: 'Check-in (WIB)', key: 'checkIn', width: 14 },
     { header: 'Check-out (WIB)', key: 'checkOut', width: 14 },
     { header: 'Status', key: 'dayStatus', width: 22 },

@@ -70,12 +70,12 @@ async function validateScopeId(db: PrismaClient, scopeType: z.infer<typeof scope
   }
   if (scopeType === 'BUREAU') {
     const bureau = await db.bureau.findUnique({ where: { id: scopeId } });
-    if (!bureau) throw unprocessable('Biro untuk scope jadwal tidak ditemukan.');
+    if (!bureau) throw unprocessable('Direktorat untuk scope jadwal tidak ditemukan.');
     return;
   }
   if (scopeType === 'DIVISION') {
     const division = await db.division.findUnique({ where: { id: scopeId } });
-    if (!division) throw unprocessable('Divisi untuk scope jadwal tidak ditemukan.');
+    if (!division) throw unprocessable('Biro untuk scope jadwal tidak ditemukan.');
     return;
   }
   const profile = await db.internProfile.findUnique({ where: { id: scopeId } });

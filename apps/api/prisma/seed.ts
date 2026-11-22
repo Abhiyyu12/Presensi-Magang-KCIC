@@ -202,10 +202,10 @@ async function seedUsers() {
 }
 
 async function seedOrganization() {
-  const biro1 = await db.bureau.upsert({ where: { code: 'BIO-OPS' }, update: { name: 'Biro Operasi' }, create: { code: 'BIO-OPS', name: 'Biro Operasi', status: 'ACTIVE' } });
-  const biro2 = await db.bureau.upsert({ where: { code: 'BIO-TEK' }, update: { name: 'Biro Teknik' }, create: { code: 'BIO-TEK', name: 'Biro Teknik', status: 'ACTIVE' } });
-  const div1 = await db.division.upsert({ where: { bureauId_code: { bureauId: biro1.id, code: 'DIV-OPSDAL' } }, update: { name: 'Divisi Operasi & Dengkel' }, create: { bureauId: biro1.id, code: 'DIV-OPSDAL', name: 'Divisi Operasi & Dengkel', status: 'ACTIVE' } });
-  await db.division.upsert({ where: { bureauId_code: { bureauId: biro2.id, code: 'DIV-TEKNIK' } }, update: { name: 'Divisi Teknik' }, create: { bureauId: biro2.id, code: 'DIV-TEKNIK', name: 'Divisi Teknik', status: 'ACTIVE' } });
+  const biro1 = await db.bureau.upsert({ where: { code: 'BIO-OPS' }, update: { name: 'Direktorat Operasi' }, create: { code: 'BIO-OPS', name: 'Direktorat Operasi', status: 'ACTIVE' } });
+  const biro2 = await db.bureau.upsert({ where: { code: 'BIO-TEK' }, update: { name: 'Direktorat Teknik' }, create: { code: 'BIO-TEK', name: 'Direktorat Teknik', status: 'ACTIVE' } });
+  const div1 = await db.division.upsert({ where: { bureauId_code: { bureauId: biro1.id, code: 'DIV-OPSDAL' } }, update: { name: 'Biro Operasi & Dengkel' }, create: { bureauId: biro1.id, code: 'DIV-OPSDAL', name: 'Biro Operasi & Dengkel', status: 'ACTIVE' } });
+  await db.division.upsert({ where: { bureauId_code: { bureauId: biro2.id, code: 'DIV-TEKNIK' } }, update: { name: 'Biro Teknik' }, create: { bureauId: biro2.id, code: 'DIV-TEKNIK', name: 'Biro Teknik', status: 'ACTIVE' } });
   const placement = await db.placement.upsert({ where: { code: 'PLC-TEGALLUAR' }, update: { name: 'Depo Tegalluar', description: 'Depo operasi kereta cepat' }, create: { code: 'PLC-TEGALLUAR', name: 'Depo Tegalluar', description: 'Depo operasi kereta cepat', status: 'ACTIVE' } });
 
   const sup = await db.user.findUniqueOrThrow({ where: { username: 'supervisor1' } });

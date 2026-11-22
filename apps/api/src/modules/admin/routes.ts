@@ -37,11 +37,11 @@ async function validateProfileRefs(
   refs: { bureauId: string; divisionId: string | null; placementId: string | null },
 ): Promise<void> {
   const bureau = await tx.bureau.findUnique({ where: { id: refs.bureauId }, select: { id: true } });
-  if (!bureau) throw badRequest('Biro tidak ditemukan.');
+  if (!bureau) throw badRequest('Direktorat tidak ditemukan.');
   if (refs.divisionId) {
     const division = await tx.division.findUnique({ where: { id: refs.divisionId }, select: { id: true, bureauId: true } });
     if (!division || division.bureauId !== refs.bureauId) {
-      throw unprocessable('Divisi tidak ditemukan atau tidak berada di bawah biro tersebut.');
+      throw unprocessable('Biro tidak ditemukan atau tidak berada di bawah direktorat tersebut.');
     }
   }
   if (refs.placementId) {
@@ -415,7 +415,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       if (!bureau) throw notFound();
       if (bureau._count.divisions > 0 || bureau._count.internProfiles > 0) {
         throw unprocessable(
-          `Biro masih dipakai ${bureau._count.divisions} divisi dan ${bureau._count.internProfiles} profil peserta. Nonaktifkan bila tidak lagi digunakan.`,
+          `Direktorat masih dipakai ${bureau._count.divisions} biro dan ${bureau._count.internProfiles} profil peserta. Nonaktifkan bila tidak lagi digunakan.`,
         );
       }
       await db.$transaction(async (tx) => {
@@ -443,7 +443,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       const body = divisionCreateBody.parse(req.body);
       requireScopeCovers(ctx, { bureauId: body.bureauId, divisionId: null });
       const bureau = await db.bureau.findUnique({ where: { id: body.bureauId } });
-      if (!bureau) throw badRequest('Biro tidak ditemukan.');
+      if (!bureau) throw badRequest('Direktorat tidak ditemukan.');
       let division;
       try {
         division = await db.division.create({ data: body });
@@ -551,7 +551,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       requireScopeCovers(ctx, { bureauId: division.bureauId, divisionId: division.id });
       if (division._count.internProfiles > 0) {
         throw unprocessable(
-          `Divisi masih dipakai ${division._count.internProfiles} profil peserta. Nonaktifkan bila tidak lagi digunakan.`,
+          `Biro masih dipakai ${division._count.internProfiles} profil peserta. Nonaktifkan bila tidak lagi digunakan.`,
         );
       }
       await db.$transaction(async (tx) => {
@@ -1059,11 +1059,11 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       if (!user) throw badRequest('User tidak ditemukan.');
       if (user.internProfile) throw conflict('User sudah memiliki profil peserta.');
       const bureau = await db.bureau.findUnique({ where: { id: body.bureauId } });
-      if (!bureau) throw badRequest('Biro tidak ditemukan.');
+      if (!bureau) throw badRequest('Direktorat tidak ditemukan.');
       if (body.divisionId) {
         const division = await db.division.findUnique({ where: { id: body.divisionId } });
         if (!division || division.bureauId !== body.bureauId) {
-          throw unprocessable('Divisi tidak ditemukan atau tidak berada di bawah biro tersebut.');
+          throw unprocessable('Biro tidak ditemukan atau tidak berada di bawah direktorat tersebut.');
         }
       }
       if (body.placementId) {
@@ -1189,12 +1189,12 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       requireScopeCovers(ctx, { bureauId: nextBureauId, divisionId: nextDivisionId });
       if (body.bureauId) {
         const bureau = await db.bureau.findUnique({ where: { id: body.bureauId } });
-        if (!bureau) throw badRequest('Biro tidak ditemukan.');
+        if (!bureau) throw badRequest('Direktorat tidak ditemukan.');
       }
       if (nextDivisionId) {
         const division = await db.division.findUnique({ where: { id: nextDivisionId } });
         if (!division || division.bureauId !== nextBureauId) {
-          throw unprocessable('Divisi tidak ditemukan atau tidak berada di bawah biro tersebut.');
+          throw unprocessable('Biro tidak ditemukan atau tidak berada di bawah direktorat tersebut.');
         }
       }
       if (body.placementId) {
@@ -1414,11 +1414,11 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       if (!user) throw badRequest('User tidak ditemukan.');
       if (body.scopeType === 'BUREAU' && body.scopeId) {
         const bureau = await db.bureau.findUnique({ where: { id: body.scopeId } });
-        if (!bureau) throw badRequest('Biro tidak ditemukan.');
+        if (!bureau) throw badRequest('Direktorat tidak ditemukan.');
       }
       if (body.scopeType === 'DIVISION' && body.scopeId) {
         const division = await db.division.findUnique({ where: { id: body.scopeId } });
-        if (!division) throw badRequest('Divisi tidak ditemukan.');
+        if (!division) throw badRequest('Biro tidak ditemukan.');
       }
       const scope = await db.adminScope.create({
         data: {
