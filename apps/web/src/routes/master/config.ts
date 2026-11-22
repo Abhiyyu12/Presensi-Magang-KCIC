@@ -43,6 +43,8 @@ export interface ResourceConfig {
   fields: FieldConfig[];
   /** Whether rows support a status ACTIVE/INACTIVE toggle via PATCH. */
   hasStatusToggle?: boolean;
+  /** Whether rows offer Hapus (DELETE); server menolak bila data masih dipakai. */
+  hasDelete?: boolean;
   /** Map an API row onto form field values (e.g. JSON columns, ISO dates). */
   toForm?: (row: Record<string, unknown>) => Record<string, unknown>;
   /** Map the parsed form payload onto the API body; may throw ApiError. */
@@ -102,6 +104,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
   {
     key: 'bureaus',
     label: 'Biro',
+    hasDelete: true,
     path: '/admin/organizations/bureaus',
     hasStatusToggle: true,
     columns: [
@@ -118,6 +121,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
   {
     key: 'divisions',
     label: 'Divisi',
+    hasDelete: true,
     path: '/admin/organizations/divisions',
     hasStatusToggle: true,
     columns: [
@@ -142,6 +146,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
   {
     key: 'placements',
     label: 'Penempatan',
+    hasDelete: true,
     path: '/admin/placements',
     hasStatusToggle: true,
     columns: [
@@ -159,6 +164,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
   {
     key: 'scopes',
     label: 'Cakupan (Scope)',
+    hasDelete: true,
     path: '/admin/scopes',
     columns: [
       { header: 'Pengguna', render: (row) => nestedName(row, 'user') },
@@ -208,6 +214,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
   {
     key: 'calendar',
     label: 'Kalender',
+    hasDelete: true,
     path: '/admin/calendar',
     columns: [
       { header: 'Tanggal', render: (row) => datePart(row['calendarDate']) },
@@ -236,6 +243,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
   {
     key: 'leave-categories',
     label: 'Kategori Izin',
+    hasDelete: true,
     path: '/admin/leave-categories',
     hasStatusToggle: true,
     columns: [

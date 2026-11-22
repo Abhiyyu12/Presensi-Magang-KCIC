@@ -7,6 +7,7 @@ import { ErrorState } from '../../components/ErrorState';
 import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { MasterCombobox } from '../../components/MasterCombobox';
+import { SuccessNotice } from '../../components/SuccessNotice';
 import { fetchScheduleScopeOptions } from './options';
 
 type Row = Record<string, unknown>;
@@ -65,6 +66,8 @@ export function SchedulesPanel() {
   const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteRow, setDeleteRow] = useState<Row | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: '',
@@ -152,6 +155,20 @@ export function SchedulesPanel() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (row: Row) => api<Row>(`/admin/schedules/${asString(row['id'])}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      setNotice('Jadwal dihapus.');
+      setDeleteRow(null);
+      setFormError(null);
+      invalidate();
+    },
+    onError: (error: unknown) => {
+      // Jadwal dipakai snapshot → tampilkan alasan penolakan server, dialog tetap terbuka.
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal menghapus jadwal.');
+    },
+  });
+
   const columns: Column<Row>[] = [
     { header: 'Nama', cell: (row) => asString(row['name']) },
     { header: 'Scope', cell: (row) => asString(row['scopeType']) },
@@ -160,20 +177,35 @@ export function SchedulesPanel() {
     {
       header: 'Aksi',
       cell: (row) => (
-        <button
-          type="button"
-          className="text-xs font-semibold text-brand-700 hover:underline"
-          onClick={() => void openEdit(row)}
-        >
-          Ubah
-        </button>
+        <span className="flex gap-2">
+          <button
+            type="button"
+            className="text-xs font-semibold text-brand-700 hover:underline"
+            onClick={() => void openEdit(row)}
+          >
+            Ubah
+          </button>
+          <button
+            type="button"
+            className="min-h-touch rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+            disabled={deleteMutation.isPending}
+            onClick={(e) => {
+              e.stopPropagation();
+              setFormError(null);
+              setDeleteRow(row);
+            }}
+          >
+            Hapus
+          </button>
+        </span>
       ),
     },
   ];
 
   return (
     <div className="space-y-3">
-      {formError && !dialogOpen ? (
+      {notice ? <SuccessNotice message={notice} onDismiss={() => setNotice(null)} /> : null}
+      {formError && !dialogOpen && deleteRow === null ? (
         <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700" role="alert">{formError}</p>
       ) : null}
       <div className="flex justify-end">
@@ -354,6 +386,21 @@ export function SchedulesPanel() {
             </p>
           </fieldset>
         </div>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={deleteRow !== null}
+        title="Hapus Jadwal"
+        description={`Jadwal "${deleteRow ? asString(deleteRow['name']) : ''}" akan dihapus permanen beserta pola harinya. Jika masih direferensikan snapshot hari kerja, server menolak penghapusan dan menyarankan penonaktifan.`}
+        confirmLabel="Ya, Hapus"
+        danger
+        busy={deleteMutation.isPending}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={() => deleteMutation.mutate(deleteRow as Row)}
+      >
+        {formError && deleteRow ? (
+          <p className="mt-3 rounded-lg bg-red-50 p-2 text-sm text-red-700" role="alert">{formError}</p>
+        ) : null}
       </ConfirmDialog>
     </div>
   );

@@ -57,8 +57,9 @@ export default function MasterDataPage() {
       <header>
         <h1 className="text-lg font-bold text-slate-900">Data Master</h1>
         <p className="text-sm text-slate-600">
-          Kelola data master operasional. Perubahan tervalidasi server dan tercatat pada audit;
-          tidak ada penghapusan — gunakan penonaktifan dan tanggal efektif.
+          Kelola data master operasional. Perubahan tervalidasi server dan tercatat pada audit.
+          Penghapusan hanya bisa bila data belum pernah dipakai; jika sudah dipakai, gunakan
+          penonaktifan dan tanggal efektif.
         </p>
       </header>
 

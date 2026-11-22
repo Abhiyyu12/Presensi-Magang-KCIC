@@ -59,6 +59,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
   const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
+  const [deleteRow, setDeleteRow] = useState<Row | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -150,6 +151,21 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (row: Row) =>
+      api<{ deleted: boolean; id: string }>(`${config.path}/${asString(row['id'])}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      setNotice(`${config.label} dihapus.`);
+      setDeleteRow(null);
+      setFormError(null);
+      invalidate();
+    },
+    onError: (error: unknown) => {
+      // Data dipakai entitas lain → server menolak dengan alasan; dialog tetap terbuka.
+      setFormError((error instanceof ApiError && (firstFieldErrorMessage(error.fieldErrors) ?? error.message)) || 'Gagal menghapus data.');
+    },
+  });
+
   const columns: Column<Row>[] = [
     ...config.columns.map((col) => ({
       header: col.header,
@@ -182,6 +198,20 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
               }}
             >
               {row['status'] === 'INACTIVE' ? 'Aktifkan' : 'Nonaktifkan'}
+            </button>
+          ) : null}
+          {config.hasDelete ? (
+            <button
+              type="button"
+              className="min-h-touch rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+              disabled={deleteMutation.isPending}
+              onClick={(e) => {
+                e.stopPropagation();
+                setFormError(null);
+                setDeleteRow(row);
+              }}
+            >
+              Hapus
             </button>
           ) : null}
         </span>
@@ -331,6 +361,29 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
               );
             })}
         </div>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={deleteRow !== null}
+        title={`Hapus ${config.label}`}
+        description={`${
+          deleteRow
+            ? asString(
+                deleteRow['name'] ??
+                  deleteRow['code'] ??
+                  (isRecord(deleteRow['user']) ? deleteRow['user']['name'] : '') ??
+                  '',
+              ) || 'Data ini'
+            : 'Data ini'
+        } akan dihapus permanen. Jika masih dipakai data lain, server menolak penghapusan dan menyarankan penonaktifan.`}
+        confirmLabel="Ya, Hapus"
+        danger
+        busy={deleteMutation.isPending}
+        onClose={() => setDeleteRow(null)}
+        onConfirm={() => deleteMutation.mutate(deleteRow as Row)}
+      >
+        {formError && deleteRow ? (
+          <p className="mt-3 rounded-lg bg-red-50 p-2 text-sm text-red-700" role="alert">{formError}</p>
+        ) : null}
       </ConfirmDialog>
     </div>
   );
