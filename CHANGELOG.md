@@ -4,6 +4,17 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — Fase 6: verifikasi berbukti akhir + laporan akhir
+
+### Ditambahkan
+- `docs/LAPORAN_AKHIR.md` — ringkasan per fase (commit `25300ad`…`85f1ebc`), file yang berubah, matriks CRUD per role, asumsi/keputusan ambigu, bukti gate & E2E, item belum selesai + alasan, saran lanjutan, cara verifikasi ulang.
+
+### Pembuktian (bukan klaim)
+- Gate akhir (15:25 WIB): api tsc + eslint + test **73/73**; web tsc + eslint + test **42/42**.
+- E2E ulang seluruh suite: pohon permission **25/25**, RBAC per role **0 gagal** (42 langkah), profil **28/28**, feedback error **7/7**, pagination/konsol **15/15**.
+- Pembersihan data uji sendiri: 16 biro scratch `QA-F6-*` dihapus (DELETE 16), SUPERVISOR kembali tepat 7 permission (diverifikasi SQL), nama jadwal sisa uji dirapikan.
+- Catatan jujur: `POST /auth/login` memang tidak memeriksa Origin (belum ada sesi/cookie); Origin+CSRF tetap ketat pada semua mutasi ber-sesi. Login-CSRF dicatat sebagai saran lanjutan, bukan bug baru.
+
 ## [2026-11-22] — Fase 0–5: perbaikan bug, RBAC penuh, profil lengkap, feedback error (branch `feat/uji-manual-integrasi`)
 
 ### Diperbaiki
