@@ -256,6 +256,36 @@ function containsForbiddenKey(value: unknown): boolean {
   return false;
 }
 
+/**
+ * Nilai parameter yang dipakai logika bisnis divalidasi strukturnya di sini
+ * (konvensi weekday aplikasi: 1=Senin … 7=Minggu). Nilai tak dikenal lolos
+ * tanpa cek — hanya kunci yang benar-benar dikonsumsi server yang dibatasi.
+ */
+function validateBusinessParameterValue(key: string, valueJson: unknown): void {
+  const inner =
+    valueJson !== null && typeof valueJson === 'object' && !Array.isArray(valueJson)
+      ? (valueJson as Record<string, unknown>)
+      : undefined;
+  const value = inner ? inner['value'] : undefined;
+  if (key === 'default_workdays') {
+    if (
+      !Array.isArray(value) ||
+      value.length !== new Set(value).size ||
+      !value.every((v) => Number.isInteger(v) && v >= 1 && v <= 7)
+    ) {
+      throw unprocessable(
+        'default_workdays harus berupa array angka hari kerja 1-7 tanpa duplikat (1=Senin … 7=Minggu), mis. [1, 2, 3, 4, 5].',
+      );
+    }
+    return;
+  }
+  if (key === 'late_tolerance_default_minutes') {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 240) {
+      throw unprocessable('late_tolerance_default_minutes harus berupa bilangan bulat 0-240 (menit).');
+    }
+  }
+}
+
 const USER_SAFE_SELECT = {
   id: true,
   username: true,
@@ -371,6 +401,38 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  app.delete(
+    '/admin/organizations/bureaus/:id',
+    { schema: { params: idParams }, preHandler: authorize('admin:org:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      requireGlobalScope(ctx);
+      const { id } = idParams.parse(req.params);
+      const bureau = await db.bureau.findUnique({
+        where: { id },
+        include: { _count: { select: { divisions: true, internProfiles: true } } },
+      });
+      if (!bureau) throw notFound();
+      if (bureau._count.divisions > 0 || bureau._count.internProfiles > 0) {
+        throw unprocessable(
+          `Biro masih dipakai ${bureau._count.divisions} divisi dan ${bureau._count.internProfiles} profil peserta. Nonaktifkan bila tidak lagi digunakan.`,
+        );
+      }
+      await db.$transaction(async (tx) => {
+        await tx.bureau.delete({ where: { id } });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ADMIN_BUREAU_DELETE',
+          objectType: 'bureau',
+          objectId: id,
+          before: { code: bureau.code, name: bureau.name, status: bureau.status },
+          requestId: req.id,
+        });
+      });
+      return ok({ deleted: true, id }, req.id);
+    },
+  );
+
   // ---------- Divisions (scoped) ----------
 
   app.post(
@@ -475,6 +537,38 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  app.delete(
+    '/admin/organizations/divisions/:id',
+    { schema: { params: idParams }, preHandler: authorize('admin:org:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      const { id } = idParams.parse(req.params);
+      const division = await db.division.findUnique({
+        where: { id },
+        include: { _count: { select: { internProfiles: true } } },
+      });
+      if (!division) throw notFound();
+      requireScopeCovers(ctx, { bureauId: division.bureauId, divisionId: division.id });
+      if (division._count.internProfiles > 0) {
+        throw unprocessable(
+          `Divisi masih dipakai ${division._count.internProfiles} profil peserta. Nonaktifkan bila tidak lagi digunakan.`,
+        );
+      }
+      await db.$transaction(async (tx) => {
+        await tx.division.delete({ where: { id } });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ADMIN_DIVISION_DELETE',
+          objectType: 'division',
+          objectId: id,
+          before: { code: division.code, name: division.name, bureauId: division.bureauId, status: division.status },
+          requestId: req.id,
+        });
+      });
+      return ok({ deleted: true, id }, req.id);
+    },
+  );
+
   // ---------- Placements (GLOBAL scope only) ----------
 
   app.post(
@@ -569,6 +663,38 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         requestId: req.id,
       });
       return ok(placement, req.id);
+    },
+  );
+
+  app.delete(
+    '/admin/placements/:id',
+    { schema: { params: idParams }, preHandler: authorize('admin:placements:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      requireGlobalScope(ctx);
+      const { id } = idParams.parse(req.params);
+      const placement = await db.placement.findUnique({
+        where: { id },
+        include: { _count: { select: { internProfiles: true } } },
+      });
+      if (!placement) throw notFound();
+      if (placement._count.internProfiles > 0) {
+        throw unprocessable(
+          `Penempatan masih dipakai ${placement._count.internProfiles} profil peserta. Nonaktifkan bila tidak lagi digunakan.`,
+        );
+      }
+      await db.$transaction(async (tx) => {
+        await tx.placement.delete({ where: { id } });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ADMIN_PLACEMENT_DELETE',
+          objectType: 'placement',
+          objectId: id,
+          before: { code: placement.code, name: placement.name, status: placement.status },
+          requestId: req.id,
+        });
+      });
+      return ok({ deleted: true, id }, req.id);
     },
   );
 
@@ -1384,6 +1510,36 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
 
   // ---------- Leave categories ----------
 
+  app.delete(
+    '/admin/scopes/:id',
+    { schema: { params: idParams }, preHandler: authorize('access:scopes:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      requireGlobalScope(ctx);
+      const { id } = idParams.parse(req.params);
+      const scope = await db.adminScope.findUnique({ where: { id } });
+      if (!scope) throw notFound();
+      await db.$transaction(async (tx) => {
+        await tx.adminScope.delete({ where: { id } });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ADMIN_SCOPE_DELETE',
+          objectType: 'adminScope',
+          objectId: id,
+          before: {
+            userId: scope.userId,
+            scopeType: scope.scopeType,
+            scopeId: scope.scopeId,
+            validFrom: scope.validFrom.toISOString(),
+            validTo: scope.validTo ? scope.validTo.toISOString() : null,
+          },
+          requestId: req.id,
+        });
+      });
+      return ok({ deleted: true, id }, req.id);
+    },
+  );
+
   app.post(
     '/admin/leave-categories',
     { schema: { body: leaveCategoryCreateBody }, preHandler: authorize('admin:leave-categories:manage') },
@@ -1463,6 +1619,37 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  app.delete(
+    '/admin/leave-categories/:id',
+    { schema: { params: idParams }, preHandler: authorize('admin:leave-categories:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      const { id } = idParams.parse(req.params);
+      const category = await db.leaveCategory.findUnique({
+        where: { id },
+        include: { _count: { select: { leaveRequests: true } } },
+      });
+      if (!category) throw notFound();
+      if (category._count.leaveRequests > 0) {
+        throw unprocessable(
+          `Kategori izin masih dipakai ${category._count.leaveRequests} pengajuan izin. Nonaktifkan bila tidak lagi digunakan.`,
+        );
+      }
+      await db.$transaction(async (tx) => {
+        await tx.leaveCategory.delete({ where: { id } });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ADMIN_LEAVE_CATEGORY_DELETE',
+          objectType: 'leaveCategory',
+          objectId: id,
+          before: { code: category.code, name: category.name, status: category.status },
+          requestId: req.id,
+        });
+      });
+      return ok({ deleted: true, id }, req.id);
+    },
+  );
+
   // ---------- Business parameters (upsert-style, no executable code) ----------
 
   app.post(
@@ -1474,6 +1661,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       if (containsForbiddenKey(body.valueJson)) {
         throw unprocessable('Data Master tidak boleh menerima nilai dengan key script/sql/code.');
       }
+      validateBusinessParameterValue(body.key, body.valueJson);
       const valueJson = body.valueJson as Prisma.InputJsonValue;
       const existing = await db.businessParameter.findUnique({ where: { key: body.key } });
       const param = existing
@@ -1523,6 +1711,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       if (body.valueJson !== undefined && containsForbiddenKey(body.valueJson)) {
         throw unprocessable('Data Master tidak boleh menerima nilai dengan key script/sql/code.');
       }
+      if (body.valueJson !== undefined) validateBusinessParameterValue(before.key, body.valueJson);
       const param = await db.businessParameter.update({
         where: { id },
         data: {

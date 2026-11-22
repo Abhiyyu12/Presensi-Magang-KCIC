@@ -1407,6 +1407,175 @@ describe('Fase UAT: kontrak list Data Master konsisten (pagination wajib)', () =
   });
 });
 
+describe('Data Master CRUD: create + delete dengan guard referensi', () => {
+  const uniq = `${Date.now() % 100000}`;
+
+  async function del(url: string, session: Session) {
+    return app.inject({ method: 'DELETE', url, headers: authHeaders(session) });
+  }
+
+  it('bureau/division/placement: create → hapus berurutan; bureau dipakai divisi ditolak 422', async () => {
+    const bureau = await post(app, '/api/v1/admin/organizations/bureaus', admin, {
+      code: `BQ${uniq}`,
+      name: `Biro Uji CRUD ${uniq}`,
+    });
+    expect(bureau.statusCode).toBe(200);
+    const bureauId = envelope(bureau).data.id as string;
+
+    const division = await post(app, '/api/v1/admin/organizations/divisions', admin, {
+      bureauId,
+      code: `DQ${uniq}`,
+      name: `Divisi Uji CRUD ${uniq}`,
+    });
+    expect(division.statusCode).toBe(200);
+    const divisionId = envelope(division).data.id as string;
+
+    const denied = await del(`/api/v1/admin/organizations/bureaus/${bureauId}`, admin);
+    expect(denied.statusCode).toBe(422);
+    expect(envelope(denied).error.message).toContain('masih dipakai');
+    expect(envelope(denied).error.message).toContain('Nonaktifkan');
+
+    const delDivision = await del(`/api/v1/admin/organizations/divisions/${divisionId}`, admin);
+    expect(delDivision.statusCode).toBe(200);
+    expect(envelope(delDivision).data.deleted).toBe(true);
+    const delBureau = await del(`/api/v1/admin/organizations/bureaus/${bureauId}`, admin);
+    expect(delBureau.statusCode).toBe(200);
+    expect(envelope(delBureau).data.deleted).toBe(true);
+
+    const placement = await post(app, '/api/v1/admin/placements', admin, {
+      code: `PQ${uniq}`,
+      name: `Penempatan Uji CRUD ${uniq}`,
+    });
+    expect(placement.statusCode).toBe(200);
+    const delPlacement = await del(`/api/v1/admin/placements/${envelope(placement).data.id}`, admin);
+    expect(delPlacement.statusCode).toBe(200);
+    expect(envelope(delPlacement).data.deleted).toBe(true);
+  });
+
+  it('kategori izin: create → hapus; kategori dipakai pengajuan izin ditolak 422', async () => {
+    const created = await post(app, '/api/v1/admin/leave-categories', admin, {
+      code: `KQ${uniq}`,
+      name: `Kategori Uji CRUD ${uniq}`,
+    });
+    expect(created.statusCode).toBe(200);
+    const id = envelope(created).data.id as string;
+    const deleted = await del(`/api/v1/admin/leave-categories/${id}`, admin);
+    expect(deleted.statusCode).toBe(200);
+    expect(envelope(deleted).data.deleted).toBe(true);
+
+    const db = getDb();
+    const used = await db.leaveCategory.findFirst({ where: { leaveRequests: { some: {} } } });
+    if (used) {
+      const denied = await del(`/api/v1/admin/leave-categories/${used.id}`, admin);
+      expect(denied.statusCode).toBe(422);
+      expect(envelope(denied).error.message).toContain('pengajuan izin');
+    }
+  });
+
+  it('cakupan (scope): create untuk pengguna → hapus (butuh ADMIN_IT access:scopes:manage)', async () => {
+    const created = await post(app, '/api/v1/admin/scopes', bootstrap, {
+      userId: p2UserId,
+      scopeType: 'GLOBAL',
+    });
+    expect(created.statusCode).toBe(200);
+    const id = envelope(created).data.id as string;
+    const deniedForAdminHr = await del(`/api/v1/admin/scopes/${id}`, admin);
+    expect(deniedForAdminHr.statusCode).toBe(403);
+    const deleted = await del(`/api/v1/admin/scopes/${id}`, bootstrap);
+    expect(deleted.statusCode).toBe(200);
+    expect(envelope(deleted).data.deleted).toBe(true);
+  });
+
+  it('jadwal: create individu → dipakai snapshot ditolak 422 → hapus setelah snapshot dibuang', async () => {
+    const db = getDb();
+    const p3 = await db.user.findUniqueOrThrow({ where: { username: 'peserta3' }, include: { internProfile: true } });
+    const p3ProfileId = p3.internProfile!.id;
+
+    const created = await post(app, '/api/v1/admin/schedules', admin, {
+      name: `Jadwal Uji CRUD ${uniq}`,
+      scopeType: 'INDIVIDUAL',
+      scopeId: p3ProfileId,
+      validFrom: '2030-01-01',
+      validTo: '2030-01-05',
+      days: [{ weekday: 1, isWorkingDay: true, startTime: '09:00', endTime: '17:00' }],
+    });
+    expect(created.statusCode).toBe(200);
+    const schedId = envelope(created).data.id as string;
+
+    const snapshot = await db.workdaySnapshot.create({
+      data: {
+        internProfileId: p3ProfileId,
+        workDate: parseDateOnly('2030-01-02'),
+        isWorkingDay: true,
+        scheduleId: schedId,
+        scheduleName: `Jadwal Uji CRUD ${uniq}`,
+      },
+    });
+    const denied = await del(`/api/v1/admin/schedules/${schedId}`, admin);
+    expect(denied.statusCode).toBe(422);
+    expect(envelope(denied).error.message).toContain('snapshot hari kerja');
+
+    await db.workdaySnapshot.delete({ where: { id: snapshot.id } });
+    const deleted = await del(`/api/v1/admin/schedules/${schedId}`, admin);
+    expect(deleted.statusCode).toBe(200);
+    expect(envelope(deleted).data.deleted).toBe(true);
+  });
+
+  it('kalender: create → tanggal dipakai snapshot ditolak 422 → hapus setelah snapshot dibuang', async () => {
+    const db = getDb();
+    const p3 = await db.user.findUniqueOrThrow({ where: { username: 'peserta3' }, include: { internProfile: true } });
+    const p3ProfileId = p3.internProfile!.id;
+
+    const created = await post(app, '/api/v1/admin/calendar', admin, {
+      calendarDate: '2031-05-01',
+      dayType: 'HOLIDAY',
+      name: `Uji CRUD ${uniq}`,
+    });
+    expect(created.statusCode).toBe(200);
+    const dayId = envelope(created).data.id as string;
+    const deleted = await del(`/api/v1/admin/calendar/${dayId}`, admin);
+    expect(deleted.statusCode).toBe(200);
+    expect(envelope(deleted).data.deleted).toBe(true);
+
+    const guardDay = await post(app, '/api/v1/admin/calendar', admin, {
+      calendarDate: '2031-05-02',
+      dayType: 'NORMAL',
+    });
+    expect(guardDay.statusCode).toBe(200);
+    const guardDayId = envelope(guardDay).data.id as string;
+
+    const snapshot = await db.workdaySnapshot.create({
+      data: {
+        internProfileId: p3ProfileId,
+        workDate: parseDateOnly('2031-05-02'),
+        isWorkingDay: false,
+      },
+    });
+    const denied = await del(`/api/v1/admin/calendar/${guardDayId}`, admin);
+    expect(denied.statusCode).toBe(422);
+    expect(envelope(denied).error.message).toContain('2031-05-02');
+
+    await db.workdaySnapshot.delete({ where: { id: snapshot.id } });
+    const deletedAfter = await del(`/api/v1/admin/calendar/${guardDayId}`, admin);
+    expect(deletedAfter.statusCode).toBe(200);
+    expect(envelope(deletedAfter).data.deleted).toBe(true);
+  });
+
+  it('parameter bisnis: default_workdays di luar 1-7 ditolak 422 tanpa mengubah data', async () => {
+    const db = getDb();
+    const before = await db.businessParameter.findUniqueOrThrow({ where: { key: 'default_workdays' } });
+    const res = await post(app, '/api/v1/admin/business-parameters', admin, {
+      key: 'default_workdays',
+      valueJson: { value: [0, 1, 2, 3, 4, 5, 6] },
+    });
+    expect(res.statusCode).toBe(422);
+    expect(envelope(res).error.message).toContain('1-7');
+    const after = await db.businessParameter.findUniqueOrThrow({ where: { key: 'default_workdays' } });
+    expect(after.valueJson).toEqual(before.valueJson);
+    expect(after.version).toBe(before.version);
+  });
+});
+
 describe('lokasi absensi opsional (absen tetap sah tanpa GPS)', () => {
   it('check-in dan check-out tanpa koordinat tetap sah (latitude/longitude null)', async () => {
     const p3 = await login(app, 'peserta3', DEV_PASSWORD);

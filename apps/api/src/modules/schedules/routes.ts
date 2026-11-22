@@ -263,6 +263,38 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  app.delete(
+    '/admin/schedules/:id',
+    { schema: { params: idParams }, preHandler: authorize('admin:schedules:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      const { id } = idParams.parse(req.params);
+      const schedule = await db.workSchedule.findUnique({
+        where: { id },
+        include: { days: true },
+      });
+      if (!schedule) throw notFound();
+      const snapshotCount = await db.workdaySnapshot.count({ where: { scheduleId: id } });
+      if (snapshotCount > 0) {
+        throw unprocessable(
+          `Jadwal masih direferensikan oleh ${snapshotCount} snapshot hari kerja. Nonaktifkan bila tidak lagi digunakan.`,
+        );
+      }
+      await db.$transaction(async (tx) => {
+        await tx.workSchedule.delete({ where: { id } });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ADMIN_SCHEDULE_DELETE',
+          objectType: 'workSchedule',
+          objectId: id,
+          before: { name: schedule.name, scopeType: schedule.scopeType, scopeId: schedule.scopeId, status: schedule.status },
+          requestId: req.id,
+        });
+      });
+      return ok({ deleted: true, id }, req.id);
+    },
+  );
+
   // ---------- Calendar ----------
 
   app.post(
@@ -355,6 +387,35 @@ export async function scheduleRoutes(app: FastifyInstance): Promise<void> {
         requestId: req.id,
       });
       return ok(day, req.id);
+    },
+  );
+
+  app.delete(
+    '/admin/calendar/:id',
+    { schema: { params: idParams }, preHandler: authorize('admin:calendar:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      const { id } = idParams.parse(req.params);
+      const day = await db.calendarDay.findUnique({ where: { id } });
+      if (!day) throw notFound();
+      const snapshotCount = await db.workdaySnapshot.count({ where: { workDate: day.calendarDate } });
+      if (snapshotCount > 0) {
+        throw unprocessable(
+          `Tanggal ${day.calendarDate.toISOString().slice(0, 10)} sudah dipakai ${snapshotCount} snapshot hari kerja. Nonaktifkan bila tidak lagi digunakan.`,
+        );
+      }
+      await db.$transaction(async (tx) => {
+        await tx.calendarDay.delete({ where: { id } });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ADMIN_CALENDAR_DELETE',
+          objectType: 'calendarDay',
+          objectId: id,
+          before: { calendarDate: day.calendarDate.toISOString().slice(0, 10), dayType: day.dayType, name: day.name },
+          requestId: req.id,
+        });
+      });
+      return ok({ deleted: true, id }, req.id);
     },
   );
 }
