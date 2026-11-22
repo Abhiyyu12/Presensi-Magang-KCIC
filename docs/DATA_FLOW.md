@@ -19,7 +19,7 @@ Dokumen ini adalah hasil audit integritas data (Fase A1–A5, 2026-11-22). Semua
 | Login (`LoginPage`) | `POST /auth/login`, `POST /auth/change-password` (wajib ganti saat `mustChangePassword`) | `users`, `sessions`, `user_role_assignments` |
 | Boot sesi (`lib/auth.tsx`) | `GET /auth/me`, `GET /auth/csrf`, `POST /auth/logout` | `sessions`, `users`, roles/permissions |
 | Navigasi (`Layout`) | `GET /access/me/effective` | `roles`, `role_permissions`, `permissions`, `user_permission_overrides`, `abac_policies`, `feature_nodes`, `admin_scopes`, `supervisor_assignments` |
-| Profil (`ProfilePage`) | `GET /profile`, `PATCH /profile`, `POST /auth/change-password` | `users` |
+| Profil (`ProfilePage`) | `GET /profile` (kini memuat roles, penugasan: nomor peserta/biro/divisi/penempatan/periode, pembimbing aktif, jadwal aktif via resolusi INDIVIDUAL > DIVISION > BUREAU > GLOBAL), `PATCH /profile` (**strict whitelist**: hanya `displayName`/`email`/`phone`; field lain → 400; email duplikat → 409; telepon wajib format Indonesia), `POST /auth/change-password` | `users`, `user_role_assignments`, `intern_profiles`, `supervisor_assignments`, `work_schedules`+`work_schedule_days` |
 
 ### Peserta (INTERN)
 
@@ -48,6 +48,7 @@ Dokumen ini adalah hasil audit integritas data (Fase A1–A5, 2026-11-22). Semua
 |---|---|---|
 | Beranda (`AdminDashboardPage`) | `GET /dashboard/admin` | agregat `attendance_days`, `leave_requests`, `intern_profiles`, `users` |
 | Data Master → Pengguna (`UsersPanel`) | `GET/POST /admin/users`, `PATCH /admin/users/:id`, `PUT /admin/users/:id/roles`, `POST /admin/users/:id/password-reset-token` (token sekali tampil, diaudit); katalog role dari `GET /admin/roles` | `users`, `roles`, `user_role_assignments`, `password_reset_tokens` |
+| Import Excel pengguna (`UsersPanel`) | `GET /admin/users/import/template` (xlsx + dropdown dari DB), `POST /admin/users/import/validate` (laporan per baris), `POST /admin/users/import/confirm` (buat user + profil + role, `mustChangePassword`) | `users`, `intern_profiles`, `bureaus`, `divisions`, `placements`, `roles`, `user_role_assignments`, `audit_events` |
 | Data Master → Biro/Divisi/Penempatan/Peserta/Penugasan/Cakupan/Kalender/Kategori Izin/Parameter (`ResourcePanel` + `config.ts`) | CRUD `/admin/organizations/bureaus`, `/admin/organizations/divisions`, `/admin/placements`, `/admin/intern-profiles`, `/admin/assignments`, `/admin/scopes`, `/admin/calendar`, `/admin/leave-categories`, `/admin/business-parameters` (+ `PATCH /admin/business-parameters/:id`) | `bureaus`, `divisions`, `placements`, `intern_profiles`, `supervisor_assignments`, `admin_scopes`, `calendar_days`, `leave_categories`, `business_parameters` |
 | Data Master → Jadwal (`SchedulesPanel`) | `GET /admin/schedules/form-defaults` (default dari parameter+timezone, bukan hardcode), `GET/POST /admin/schedules`, `GET/PATCH /admin/schedules/:id` | `work_schedules`, `work_schedule_days`, `business_parameters` |
 | Koreksi absensi (dari `AttendanceDetailPage`) | `POST /admin/attendance/:id/correction` (alasan wajib, before/after diaudit) | `attendance_days`, `attendance_events`, `audit_events` |
@@ -57,6 +58,12 @@ Dokumen ini adalah hasil audit integritas data (Fase A1–A5, 2026-11-22). Semua
 
 ## 3. Rantai data penting
 
+- **Konvensi error (seluruh API):** kegagalan validasi selalu
+  `{ error: { code: 'VALIDATION_ERROR', message: 'Permintaan tidak valid.', fieldErrors: { field: [pesan] } } }`
+  dalam Bahasa Indonesia (pesan default zod diterjemahkan; pesan kustom
+  lolos apa adanya). Jaring pengaman Prisma: `P2002` → 409 `Data sudah ada.`,
+  `P2003` → 409 `Data masih dipakai data lain...`, `P2025` → 404
+  `Data tidak ditemukan.` — tidak ada 500 mentah di permukaan API.
 - **Check-in/out:** `work_schedules` (resolusi INDIVIDUAL > DIVISION > BUREAU > GLOBAL) + `calendar_days` + `business_parameters` → snapshot immutable `workday_snapshots` → `attendance_days` → `attendance_events` (foto → validasi magic bytes → re-encode JPEG tanpa EXIF → MinIO privat → `file_objects`, satu transaksi PG, compensating delete bila gagal).
 - **Status telat** dihitung dari `occurredAtServer` vs snapshot (`startTime` + `lateToleranceMinutes`); toleransi kosong pada jadwal → server memakai `late_tolerance_default_minutes`.
 - **Izin:** `leave_requests` state machine (PENDING/APPROVED/REJECTED/CANCELLED/DEPARTED/RETURNED/COMPLETED/NEEDS_REVIEW); pergerakan menulis `leave_events`; early-checkout tanpa izin EARLY_DEPARTURE approved → `attendance_days.dayStatus = NEEDS_REVIEW`; sweep 15 menit menandai DEPARTED basi.

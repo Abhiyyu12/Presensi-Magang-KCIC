@@ -4,6 +4,35 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — Fase 0–5: perbaikan bug, RBAC penuh, profil lengkap, feedback error (branch `feat/uji-manual-integrasi`)
+
+### Diperbaiki
+- **Origin/CSRF**: akses dari `127.0.0.1:5174` tidak lagi ditolak; fokus input pertama yang hanya menerima 1 karakter diperbaiki.
+- **Navigasi**: sidebar bisa diciutkan di desktop; drawer hamburger di ponsel; header dirapikan; tema KCIC `#8B1A1A` lewat design tokens (bukan warna hardcode).
+- **Pesan sukses yang lenyap** pada halaman Role & Permission (invalidasi query menimpa state) — reset status kini hanya saat berganti role.
+- **Kotak pesan hijau untuk error** di halaman Profil — sukses/gagal kini dipisah (hijau/merah, `role="alert"`).
+
+### Ditambahkan
+- **Dashboard admin/pembimbing**: filter biro/divisi/tanggal dijalankan di backend + grafik SVG tanpa library baru.
+- **Kolom Aksi + pagination server-side** di Monitoring, Approval, dan Laporan; combobox searchable untuk dropdown master.
+- **Role CRUD** (Data Master → tab Role) + penggabungan menu Peserta ke Pengguna + hapus menu Penugasan.
+- **Import Excel pengguna**: template xlsx dinamis (dropdown biro/divisi/penempatan/role dari DB), validate → confirm, error per baris, `mustChangePassword`.
+- **Menu 'Pengguna & Hak Akses'**: pohon permission 7 menu → submenu → fitur/aksi (expand/collapse, indeterminate, cari, pilih semua) + template sekali klik Administrator/Pembimbing/Peserta (tersimpan di backend, `permission-taxonomy.ts`).
+- **RBAC penuh di frontend**: menu dari permission efektif, guard rute redirect ke Beranda, tombol aksi disembunyikan tanpa permission (ekspor laporan, unduh CSV, aksi izin pemilik, tab Akses), backend tetap titik keputusan.
+- **Profil lengkap**: `GET /profile` memuat role, penugasan (nomor peserta, biro/divisi/penempatan, periode), pembimbing aktif, dan jadwal kerja aktif (resolusi INDIVIDUAL > DIVISION > BUREAU > GLOBAL). `PATCH /profile` strict whitelist nama/email/telepon (field lain ditolak 400, email duplikat 409, telepon format Indonesia).
+- **Feedback error ramah**: seluruh error validasi API kini envelope `VALIDATION_ERROR` Bahasa Indonesia + `fieldErrors` per-field (pesan default zod diterjemahkan); jaring pengaman Prisma `P2002`/`P2003`/`P2025` → 409/409/404 ramah; panel menampilkan pesan field pertama dari backend.
+
+### Diubah
+- Validasi telepon format Indonesia dipakai seragam di profil, admin user create/patch, dan import Excel (`phoneIdSchema`).
+- Tombol Hapus role disembunyikan untuk role sistem/berpengguna; API tetap menolak (hapus relasi aman).
+
+### Pembuktian (bukan klaim)
+- `pnpm --filter api test` **73/73**, `pnpm --filter web test` **42/42**, tsc+eslint kedua app hijau.
+- E2E Playwright: Fase 1.6 **25/25**, Fase 2 **42/42** (termasuk pencabutan permission live → menu/tombol berubah), Fase 3 **28/28** (profil lengkap, edit kontak, validasi per-field, header sinkron, 390px), Fase 4 **7/7** (error per-field dialog, role create+delete, mobile 390px). Screenshot di `ux-audit/`.
+
+### Dokumentasi
+- `docs/RBAC.md` (pohon permission + template + guard), `docs/ADMIN_GUIDE.md` (panduan singkat admin + cara import Excel), README (fitur per role + tautan docs), `docs/DATA_FLOW.md` (kontrak profil baru, import Excel, konvensi error), `docs/USER_GUIDE.md` (Profil & Admin diperbarui).
+
 ## [2026-11-22] — Fase A5: Dokumentasi integritas data
 
 ### Ditambahkan

@@ -106,7 +106,13 @@ Izin hanya bisa diajukan **setelah absen masuk** pada hari itu.
 ## 8. Bantuan dan Profil
 
 - **Menu → Bantuan**: artikel panduan resmi (cara absensi, kebijakan izin, dll.).
-- **Menu → Profil**: data diri Anda dan ganti kata sandi.
+- **Menu → Profil**: halaman profil menampilkan data lengkap Anda — username,
+  role, kontak, serta untuk peserta: nomor peserta, biro/divisi/penempatan,
+  periode magang, jadwal kerja aktif (per hari), dan daftar pembimbing.
+- Yang bisa Anda ubah sendiri: **nama tampilan, email, telepon**. Email harus
+  unik, telepon format nomor Indonesia (mis. `081234567890`). Field lain hanya
+  bisa diubah admin. Nama baru langsung tampil di header tanpa perlu reload.
+- Ganti kata sandi di bagian **Ubah kata sandi**.
 
 ## 9. Bila mengalami masalah
 
@@ -134,11 +140,18 @@ Izin hanya bisa diajukan **setelah absen masuk** pada hari itu.
 ## 11. Untuk Admin HR / Admin IT
 
 - **Admin HR**: Monitoring, Approval (setujui/tolak izin dengan catatan),
-  Laporan, Data Master (pengguna, organisasi, jadwal, kalender, kategori izin,
-  parameter), Audit, Bantuan. Koreksi absensi dilakukan dari detail hari
-  peserta dengan alasan wajib (minimal 5 karakter) dan tercatat di audit.
-- **Admin IT**: Akses (role, permission, policy, simulasi izin) dan Audit.
-  Role baru selalu mulai tanpa permission; perubahan akses tercatat di audit.
+  Laporan, Data Master, Audit, Bantuan. Koreksi absensi dilakukan dari detail
+  hari peserta dengan alasan wajib (minimal 5 karakter) dan tercatat di audit.
+- **Kelola pengguna** (Data Master → Pengguna): tambah pengguna dengan password
+  sementara (wajib diganti saat login pertama), ganti role, buat token reset
+  kata sandi, dan **import massal via Excel** (unduh template → validate →
+  confirm; error dilaporkan per baris).
+- **Admin IT**: **Pengguna & Hak Akses** — pohon permission (7 menu → submenu →
+  fitur/aksi) dengan efek ALLOW/DENY, pencarian, dan **template sekali klik**
+  (Administrator / Pembimbing / Peserta). Role baru selalu mulai tanpa
+  permission; role dasar dibuat di Data Master → tab Role. Perubahan akses
+  tercatat di audit; detail di [RBAC.md](RBAC.md). Panduan lengkap admin:
+  [ADMIN_GUIDE.md](ADMIN_GUIDE.md).
 - Semua ekspor dan koreksi meninggalkan jejak audit yang bisa diperiksa di
   menu **Audit**.
 

@@ -29,8 +29,30 @@ Akses:
 |---|---|---|
 | `dev-admin` (atau `BOOTSTRAP_ADMIN_USERNAME` di .env) | `BOOTSTRAP_ADMIN_PASSWORD` | ADMIN_IT + ADMIN_HR (wajib ganti password) |
 | `admin-hr` | `DevPassword123!` | ADMIN_HR (scope GLOBAL) |
-| `supervisor1` | `DevPassword123!` | SUPERVISOR |
+| `supervisor1` | `DevPassword123!` | SUPERVISOR (Budi Santoso) |
 | `peserta1..3` | `DevPassword123!` | INTERN (MG-2026-001..003) |
+| `bayu.pratama`, `maya.sari`, `fajar.nugroho`, `putri.maharani` | `DevPassword123!` | INTERN tambahan |
+
+## Fitur per role
+
+| Role | Menu utama | Kemampuan kunci |
+|---|---|---|
+| Peserta (INTERN) | Beranda, Absen, Izin, Riwayat, Bantuan, Profil | absen masuk/pulang dengan selfie+GPS (anti-duplikat via Idempotency-Key), ajukan izin (izin sementara/pulang awal) + pergerakan keluar-kembali, riwayat + unduh CSV pribadi, profil menampilkan penugasan/jadwal/pembimbing dan mengubah kontak sendiri |
+| Pembimbing (SUPERVISOR) | Beranda, Monitoring, Izin Peserta, Laporan | pantau absensi peserta binaan (filter biro/divisi/pencarian), lihat pengajuan izin (baca saja), rekap + ekspor CSV/XLSX sesuai scope |
+| Admin HR (ADMIN_HR) | Beranda, Monitoring, Approval, Laporan, Data Master, Audit | setujui/tolak izin dengan catatan wajib, koreksi absensi ber-alasan, kelola pengguna + import Excel, seluruh data master (organisasi, jadwal, kalender, kategori izin, parameter operasional) |
+| Admin IT (ADMIN_IT) | Pengguna & Hak Akses, Audit | role/permission (pohon 7 menu + template Administrator/Pembimbing/Peserta), feature tree, policy ABAC, simulasi izin |
+
+Menu dan tombol mengikuti permission efektif (lihat [docs/RBAC.md](docs/RBAC.md)); keputusan tetap dijalankan server per request.
+
+## Dokumentasi
+
+| Dokumen | Isi |
+|---|---|
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | panduan pengguna akhir (peserta/pembimbing/admin) |
+| [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) | panduan singkat admin: pengguna, import Excel, role, data master, koreksi |
+| [docs/RBAC.md](docs/RBAC.md) | pohon permission, template role, aturan guard |
+| [docs/DATA_FLOW.md](docs/DATA_FLOW.md) | peta halaman → API → tabel DB + konvensi error |
+| [CHANGELOG.md](CHANGELOG.md) | riwayat perubahan per fase |
 
 ## Perintah penting
 
