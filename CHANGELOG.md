@@ -4,6 +4,15 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: jarak scrollbar dialog Data Master diperbaiki (tidak lagi menempel ke inputan)
+
+### Diubah
+- **Inputan di dalam dialog Data Master tidak lagi menempel ke scrollbar**: badan gulir dialog Tambah/Ubah Pengguna, dialog detail pengguna, dialog Biro/Divisi/Penempatan (ResourcePanel), dan dialog Jadwal sebelumnya hanya memberi jarak 4px (`pr-1`) antara ujung input/select dan scrollbar — di Windows scrollbar native yang tebal terlihat "mepet" ke inputan (keluhan user: "selectnya masih terlalu mepet / paddingnya masih ga bener"). Kini jaraknya **16px (`pr-4`)** dan scrollbar-nya diganti **versi tipis bulat abu-abu (`scroll-slim`, 8px)** — jauh lebih lapang dan rapi; scrollbar native tebal dengan panah hitam tidak lagi muncul di dalam dialog. Utility CSS `scroll-slim` ditambahkan di `index.css` (WebKit + Firefox `scrollbar-width: thin`), tanpa dependensi baru.
+
+### Pembuktian (bukan klaim)
+- Gate: web tsc+eslint bersih + test **48/48**.
+- Playwright (admin-hr, 1440px): jarak terukur ujung input → tepi area gulir = **16px** (sebelumnya 4px); dialog dicentang "Jadikan peserta magang" → seksi inputan peserta terlihat penuh dengan select Biro/Divisi/Penempatan lapang. Screenshot.
+
 ## [2026-11-22] — UAT: dialog Tambah/Ubah Pengguna diperlebar + auto-scroll ke inputan peserta
 
 ### Diubah

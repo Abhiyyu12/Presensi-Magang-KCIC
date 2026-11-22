@@ -52,6 +52,28 @@
   }
 }
 
+@layer utilities {
+  /* Scrollbar tipis untuk area gulir di dalam dialog — scrollbar native Windows
+     yang tebal terasa menempel ke ujung inputan. */
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+  .scroll-slim::-webkit-scrollbar {
+    width: 8px;
+  }
+  .scroll-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb {
+    background: rgb(203 213 225);
+    border-radius: 9999px;
+  }
+  .scroll-slim::-webkit-scrollbar-thumb:hover {
+    background: rgb(148 163 184);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

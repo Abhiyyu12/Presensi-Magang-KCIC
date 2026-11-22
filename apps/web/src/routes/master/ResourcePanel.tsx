@@ -243,7 +243,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
         }}
         onConfirm={() => saveMutation.mutate()}
       >
-        <div className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+        <div className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-4 scroll-slim">
           {formError ? (
             <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700" role="alert">{formError}</p>
           ) : null}

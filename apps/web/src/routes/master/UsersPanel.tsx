@@ -692,7 +692,7 @@ export function UsersPanel() {
         onClose={() => setCreateOpen(false)}
         onConfirm={() => createMutation.mutate()}
       >
-        <div ref={createBodyRef} className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+        <div ref={createBodyRef} className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-4 scroll-slim">
           {(
             [
               ['username', 'Username', 'text', true],
@@ -749,7 +749,7 @@ export function UsersPanel() {
         onClose={() => setEditRow(null)}
         onConfirm={() => editMutation.mutate()}
       >
-        <div ref={editBodyRef} className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+        <div ref={editBodyRef} className="mt-3 max-h-[60vh] space-y-3 overflow-y-auto pr-4 scroll-slim">
           {(
             [
               ['displayName', 'Nama tampilan', 'text'],
@@ -828,7 +828,7 @@ export function UsersPanel() {
         onClose={() => setDetailId(null)}
         onConfirm={() => setDetailId(null)}
       >
-        <div className="mt-3 max-h-[65vh] space-y-4 overflow-y-auto pr-1">
+        <div className="mt-3 max-h-[65vh] space-y-4 overflow-y-auto pr-4 scroll-slim">
           {detailQuery.isError ? (
             <p className="rounded-lg bg-red-50 p-2 text-sm text-red-700" role="alert">Gagal memuat detail.</p>
           ) : detail ? (
