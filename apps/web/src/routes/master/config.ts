@@ -24,6 +24,8 @@ export interface FieldConfig {
   required?: boolean;
   min?: number;
   options?: { value: string; label: string }[];
+  /** Teks bantuan singkat di bawah input. */
+  hint?: string;
   /** Only shown on create, not on edit (e.g. username). */
   createOnly?: boolean;
   combobox?: ComboboxFieldConfig;
@@ -82,6 +84,18 @@ const STATUS_OPTIONS = [
 ];
 
 const statusText = (row: Row): string => (row['status'] === 'INACTIVE' ? 'Nonaktif' : 'Aktif');
+
+const SCOPE_TYPE_TEXT: Record<string, string> = {
+  GLOBAL: 'Global (semua data)',
+  BUREAU: 'Direktorat',
+  DIVISION: 'Biro',
+};
+
+const DAY_TYPE_TEXT: Record<string, string> = {
+  NORMAL: 'Normal',
+  HOLIDAY: 'Libur',
+  WORKING_EXCEPTION: 'Masuk khusus (pengecualian)',
+};
 
 const nestedName = (row: Row, key: string): string => {
   const value = row[key];
@@ -168,7 +182,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
     path: '/admin/scopes',
     columns: [
       { header: 'Pengguna', render: (row) => nestedName(row, 'user') },
-      { header: 'Tipe', field: 'scopeType' },
+      { header: 'Tipe', render: (row) => SCOPE_TYPE_TEXT[asString(row['scopeType'])] ?? asString(row['scopeType']) },
       { header: 'Berlaku dari', render: (row) => datePart(row['validFrom']) },
       { header: 'Berlaku sampai', render: (row) => (row['validTo'] ? datePart(row['validTo']) : '-') },
     ],
@@ -183,21 +197,23 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
       },
       {
         name: 'scopeType',
-        label: 'Tipe scope',
+        label: 'Tipe cakupan',
         type: 'select',
         required: true,
         createOnly: true,
+        hint: 'Global = boleh semua data; Direktorat = hanya data di satu direktorat; Biro = hanya data di satu biro.',
         options: [
-          { value: 'GLOBAL', label: 'GLOBAL' },
-          { value: 'BUREAU', label: 'BUREAU' },
-          { value: 'DIVISION', label: 'DIVISION' },
+          { value: 'GLOBAL', label: 'Global (semua data)' },
+          { value: 'BUREAU', label: 'Direktorat' },
+          { value: 'DIVISION', label: 'Biro' },
         ],
       },
       {
         name: 'scopeId',
-        label: 'Objek scope (direktorat/biro)',
+        label: 'Objek cakupan (direktorat/biro)',
         type: 'combobox',
         createOnly: true,
+        hint: 'Diisi hanya untuk tipe Direktorat atau Biro.',
         combobox: {
           fetchOptions: fetchScopeIdOptions,
           serverSearch: true,
@@ -205,7 +221,12 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
           hideWhen: { field: 'scopeType', equals: ['GLOBAL'] },
         },
       },
-      { name: 'validFrom', label: 'Berlaku dari', type: 'date' },
+      {
+        name: 'validFrom',
+        label: 'Berlaku dari',
+        type: 'date',
+        hint: 'Cakupan hanya aktif di antara kedua tanggal ini; kosongkan "Berlaku sampai" bila tanpa batas waktu.',
+      },
       { name: 'validTo', label: 'Berlaku sampai', type: 'date' },
     ],
     toForm: (row) => ({ ...row, validFrom: datePart(row['validFrom']), validTo: datePart(row['validTo']) }),
@@ -218,7 +239,7 @@ export const MASTER_RESOURCES: ResourceConfig[] = [
     path: '/admin/calendar',
     columns: [
       { header: 'Tanggal', render: (row) => datePart(row['calendarDate']) },
-      { header: 'Jenis', field: 'dayType' },
+      { header: 'Jenis', render: (row) => DAY_TYPE_TEXT[asString(row['dayType'])] ?? asString(row['dayType']) },
       { header: 'Keterangan', field: 'name' },
       { header: 'Status', render: statusText },
     ],

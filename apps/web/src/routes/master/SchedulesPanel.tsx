@@ -28,6 +28,7 @@ interface FormDefaults {
 const DAY_NAMES = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
 const SCOPE_LABELS: Record<string, string> = {
+  GLOBAL: 'Global',
   BUREAU: 'Direktorat',
   DIVISION: 'Biro',
   INDIVIDUAL: 'Peserta (individu)',
@@ -171,7 +172,7 @@ export function SchedulesPanel() {
 
   const columns: Column<Row>[] = [
     { header: 'Nama', cell: (row) => asString(row['name']) },
-    { header: 'Scope', cell: (row) => asString(row['scopeType']) },
+    { header: 'Cakupan', cell: (row) => SCOPE_LABELS[asString(row['scopeType'])] ?? asString(row['scopeType']) },
     { header: 'Berlaku dari', cell: (row) => asString(row['validFrom']).slice(0, 10) },
     { header: 'Berlaku sampai', cell: (row) => (row['validTo'] ? asString(row['validTo']).slice(0, 10) : '-') },
     {
@@ -258,7 +259,7 @@ export function SchedulesPanel() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="label" htmlFor="sched-scope">Tipe scope</label>
+              <label className="label" htmlFor="sched-scope">Cakupan</label>
               <select
                 id="sched-scope"
                 className="input"
@@ -267,11 +268,14 @@ export function SchedulesPanel() {
                   setForm((f) => ({ ...f, scopeType: e.target.value, scopeId: '' }))
                 }
               >
-                <option value="GLOBAL">GLOBAL</option>
-                <option value="BUREAU">BUREAU</option>
-                <option value="DIVISION">DIVISION</option>
-                <option value="INDIVIDUAL">INDIVIDUAL</option>
+                <option value="GLOBAL">Global — semua peserta</option>
+                <option value="BUREAU">Direktorat — satu direktorat</option>
+                <option value="DIVISION">Biro — satu biro</option>
+                <option value="INDIVIDUAL">Peserta (individu) — satu peserta</option>
               </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Saat peserta absen, dipakai jadwal paling spesifik yang berlaku: individu lebih utama dari biro, biro dari direktorat, direktorat dari global.
+              </p>
             </div>
             {form.scopeType === 'GLOBAL' ? null : (
               <MasterCombobox

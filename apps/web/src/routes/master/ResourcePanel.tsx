@@ -311,6 +311,9 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
                       error={error}
                       allowClear={!field.required}
                     />
+                    {field.hint && !error ? (
+                      <p className="mt-1 text-xs text-slate-500">{field.hint}</p>
+                    ) : null}
                   </div>
                 );
               }
@@ -354,6 +357,9 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
                       onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
                     />
                   )}
+                  {field.hint && !error ? (
+                    <p className="mt-1 text-xs text-slate-500">{field.hint}</p>
+                  ) : null}
                   {error ? (
                     <p className="mt-1 text-xs font-medium text-red-600" role="alert">{error}</p>
                   ) : null}

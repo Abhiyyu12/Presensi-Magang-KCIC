@@ -4,6 +4,24 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — Istilah teknis di Data Master jadi Bahasa Indonesia + deskripsi bantuan tiap isian
+
+### Diubah
+- **Kode mentah English tidak lagi tampil di UI** (permintaan user: "jangan berbahasa asing, kasih deskripsi biar nggak bingung"):
+  - Tab **Cakupan**: dropdown "Tipe scope GLOBAL/BUREAU/DIVISION" kini **"Tipe cakupan"** dengan opsi **"Global (semua data) / Direktorat / Biro"**; kolom daftar "Tipe" juga menampilkan label Indonesia, bukan `BUREAU`/`DIVISION`.
+  - Tab **Jadwal**: label "Tipe scope" kini **"Cakupan"** dengan opsi berpenjelasan: **"Global — semua peserta", "Direktorat — satu direktorat", "Biro — satu biro", "Peserta (individu) — satu peserta"**; kolom daftar "Scope" kini "Cakupan" dengan label Indonesia.
+  - Tab **Kalender**: kolom "Jenis" tak lagi menampilkan `NORMAL/HOLIDAY/WORKING_EXCEPTION`, kini **"Normal / Libur / Masuk khusus (pengecualian)"**.
+- **Deskripsi bantuan tiap isian penting** (teks kecil abu-abu di bawah input, fitur `hint` baru di config field — dipakai seragam di semua form Data Master):
+  - Cakupan → Tipe cakupan: "Global = boleh semua data; Direktorat = hanya data di satu direktorat; Biro = hanya data di satu biro."
+  - Cakupan → Objek cakupan: "Diisi hanya untuk tipe Direktorat atau Biro."
+  - Cakupan → Berlaku dari: "Cakupan hanya aktif di antara kedua tanggal ini; kosongkan Berlaku sampai bila tanpa batas waktu."
+  - Jadwal → Cakupan: "Saat peserta absen, dipakai jadwal paling spesifik yang berlaku: individu > biro > direktorat > global."
+- Nilai yang dikirim ke server tetap `GLOBAL/BUREAU/DIVISION/INDIVIDUAL/NORMAL/HOLIDAY/WORKING_EXCEPTION` — hanya tampilan yang diterjemahkan, kontrak API tak berubah.
+
+### Pembuktian (bukan klaim)
+- Gate: web tsc+eslint bersih + test **48/48**.
+- Playwright live **13/13 OK** (login dev-admin; log `uat_istilah_scope.py`, screenshot): label & opsi Cakupan/Jadwal Indonesia + hint tampil; kolom daftar tanpa kode mentah `BUREAU/DIVISION`; Kalender dibuat 1 baris uji "Libur" → kolom Jenis tampil "Libur" → baris dihapus via tombol Hapus (DB kembali 0 baris).
+
 ## [2026-11-22] — Istilah struktur organisasi KCIC: bureaus = Direktorat, divisions = Biro
 
 ### Diubah
