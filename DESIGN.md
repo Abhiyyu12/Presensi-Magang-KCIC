@@ -12,44 +12,31 @@
 
 ## 2. Navigation by role
 
-### Peserta
-- Dashboard
-- Absensi
-- Izin Tengah Hari
-- Riwayat & Timeline
-- Pusat Bantuan
-- Profil/Akun
+Single source of short menu labels (updated 2026-11-22, UX upgrade commit f8a83a8): seed `FEATURE_NODES` in `apps/api/prisma/seed.ts` with the `Layout.tsx` fallback using the same labels — Beranda, Absen, Izin, Izin Peserta (supervisor-only, permission `leave:view:scoped`), Riwayat, Monitoring, Approval, Laporan, Data Master, Akses, Audit, Bantuan, Profil. Labels are ≤10 characters where possible so they fit 360px bottom nav.
 
-### Pembimbing
-- Dashboard
-- Peserta Bimbingan
-- Monitoring/Riwayat
-- Report & Statistik
-- Pusat Bantuan
-- Profil/Akun
+Navigation behavior:
+- Mobile: bottom nav with 4 primary items + a "Menu" button opening a sheet containing ALL role items (including Bantuan/Profil/Audit). No role loses access to any item on phones.
+- Desktop: sticky top header; sidebar shows ≤6 primary items + a "Lainnya" group for the rest (e.g. Bantuan/Profil).
+- Items derive from effective permissions (`/access/me/effective` feature tree); approvers do not see the read-only "Izin Peserta" item (they use Approval).
 
-### Admin Magang/HR
-- Dashboard
-- Data Peserta & Pengguna
-- Organisasi & Penempatan
-- Jadwal & Kalender
-- Monitoring Absensi
-- Approval Izin
-- Koreksi
-- Report & Statistik
-- Data Master
-- Pusat Bantuan
-- Audit sesuai permission
-- Profil/Akun
+### Peserta (INTERN)
+- Beranda, Absen, Izin, Riwayat, Bantuan, Profil
+- Bottom nav: Beranda, Absen, Izin, Riwayat + Menu (sheet: Bantuan, Profil)
 
-### Administrator IT
-- Dashboard Administrasi
-- Role & Permission
-- Feature Tree
-- ABAC/ReBAC
-- Konfigurasi teknis yang diizinkan
-- Audit keamanan
-- Fitur operasional hanya jika diberi permission
+### Pembimbing (SUPERVISOR)
+- Beranda, Monitoring, Izin Peserta (read-only leave list, `leave:view:scoped`), Laporan, Bantuan, Profil
+- Bottom nav: Beranda, Monitoring, Izin Peserta, Laporan + Menu (sheet: Bantuan, Profil)
+
+### Admin Magang/HR (ADMIN_HR)
+- Beranda, Monitoring, Approval, Laporan, Data Master, Audit, Bantuan, Profil
+- Data Master stays one tabbed page (11 tabs: Pengguna, Peserta, Biro, Divisi, Penempatan, Penugasan, Jadwal, Kalender, Kategori Izin, Parameter, Cakupan/Scope) instead of separate menu items; tabs scroll horizontally with a swipe hint on narrow screens.
+- Bottom nav: Beranda, Monitoring, Approval, Laporan + Menu (sheet: Data Master, Audit, Bantuan, Profil); desktop sidebar: 6 primary + "Lainnya" (Bantuan, Profil)
+
+### Administrator IT (ADMIN_IT)
+- Beranda, Akses (role/permission/feature tree/ABAC/simulate), Audit, Bantuan, Profil
+- Operational features appear only if explicitly granted.
+- Landing after login goes to the admin dashboard (not the participant dashboard).
+- Bottom nav: Beranda, Akses, Audit, Bantuan + Menu (sheet: Profil)
 
 Navigation is generated from effective permission data. Hiding a menu is not security enforcement.
 
@@ -58,12 +45,12 @@ Navigation is generated from effective permission data. Hiding a menu is not sec
 | Page | Main content |
 |---|---|
 | Login | Username, password, show/hide, error, recovery link if enabled |
-| Participant dashboard | Today's schedule, attendance state, primary CTA, leave status |
+| Participant dashboard | Today's schedule, attendance state, primary CTA (Absen Masuk/Pulang), leave status, in-app check-out reminder banner when checked-in past scheduled end time |
 | Camera attendance | Permission status, camera preview, capture, retake, location status |
 | Attendance confirmation | Server time WIB, status, evidence thumbnail, location recorded |
 | Leave request | Type, category, reason, estimated departure/return |
 | Leave detail | Approval state, notes, departure/return/early checkout timeline |
-| Participant history | Date filter, paginated list, detail |
+| Participant history | Quick date presets (7 hari terakhir / 30 hari terakhir / Bulan ini) + manual date filter, paginated list, detail, "Unduh CSV" personal export |
 | Supervisor dashboard | Assigned intern summary, pending review |
 | Assigned interns | Search, scope filters, pagination |
 | Reports | Filters, server-side table, export |

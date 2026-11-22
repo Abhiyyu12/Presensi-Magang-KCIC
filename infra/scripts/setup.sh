@@ -36,7 +36,10 @@ docker compose ps
 
 echo ""
 echo "Setup complete."
-echo "  Web:  http://localhost:5173"
-echo "  API:  http://localhost:3000/api/v1  (docs: /api/v1/docs)"
-echo "  MinIO console: http://localhost:9001"
+WEB_PORT=$(grep -E '^WEB_PORT=' .env | cut -d= -f2 || true); WEB_PORT=${WEB_PORT:-5174}
+API_PORT=$(grep -E '^API_PORT=' .env | cut -d= -f2 || true); API_PORT=${API_PORT:-3002}
+MINIO_CONSOLE_HOST_PORT=$(grep -E '^MINIO_CONSOLE_HOST_PORT=' .env | cut -d= -f2 || true); MINIO_CONSOLE_HOST_PORT=${MINIO_CONSOLE_HOST_PORT:-9003}
+echo "  Web:  http://localhost:${WEB_PORT}"
+echo "  API:  http://localhost:${API_PORT}/api/v1  (OpenAPI JSON: /api/v1/docs/json — no Swagger UI)"
+echo "  MinIO console: http://localhost:${MINIO_CONSOLE_HOST_PORT}"
 echo "  Bootstrap admin username: see BOOTSTRAP_ADMIN_USERNAME in .env (password in .env, must be changed on first login)"

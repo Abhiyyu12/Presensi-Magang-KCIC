@@ -48,7 +48,7 @@
 
 ## Frontend quality
 
-- Typed API client generated or checked against OpenAPI.
+- Typed API client: hand-written client in `apps/web/src/lib/api.ts` + `types.ts`. Generated/OpenAPI-checked client BELUM DIOTOMASI — direncanakan; verifikasi saat ini = typecheck strict + 24 unit test web (`src/lib/*.test.ts`) terhadap envelope/error mapping/CSRF.
 - Shared error handling.
 - Loading/error/empty/success/permission-denied states.
 - Accessible forms and dialogs.
@@ -57,4 +57,15 @@
 
 ## Automated checks
 
-At minimum: formatter, lint, typecheck, unit tests, integration tests, API tests, E2E, architecture boundary tests, dependency audit, secret scan, production build.
+Yang berjalan hari ini (2026-11-22):
+- Lint: `.eslintrc.cjs` di kedua app (eslint 8 + @typescript-eslint 8 + react-hooks); `pnpm --filter api lint`, `pnpm --filter web lint`, `--max-warnings 0`.
+- Typecheck: `pnpm typecheck` (tsc strict, kedua app).
+- Unit + integration + API tests: `pnpm test` — API 38 (29 integrasi + 9 unit, DB `attendance_test` dibuat ulang per run), web 24 unit.
+- Production build: `pnpm build` (web: tsc + vite build).
+
+BELUM DIOTOMASI — direncanakan (verifikasi saat ini = review manual + typecheck/lint/test di atas):
+- Formatter (belum ada konfigurasi/script formatter).
+- E2E suite (tidak ada `test:e2e`/Playwright di repo; uji browser ad-hoc di luar repo).
+- Architecture boundary tests.
+- Dependency audit.
+- Secret scan (`.env` gitignored; placeholder di `.env.example`; belum ada scanner terotomasi).

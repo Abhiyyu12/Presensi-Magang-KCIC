@@ -1,6 +1,6 @@
 # API CONTRACT — REST API Baseline
 
-Base path: `/api/v1`. JSON is used unless multipart upload or file download is required. All timestamps are ISO-8601 UTC. Every endpoint must have runtime validation and OpenAPI documentation.
+Base path: `/api/v1`. JSON is used unless multipart upload or file download is required. All timestamps are ISO-8601 UTC. Every endpoint must have runtime validation and OpenAPI documentation. The OpenAPI document is served as JSON only at `GET /api/v1/docs/json`; no Swagger UI is registered.
 
 ## 1. Standard response
 
@@ -33,11 +33,13 @@ Never return stack traces, SQL details, secrets, password hashes, session token 
 - `POST /auth/login`
 - `POST /auth/logout`
 - `GET /auth/me`
+- `GET /auth/csrf` (issues the double-submit CSRF token)
 - `POST /auth/change-password`
-- `POST /auth/forgot-password` (only if approved flow is implemented)
 - `POST /auth/reset-password`
 
-Use server-side sessions and HttpOnly cookies. Apply CSRF/origin protection to state-changing cookie-authenticated requests. Rate-limit login and password recovery.
+`POST /auth/forgot-password` is NOT implemented; password recovery uses an admin-issued one-time token via `POST /admin/users/:userId/password-reset-token` (see §6).
+
+Use server-side sessions and HttpOnly cookies. Apply CSRF/origin protection to state-changing cookie-authenticated requests. Rate-limit login and password recovery: login is limited to 30 requests / 15 minutes per IP (raised from 10 on 2026-11-22 because office NAT shares one IP; in-memory store), reset-password to 10 / 15 minutes per IP.
 
 ## 3. Dashboard and profile
 
@@ -57,6 +59,7 @@ Each dashboard response must be scoped to the authenticated user and permissions
 - `GET /attendance`
 - `GET /attendance/:attendanceId`
 - `GET /attendance/:attendanceId/evidence`
+- `GET /attendance/export` (personal history CSV; authenticated users with an intern profile only — rejected 403 otherwise; no photos/coordinates; audited as `ATTENDANCE_EXPORT_SELF`)
 
 Submission requires:
 - `Idempotency-Key` header.
@@ -71,6 +74,7 @@ Backend must validate the expected next event and unique attendance day/event co
 
 - `GET /leaves`
 - `POST /leaves`
+- `GET /leaves/categories` (applicant-facing read list of ACTIVE categories, guard `leave:request`; added 2026-11-22 — the admin CRUD list `/admin/leave-categories` is not readable by peserta)
 - `GET /leaves/:leaveId`
 - `POST /leaves/:leaveId/cancel`
 - `POST /leaves/:leaveId/approve`
@@ -84,6 +88,9 @@ Approval/rejection requires permission and scope. Rejection requires a note. Mov
 ## 6. Admin and master data
 
 - `/admin/users`
+- `/admin/users/:id/roles` (assign roles to a user)
+- `/admin/users/:userId/password-reset-token` (admin-issued one-time reset token, shown once, audited)
+- `/admin/intern-profiles`
 - `/admin/organizations/bureaus`
 - `/admin/organizations/divisions`
 - `/admin/placements`
@@ -92,11 +99,12 @@ Approval/rejection requires permission and scope. Rejection requires a note. Mov
 - `/admin/calendar`
 - `/admin/leave-categories`
 - `/admin/business-parameters`
-- `/admin/roles`
-- `/admin/permissions`
-- `/admin/feature-tree`
-- `/admin/policies`
+- `/admin/roles` (read-only ACTIVE role catalog for user management; guard `admin:users:manage`)
+- `/admin/attendance/:attendanceId/correction` (correction with mandatory reason, audited before/after)
+- `/admin/audit` (read-only audit trail; guard `admin:audit:view`)
 - `/admin/scopes`
+
+Access-control administration lives under `/admin/access/*` (see §9), not `/admin/permissions|feature-tree|policies`.
 
 Use CRUD methods only where allowed. Enforce effective dates, uniqueness, referential integrity, permission checks, and audit.
 
@@ -127,6 +135,13 @@ Draft content must not be visible to users without appropriate permission.
 - `POST /admin/access/roles`
 - `PATCH /admin/access/roles/:id`
 - `PUT /admin/access/roles/:id/permissions`
+- `GET /admin/access/permissions`
+- `GET /admin/access/feature-tree`
+- `POST /admin/access/feature-tree`
+- `PATCH /admin/access/feature-tree/:id`
+- `GET /admin/access/policies`
+- `POST /admin/access/policies`
+- `PATCH /admin/access/policies/:id`
 - `GET /admin/access/simulate`
 
 Simulation is diagnostic and must not grant access. Changes require audit and cache invalidation.

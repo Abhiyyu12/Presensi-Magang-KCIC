@@ -9,7 +9,7 @@ Bangun aplikasi secara end-to-end, bukan hanya mockup UI. Ikuti fase pada `IMPLE
 
 WAJIB:
 1. Periksa repository dan jangan menimpa pekerjaan yang sudah ada.
-2. Catat semua aktivitas di `docs/BUILD_LOG.md`.
+2. Catat semua aktivitas di `BUILD_LOG.md` (root repo, bukan `docs/`). Register keputusan: `DECISIONS.md` di root.
 3. Bootstrap monorepo TypeScript strict dengan stack yang ditetapkan di `ARCHITECTURE.md`; pin versi dependency dan container image.
 4. Bangun Docker Compose lokal untuk frontend, backend, PostgreSQL, dan MinIO. Tambahkan health checks, named volumes, private buckets, localhost-only ports, dan startup dependency yang benar.
 5. Buat migration, constraint, index, dan seed dummy yang idempotent.
@@ -17,7 +17,7 @@ WAJIB:
 7. Setiap API harus punya schema validation, error handling, authorization, scope enforcement, request ID, dan test.
 8. Setelah API stabil, implementasikan UI responsive dengan seluruh loading/error/empty/success/permission states.
 9. Jangan membuat tombol/halaman palsu. Semua aksi harus terhubung ke API nyata.
-10. Jalankan unit, integration, API, E2E, security, lint, typecheck, dan build tests.
+10. Jalankan unit, integration, API, E2E, security, lint, typecheck, dan build tests. (Catatan status 2026-11-22: suite E2E terotomasi belum ada di repo — direncanakan; verifikasi browser saat ini = skrip Playwright ad-hoc di luar repo. Jangan mengklaim gate yang belum jalan.)
 11. Perbaiki seluruh P0/P1 dan regression. Jangan menghapus atau skip test untuk membuat pipeline hijau.
 12. Lakukan clean-room verification dari Docker environment baru dan migration dari database kosong.
 13. Jika keputusan bisnis belum tersedia, gunakan konfigurasi yang dapat diubah hanya jika aman; jika mempengaruhi validitas kebijakan, tandai pending dan jangan mengarang nilai.

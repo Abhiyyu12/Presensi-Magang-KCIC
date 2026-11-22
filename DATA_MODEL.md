@@ -21,8 +21,9 @@
 - `permissions`: id, code unique, module, action, description.
 - `role_permissions`: role_id, permission_id, effect (`ALLOW`/`DENY`).
 - `user_role_assignments`: user_id, role_id, valid_from, valid_to, assigned_by.
-- `feature_nodes`: id, parent_id, code unique, label, route, node_type.
+- `feature_nodes`: id, parent_id, code unique, label, route, node_type, required_permission_code nullable, sort_order.
 - `user_permission_overrides`: user_id, permission_id, effect, scope_json, valid_from, valid_to, reason, granted_by.
+- `abac_policies`: id, code unique, description nullable, permission_code, effect (`ALLOW`/`DENY`, default ALLOW), condition_json (interpreter: all/any/not), status (`ACTIVE`/`INACTIVE`).
 - `sessions`: id, user_id, token_hash unique, expires_at, revoked_at, last_seen_at, user_agent_hash, ip_hash nullable.
 - `password_reset_tokens`: id, user_id, token_hash, expires_at, consumed_at.
 
@@ -35,11 +36,10 @@
 - `admin_scopes`: id, user_id, scope_type, scope_id, valid_from, valid_to.
 
 ### Scheduling
-- `work_schedules`: id, name, scope_type, scope_id nullable, valid_from, valid_to, timezone, status, version.
+- `work_schedules`: id, name, scope_type (`GLOBAL`, `BUREAU`, `DIVISION`, `INDIVIDUAL`), scope_id nullable, valid_from, valid_to, timezone, status, version. Schedule scope is inline on this table (`scope_type`/`scope_id`, indexed with `valid_from`); there is NO separate `schedule_assignments` table in the implemented schema.
 - `work_schedule_days`: id, schedule_id, weekday, is_working_day, start_time, end_time, late_tolerance_minutes.
 - `calendar_days`: id, calendar_date, day_type (`HOLIDAY`, `WORKING_EXCEPTION`, `NORMAL`), name, source, status.
-- `schedule_assignments`: id, schedule_id, target_type, target_id, valid_from, valid_to, priority.
-- `resolved_workdays` or immutable `workday_snapshots`: intern_profile_id, work_date, resolved schedule snapshot, resolution source, status.
+- `workday_snapshots` (immutable resolved workdays): intern_profile_id, work_date, resolved schedule snapshot, resolution source, status.
 
 ### Attendance and evidence
 - `attendance_days`: id, intern_profile_id, work_date, check_in_event_id nullable, check_out_event_id nullable, day_status, schedule_snapshot_json, correction_flag.

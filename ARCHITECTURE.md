@@ -22,29 +22,32 @@ Use a **Modular Monolith** with separate frontend and backend applications in on
 | Authentication | Server-side session, opaque cookie | Revocation and HttpOnly |
 | Object storage | MinIO, S3-compatible private buckets | Private selfie evidence |
 | API docs | OpenAPI generated from route schemas | Contract visibility |
-| Tests | Vitest, Supertest/inject, Playwright | Unit, integration, E2E |
+| Tests | Vitest + Fastify inject (unit/integration/API). Playwright E2E BELUM DIOTOMASI — direncanakan; verifikasi browser saat ini = skrip Playwright ad-hoc di luar repo | Unit, integration, API; E2E manual/ad-hoc |
 | Containers | Docker Compose | Local reproducibility |
 
 Versions must be selected as current supported stable versions at implementation time and pinned in lockfiles/image tags. Do not use floating `latest` tags. If a package is incompatible, document evidence and propose a replacement before switching.
 
 ## 3. Repository structure
 
+Actual structure (verified 2026-11-22). There is no `packages/contracts` workspace and no `infra/docker` directory; the compose file lives at the repo root. `BUILD_LOG.md` and `DECISIONS.md` live at the repo root, not under `docs/`.
+
 ```text
 /
 ├── apps/
 │   ├── web/
 │   │   ├── src/
-│   │   │   ├── app/
-│   │   │   ├── routes/
-│   │   │   ├── modules/
-│   │   │   ├── components/
+│   │   │   ├── routes/        # page components (+ access/, master/ subpanels)
+│   │   │   ├── components/    # Layout, DataTable, CameraCapture, NavIcon, …
 │   │   │   ├── hooks/
-│   │   │   ├── lib/
-│   │   │   └── styles/
+│   │   │   ├── lib/           # api client, auth context, format, types (+ unit tests)
+│   │   │   ├── test/
+│   │   │   ├── App.tsx
+│   │   │   ├── main.tsx
+│   │   │   └── index.css
 │   │   └── Dockerfile
 │   └── api/
 │       ├── src/
-│       │   ├── app/
+│       │   ├── app/           # buildApp.ts, auth.ts
 │       │   ├── config/
 │       │   ├── common/
 │       │   ├── modules/
@@ -54,16 +57,15 @@ Versions must be selected as current supported stable versions at implementation
 │       │   ├── schema.prisma
 │       │   ├── migrations/
 │       │   └── seed.ts
+│       ├── test/              # api.test.ts (integration), unit.test.ts
 │       └── Dockerfile
-├── packages/
-│   └── contracts/
-├── docs/
-│   ├── BUILD_LOG.md
-│   └── decisions/
+├── docs/                      # AUDIT.md (UX audit); decisions register = root DECISIONS.md
 ├── infra/
-│   ├── docker/
-│   └── scripts/
+│   ├── scripts/               # setup/doctor/reset/backup/restore/pipeline, minio-init.mjs
+│   └── bin/                   # static mc binary (gitignored, downloaded host-side)
 ├── docker-compose.yml
+├── BUILD_LOG.md
+├── DECISIONS.md
 ├── .env.example
 ├── .gitignore
 ├── .dockerignore
@@ -75,26 +77,28 @@ Versions must be selected as current supported stable versions at implementation
 
 ## 4. Backend module boundaries
 
-Each module owns its routes, schemas, application services, domain rules, repositories, and tests.
+Each module owns its routes, schemas, application services, domain rules, repositories, and tests. Actual module directories under `apps/api/src/modules/` (verified 2026-11-22):
 
-- `auth`: login, logout, session, password change/reset, account status.
-- `users`: user account and profile.
-- `organizations`: biro, divisi, organizational hierarchy.
-- `assignments`: participant-supervisor relationships and effective dates.
+- `auth`: login, logout, session, CSRF, password change/reset, account status.
+- `users`: user profile (`/profile`).
+- `admin`: organizations (bureaus/divisions), placements, users + role assignment, intern profiles, supervisor assignments, admin scopes, leave categories, business parameters, attendance correction admin route, read-only role catalog, password-reset-token issuance.
 - `schedules`: work schedules, calendar, exceptions, schedule resolution.
-- `attendance`: check-in/out, evidence orchestration, status calculation, idempotency.
+- `attendance`: check-in/out, personal CSV export, evidence orchestration, status calculation, idempotency, corrections.
 - `leaves`: leave requests, approval, movement events, review state.
 - `reports`: report queries, aggregation, CSV/XLSX export.
-- `master-data`: configurable categories and business parameters.
-- `access-control`: roles, permissions, feature tree, ABAC/ReBAC evaluation.
-- `audit`: append-oriented audit events and access evidence.
-- `help-center`: categories and articles.
+- `dashboard`: participant/supervisor/admin dashboards (including in-app pending counters/badges).
+- `access`: roles, permissions, feature tree, ABAC/ReBAC evaluation, simulate.
+- `audit`: append-oriented audit events and read-only audit trail API.
+- `help`: categories and articles (Pusat Bantuan).
 - `files`: MinIO abstraction, upload validation, authorized retrieval.
-- `notifications`: in-app badge/pending counters only for MVP.
+
+There is no separate `notifications` module; the MVP in-app badge/pending counters are served by the `dashboard` module.
 
 Cross-module calls must use public application interfaces. Avoid importing another module's repository or private implementation.
 
 ## 5. Frontend module boundaries
+
+The web app is organized by routes, not by module folders: page components in `apps/web/src/routes/` (login, participant/supervisor/admin dashboards, attendance, history, leaves, approvals, monitoring, reports, master data tabs, access, audit, help center, profile), shared UI in `components/`, API/auth/format logic in `lib/`, and hooks in `hooks/`. Domain areas covered:
 
 - `auth`
 - `dashboard`
@@ -176,14 +180,14 @@ Alternative transactional outbox may be introduced only if justified; do not add
 
 ## 11. Local Docker services
 
-- `web`: frontend app.
+- `web`: frontend app (nginx serving the Vite build, proxying `/api`).
 - `api`: backend API.
+- `api-migrate`: one-shot `prisma migrate deploy` + seed before the API starts.
 - `db`: PostgreSQL.
 - `minio`: object storage.
-- `minio-init`: one-shot bucket/policy setup using local credentials.
-- Optional `adminer` or database UI is not required; if added, bind to localhost and keep disabled by default.
+- `minio-init`: one-shot bucket/policy setup using `infra/scripts/minio-init.mjs` and the bind-mounted static `mc` binary (`infra/bin/mc`, gitignored, downloaded host-side from the minio/mc GitHub releases; `dl.min.io` no longer serves binaries).
 
-Use named volumes for PostgreSQL and MinIO. Health checks must gate API startup and migration/seed execution. Ports bind to `127.0.0.1`.
+Use named volumes for PostgreSQL and MinIO. Health checks must gate API startup and migration/seed execution. Ports bind to `127.0.0.1`. Host ports in this environment (set via `.env`): API 3002 (container 3000), web 5174 (nginx 80), PostgreSQL 5433, MinIO API 9002 / console 9003 — remapped because another local stack occupies 3000/5173/5432/9000/9001. Host-dev mode (`pnpm --filter api dev` + vite) uses API_PORT=3000 and the vite proxy to 127.0.0.1:3000.
 
 ## 12. Environment variables
 
@@ -191,7 +195,10 @@ Maintain `.env.example` with placeholders for:
 - `NODE_ENV`
 - `APP_URL`
 - `API_PORT`
+- `WEB_PORT`
+- `DB_HOST_PORT`, `MINIO_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT` (host port remapping)
 - `DATABASE_URL`
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (initdb credentials)
 - `SESSION_SECRET`
 - `COOKIE_SECURE`
 - `CORS_ORIGIN`
@@ -202,6 +209,7 @@ Maintain `.env.example` with placeholders for:
 - `MINIO_BUCKET_ATTENDANCE`
 - `MINIO_BUCKET_HELP`
 - `MINIO_USE_SSL`
+- `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` (MinIO root; app uses a least-privilege service user created by minio-init)
 - `BOOTSTRAP_ADMIN_USERNAME`
 - `BOOTSTRAP_ADMIN_PASSWORD`
 - `LOG_LEVEL`

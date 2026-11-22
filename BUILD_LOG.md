@@ -22,7 +22,7 @@ Catat setiap fase pembangunan. Jangan menghapus catatan kegagalan; tambahkan has
 
 ## 2026-11-22 — Phase 2: Skema DB, migration, seed
 
-- **Status:** IN PROGRESS (dijalankan pipeline.sh)
+- **Status:** PASSED (selesai; migrate+seed dari volume kosong terverifikasi di entri clean-room di bawah)
 - **Scope:** apps/api/prisma/schema.prisma lengkap (seluruh entitas DATA_MODEL: users/roles/permissions/feature-tree/ABAC/sessions/reset tokens, organisasi, placements, intern profiles, assignments, admin scopes, work schedules + days, calendar, workday snapshots, attendance days/events, file objects, leave categories/requests/events, audit events, business parameters, help, idempotency records).
 - **Migration:** dibuat via `prisma migrate diff --from-empty` ke `prisma/migrations/0_init/migration.sql` + SQL tambahan: partial unique index satu izin TEMPORARY aktif per peserta per hari kerja, check constraint lat [-90,90]/lng [-180,180], size_bytes > 0.
 - **Seed (deterministik, idempotent, data dummy):** katalog 30 permission; 4 role sistem (INTERN/SUPERVISOR/ADMIN_HR/ADMIN_IT) dengan grant tepat; feature tree navigasi; akun dev (bootstrap admin dari env, admin-hr, supervisor1, peserta1-3, password dummy `DevPassword123!` terdokumentasi); 2 biro dummy + divisi + penempatan Tegalluar; 3 profil peserta MG-2026-001..003 + assignment pembimbing; jadwal GLOBAL Sen-Jum 09:00-18:00 toleransi 15 menit — **ditandai PENDING_KCIC_CONFIRMATION** (kebijakan jam resmi KCIC belum tersedia, tidak dikarang); kategori izin (usulan) + parameter bisnis `late_tolerance_default_minutes=15`, `default_workdays=[1..5]` status PENDING_KCIC_CONFIRMATION; help: 1 artikel PUBLISHED + 1 DRAFT (untuk uji visibilitas).
@@ -30,7 +30,7 @@ Catat setiap fase pembangunan. Jangan menghapus catatan kegagalan; tambahkan has
 ## 2026-11-22 — Phase 3: Auth & access control
 
 - **Status:** IMPLEMENTED (verifikasi via test pipeline)
-- **Scope:** Argon2id (@node-rs/argon2), sesi opaque server-side (cookie HttpOnly `sid`, hash sha256 di DB, rotasi saat ganti password, revokasi semua sesi), CSRF double-submit + Origin allowlist, rate-limit login 10/15 menit dengan pesan gagal generik + audit AUTH_LOGIN_FAILED, change-password, reset-password token sekali pakai yang diterbitkan admin (audited, ditampilkan sekali).
+- **Scope:** Argon2id (@node-rs/argon2), sesi opaque server-side (cookie HttpOnly `sid`, hash sha256 di DB, rotasi saat ganti password, revokasi semua sesi), CSRF double-submit + Origin allowlist, rate-limit login 10/15 menit (dinaikkan menjadi 30/15 menit per IP pada Fase 4 UX — lihat DECISIONS.md D-025) dengan pesan gagal generik + audit AUTH_LOGIN_FAILED, change-password, reset-password token sekali pakai yang diterbitkan admin (audited, ditampilkan sekali).
 - **Access control:** RBAC (role→permission, effect ALLOW/DENY) + ABAC (interpreter kondisi JSON: all/any/not; subject roleCodes/adminScopeTypes/accountStatus/isIntern) + ReBAC (supervisor assignment, admin scope). Deny overrides allow. Role baru mulai dengan NOL permission. Guard: tidak bisa memberikan permission yang tidak dimiliki aktor. Default-deny scope filtering (`internScopeWhere` → `{id:'__none__'}` bila tanpa clause). IDOR → 404 tanpa bocoran eksistensi.
 
 ## 2026-11-22 — Phase 4: Organisasi, assignment, jadwal
@@ -50,12 +50,12 @@ Catat setiap fase pembangunan. Jangan menghapus catatan kegagalan; tambahkan has
 
 ## 2026-11-22 — Phase 7-8: Frontend (apps/web)
 
-- **Status:** IN PROGRESS (dibangun agent frontend)
+- **Status:** PASSED (frontend lengkap; 23/23 test web hijau + uji browser — lihat entri clean-room dan Fase 4 di bawah)
 - **Scope:** React 18 + Vite 5 + Tailwind + TanStack Query + RHF/Zod. Klien API: envelope unwrap, alur CSRF (GET /auth/csrf → header x-csrf-token), Idempotency-Key untuk submit absensi/gerakan izin. Halaman sesuai DESIGN.md: login, dashboard peserta/pembimbing/admin, absensi kamera (state machine kamera+lokasi, retake, konfirmasi, sukses hanya setelah persist server, copy Bahasa Indonesia dari DESIGN §10), pengajuan/approval/timeline izin, riwayat, monitoring, koreksi, master data, access management (role/feature tree/ABAC/simulate), audit, help center, profil. Navigasi dibangun dari /access/me/effective (hiding menu bukan enforcement; backend tetap otoritatif).
 
 ## 2026-11-22 — Phase 9: Test suite
 
-- **Status:** IN PROGRESS (pipeline.sh menjalankan)
+- **Status:** PASSED (suite hijau; jumlah final pasca-Fase 4: API 36 = 27 integrasi + 9 unit, web 23)
 - **Scope:** Vitest. Database test terpisah `attendance_test` (dibuat otomatis, migrate deploy + seed idempotent dengan bootstrap admin test).
   - test/unit.test.ts: evaluator permission (default-deny, deny-overrides-allow, ABAC all/any/not, policy INACTIVE diabaikan), konversi waktu bisnis WIB (zonedTimeToUtc 09:00→02:00Z, rollover tanggal, weekday 1..7, addDays lintas bulan).
   - test/api.test.ts (inject end-to-end): 401 tanpa sesi; login gagal → pesan generik; POST tanpa CSRF → 403; effective permissions peserta; check-out sebelum check-in → 409; hari penuh peserta2; check-in peserta1 + replay Idempotency-Key (respons sama) + duplikat key baru → 409; bukti via presigned URL (fetch 200) + peserta lain → 404; IDOR detail absensi → 404; alur izin lengkap (create → reject tanpa note 400 → approve → departure → return; EARLY_DEPARTURE approve → early-checkout → dayStatus EARLY_DEPARTURE_APPROVED); koreksi admin + audit before/after + reason pendek 400; report rows/metrics + export CSV (attachment, tanpa latitude) + peserta 403; role baru zero-permission + simulate allowed=false; ADMIN_HR ditolak kelola role (403); business parameter dengan key `sql` → 422; help published vs draft (404 untuk peserta, 200 untuk admin); deaktivasi user → sesi langsung 401.
@@ -73,7 +73,7 @@ Catat setiap fase pembangunan. Jangan menghapus catatan kegagalan; tambahkan has
 
 ## 2026-11-22 — Backend test suite HIJAU + perbaikan build image Docker
 
-- **Status:** VERIFIED (backend) / IN PROGRESS (stack penuh)
+- **Status:** VERIFIED (backend; stack penuh diverifikasi pada entri clean-room berikutnya)
 - **Hasil test backend:** `pnpm exec vitest run` → **32/32 pass (2 file)**; `tsc --noEmit` → exit 0. Frontend: **23/23 pass**, tsc bersih. Perbaikan assertion terakhir: respons movement izin memakai field `leaveStatus` (bukan `status`); audit koreksi difilter `objectType=attendance_event&action=ATTENDANCE_CORRECTION` sesuai implementasi.
 - **Perbaikan build image (ditemukan saat clean build):**
   1. `.dockerignore`: pola `node_modules`/`dist`/`.env` hanya match di root context — `apps/*/node_modules` dari host (symlink Windows rusak) ikut ter-COPY dan menimpa hasil `pnpm install` dalam image. Diganti glob rekursif `**/node_modules` dll. + `infra/bin` (biner mc 30MB tidak perlu masuk context).
@@ -88,6 +88,26 @@ Catat setiap fase pembangunan. Jangan menghapus catatan kegagalan; tambahkan has
 - **Bug frontend ditemukan via uji browser (diperbaiki):** (1) `fetchMe` di `lib/auth.tsx` menyimpan wrapper `{user}` dari envelope `/auth/me` → setelah hard reload permissions kosong → guard menolak /absensi padahal user berhak; (2) guard route (App.tsx) & fallbackNav (Layout.tsx) memakai kode permission yang tidak ada di katalog (`admin:manage`, `access:manage`, `audit:view`, `help:manage`, `master:manage`) → diganti kode nyata (`admin:users:manage`, `access:roles:manage`, `admin:audit:view`, `admin:help:manage`, daftar `admin:*:manage` untuk /master, daftar `access:*` untuk /access). Setelah fix: 23/23 test web hijau, tsc bersih, browser: login → dashboard → /absensi (hard reload) OK.
 - **Catatan:** uji browser mencakup alur peserta (login, dashboard, absensi, nav). Alur admin/supervisor diverifikasi lewat 33 test API (inject) — E2E browser per-role tambahan direkomendasikan saat pilot.
 - **Perbaikan lanjutan (uji browser admin-hr di /master):** kolom Role pada tabel Pengguna selalu "-" dan dropdown "Atur Role" kosong karena (a) respons GET /admin/users tidak menyertakan role (hanya roleAssignments internal), dan (b) katalog role diambil dari GET /admin/access/roles yang IT-only (403 untuk ADMIN_HR). Fix: GET /admin/users kini memetakan roleAssignments → roles [{id,code,name}]; endpoint baru GET /admin/roles (read-only katalog role ACTIVE, guard admin:users:manage — governance role tetap IT-only di /admin/access/*); UsersPanel memakai /admin/roles. Test baru di api.test.ts: katalog role untuk ADMIN_HR + roles ter-map pada list pengguna.
+
+## 2026-11-22 — Fase 4 — Upgrade UX & navigasi (commit f8a83a8)
+
+- **Status:** VERIFIED
+- **Scope:** Seluruh temuan audit F-01..F-17 (docs/AUDIT.md §10) + 3 improvement kecil:
+  - **Navigasi/layout:** Layout ditulis ulang (header sticky full-width, flex hanya sidebar+main — fix desktop rusak F-02); bottom nav mobile 4 item primer + tombol "Menu" membuka sheet berisi semua item role (F-05); label menu pendek satu sumber di seed FEATURE_NODES (upsert idempoten) + fallback Layout: Beranda, Absen, Izin, Izin Peserta, Riwayat, Monitoring, Approval, Laporan, Data Master, Akses, Audit, Bantuan, Profil (F-08); ikon SVG inline menggantikan emoji (F-14); brand/nama akun truncate satu baris di 360px (F-15); landing ADMIN_IT diarahkan ke AdminDashboardPage (F-06).
+  - **Dashboard & absensi:** AdminDashboard membaca `counts.*`, SupervisorDashboard memetakan `todayStats.*` + backend additive `pendingLeaves`/`todayStatus[]` (F-03/F-04); fallback `NOT_SCHEDULED` + banner hari non-kerja dengan tombol absen disabled berpenjelasan (F-07); layar explain digabung ke capture, alur mulai otomatis di hari kerja (F-17); envelope error API terbentuk benar (setErrorHandler sebelum registrasi plugin, F-01) sehingga alasan penolakan terbaca di UI.
+  - **Izin & umpan balik:** node nav "Izin Peserta" (`leave:view:scoped`) + LeavesPage read-only `scope=scoped` untuk pembimbing (F-11); komponen SuccessNotice di UsersPanel/ResourcePanel (F-09); tap target 44px `min-h-touch` (F-10); petunjuk geser tabel di layar sempit (F-16).
+  - **Improvement:** I-1 chip preset riwayat (7 hari terakhir / 30 hari terakhir / Bulan ini); I-2 banner pengingat absen pulang di Beranda peserta; I-3 `GET /attendance/export` CSV riwayat pribadi (tanpa foto/koordinat, diaudit `ATTENDANCE_EXPORT_SELF`, hanya akun berprofil peserta) + tombol "Unduh CSV" di Riwayat + 2 test API baru.
+  - **Bug tambahan diperbaiki:** opsi status akun `DISABLED` yang tidak ada di enum diganti Aktif/Nonaktif/Ditangguhkan; validasi zod ResourcePanel kini throw sehingga dialog tidak tertutup saat isian invalid.
+- **Verifikasi:** typecheck API & web hijau; lint kedua app hijau (`.eslintrc.cjs` baru, eslint 8 + @typescript-eslint 8 + react-hooks, `--max-warnings 0` — F-12); **test API 36/36** (27 integrasi + 9 unit, DB `attendance_test` dibuat ulang per run); **test web 23/23**; build web hijau; Docker rebuild + reseed; uji browser Playwright (skrip ad-hoc di luar repo) pada viewport 360/390/1280 untuk peserta1, supervisor1, admin-hr, dan akun dummy IT-only.
+- **Known limitations (jujur, bukan dihapus):** Swagger UI tidak ada (OpenAPI hanya JSON di `/api/v1/docs/json`); suite E2E belum diotomasi (tidak ada `test:e2e`/Playwright di repo — verifikasi browser = skrip ad-hoc); compose memakai satu user Postgres initdb untuk runtime+migrasi (deviasi least-privilege, dicatat di SECURITY.md §8). Tanpa perubahan skema DB; perubahan backend hanya additive.
+
+## 2026-11-22 — Fase 5 — Sinkronisasi dokumentasi
+
+- **Status:** DONE
+- **Scope:** seluruh dokumen root disinkronkan dengan implementasi nyata (hasil review diff per file): README (URL OpenAPI JSON-only, perintah lint/test web, troubleshooting mc, seksi Navigasi & UX), AGENT.md/PROMPT_AGENT.md/IMPLEMENTATION_PLAN.md (BUILD_LOG di root, bukan docs/), ARCHITECTURE.md (struktur repo & modul aktual, service compose, port host), API_CONTRACT.md (endpoint nyata: /auth/csrf, /attendance/export, /admin/access/*, katalog role read-only, reset token admin; forgot-password TIDAK ada), DATA_MODEL.md (feature_nodes/abac_policies lengkap; schedule_assignments TIDAK ada — scope inline di work_schedules), DESIGN.md §2 (menu per role hasil Fase 4), SECURITY.md §3+§8 (rate limit 30/15 menit; deviasi satu user Postgres), TESTING.md/CODE_QUALITY.md (perintah yang benar-benar ada; E2E/formatter/audit/secret-scan/architecture-tests ditandai BELUM DIOTOMASI), DECISIONS.md (D-025..D-029), REQUIREMENTS_TRACEABILITY.md (sitasi dipetakan ke bagian PRD nyata, bukan ID fiktif), RUNBOOK.md (URL/port aktual, prasyarat infra/bin/mc), .env.example (port host remap + komentar), infra/scripts/setup.sh (echo URL dibaca dari .env).
+- **Dokumen baru:** `CHANGELOG.md` (riwayat perubahan per commit) dan `docs/USER_GUIDE.md` (panduan pengguna Bahasa Indonesia sederhana: login, absen masuk/pulang, hari libur, izin + catat pergerakan, riwayat + CSV, bantuan/profil, troubleshooting, pembimbing, admin).
+- **Verifikasi:** label/istilah di USER_GUIDE dicocokkan dengan kode (EVENT_TYPE_LABELS, pesan server, nama tombol); tidak ada klaim fitur yang tidak ada.
+- **Catatan:** jumlah test pada entri historis dibiarkan apa adanya (33/36/23); jumlah terkini pasca-Fase 6 = API 38, web 24 (lihat entri Fase 6).
 
 ## Keputusan pending (TIDAK dikarang)
 

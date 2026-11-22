@@ -1,5 +1,7 @@
 # TESTING — Quality Strategy and Release Gates
 
+Status aktual (2026-11-22, pasca-Fase 6): API 38 test hijau — 29 integrasi (`apps/api/test/api.test.ts`, Fastify inject) + 9 unit (`apps/api/test/unit.test.ts`); DB test terpisah `attendance_test` di-DROP+CREATE setiap run (skip via `KEEP_TEST_DB=1`). Web 24 unit test hijau (`apps/web/src/lib/*.test.ts`). Lint hijau di kedua app (`.eslintrc.cjs`, eslint 8 + @typescript-eslint 8 + react-hooks, `--max-warnings 0`).
+
 ## 1. Testing pyramid
 
 1. Unit tests for pure business rules and calculations.
@@ -43,6 +45,9 @@
 - CORS/CSRF/session cookie behavior.
 
 ### E2E
+
+**BELUM DIOTOMASI — direncanakan.** Tidak ada script `test:e2e` maupun suite Playwright di repo. Verifikasi saat ini = 23 unit test web + 36 test API (inject end-to-end) + uji browser ad-hoc memakai skrip Playwright Python di luar repo (per role pada viewport 360×740, 390×844, 1280×800, termasuk alur check-in dengan kamera palsu + geolocation). Daftar journey di bawah adalah cakupan yang direncanakan untuk suite E2E terotomasi:
+
 1. Admin bootstrap login and password change.
 2. Admin creates organization, participant, supervisor, schedule, assignment.
 3. Participant login.
@@ -89,15 +94,17 @@ Test at minimum:
 
 ## 5. Commands
 
-The agent must document and implement scripts with equivalent commands:
-- `pnpm lint`
+Scripts that exist and run today (root `package.json` + per-app):
+- `pnpm lint` (per-app: `pnpm --filter api lint`, `pnpm --filter web lint`; `--max-warnings 0`)
 - `pnpm typecheck`
-- `pnpm test`
-- `pnpm test:integration`
-- `pnpm test:e2e`
+- `pnpm test` (API 38 + web 24)
+- `pnpm test:integration` (= `pnpm --filter api test`)
 - `pnpm build`
 - `pnpm db:migrate`
 - `pnpm db:seed`
+
+BELUM DIOTOMASI — direncanakan:
+- `pnpm test:e2e` — script dan suite Playwright belum ada di repo; verifikasi saat ini = uji browser ad-hoc (lihat §2 E2E).
 
 Do not claim a command passed unless it was executed and its exit code was zero.
 
@@ -120,6 +127,8 @@ Do not claim a command passed unless it was executed and its exit code was zero.
 - Leave E2E pass.
 - History/report E2E pass.
 - Admin/master data E2E pass.
+
+Catatan jujur: E2E terotomasi BELUM DIOTOMASI — direncanakan. Verifikasi saat ini = test API inject untuk seluruh alur di atas (check-in/out, izin lengkap, koreksi, report/export, master data, IDOR) + uji browser ad-hoc per role (login→dashboard→absensi→izin→riwayat→master→audit).
 
 ### Gate D — Clean-room verification
 - Remove local volumes only after explicit confirmation.

@@ -29,7 +29,7 @@ The MVP does not guarantee prevention of GPS spoofing, device compromise, photo 
 - HttpOnly, SameSite cookie; Secure under HTTPS.
 - Rotate session after login and privilege changes.
 - Revoke session on logout, password reset, and account deactivation.
-- Rate-limit login and recovery.
+- Rate-limit login and recovery. Current values (2026-11-22): login 30 requests / 15 minutes per IP — raised from 10 because office NAT/WiFi shares one public IP and 10 locked out all participants together; reset-password 10 / 15 minutes per IP. Store is in-memory (per-process); brute-force per account remains mitigated by Argon2id hashing and generic failure messages. Global API limit: 600 requests / minute.
 - Generic login/recovery messages.
 - CSRF and Origin validation for cookie-authenticated mutations.
 - Privileged-account MFA is recommended; production policy pending.
@@ -93,8 +93,8 @@ The MVP does not guarantee prevention of GPS spoofing, device compromise, photo 
 
 ## 8. Database and audit
 
-- Least-privilege runtime DB user.
-- Separate migration credentials where practical.
+- Least-privilege runtime DB user. **DEVIATION (documented 2026-11-22, not yet implemented):** docker-compose uses ONE initdb Postgres user (`POSTGRES_USER`, default `attendance_app`) for both runtime and migrations/seed (`api-migrate` service). The promised runtime/migration credential split is planned; current mitigation = local-only environment, localhost-bound port 5433, fake data only.
+- Separate migration credentials where practical — see deviation above.
 - Foreign keys, constraints, transactions, and indexes.
 - Audit records cannot be modified through normal application routes.
 - Do not log passwords, tokens, selfie bytes, signed URLs, or unnecessary precise GPS.

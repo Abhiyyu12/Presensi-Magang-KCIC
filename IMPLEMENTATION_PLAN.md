@@ -4,7 +4,7 @@
 
 - Do not implement all modules in one giant pass.
 - Each phase has an exit gate.
-- A phase is not complete until tests and evidence are recorded in `docs/BUILD_LOG.md`.
+- A phase is not complete until tests and evidence are recorded in `BUILD_LOG.md` (repo root).
 - Do not start UI polish before the backend foundation and contracts are stable.
 - Do not seed real personal data.
 
@@ -12,7 +12,7 @@
 - Inspect empty/non-empty repository.
 - Confirm Node, pnpm, Docker, Compose, ports, disk.
 - Initialize Git if absent only after checking.
-- Create `docs/BUILD_LOG.md`.
+- Create `BUILD_LOG.md` (repo root).
 - Record architecture choices and unresolved questions.
 
 Exit: environment report exists; no existing work overwritten.
@@ -33,7 +33,7 @@ Exit: clean Docker start; web/API reachable; DB and MinIO healthy; data persists
 - Add deterministic development seed.
 - Add validation, error mapping, request IDs, structured logging.
 - Add repository/service patterns and module boundaries.
-- Add migration and architecture tests.
+- Add migration and architecture tests. (Status 2026-11-22: migration from empty DB verified; architecture boundary tests BELUM DIOTOMASI — direncanakan; verifikasi saat ini = typecheck strict + lint + review manual batas modul.)
 
 Exit: migrate from empty DB; seed idempotently; lint/typecheck/build pass.
 
@@ -84,7 +84,7 @@ Exit: all leave state transitions tested and no automatic fabricated checkout.
 - Help center.
 - Responsive and error states.
 
-Exit: participant E2E workflows pass on desktop automation; manual camera/GPS device tests documented.
+Exit: participant E2E workflows pass on desktop automation; manual camera/GPS device tests documented. (Status 2026-11-22: E2E terotomasi BELUM DIOTOMASI — direncanakan; verifikasi saat ini = test API inject + uji browser Playwright ad-hoc di luar repo; uji perangkat kamera/GPS nyata menunggu pilot.)
 
 ## Phase 8 — Supervisor and admin experience
 - Supervisor dashboard and assigned participant list.
@@ -95,7 +95,7 @@ Exit: participant E2E workflows pass on desktop automation; manual camera/GPS de
 - Access control UI.
 - Help center management.
 
-Exit: role/scope E2E tests pass; no unauthorized navigation or API access.
+Exit: role/scope E2E tests pass; no unauthorized navigation or API access. (Status 2026-11-22: negatif otorisasi terverifikasi via test API; E2E browser terotomasi BELUM DIOTOMASI — verifikasi saat ini = uji browser ad-hoc per role.)
 
 ## Phase 9 — Reports and exports
 - Server-side filters and pagination.
@@ -107,8 +107,8 @@ Exit: role/scope E2E tests pass; no unauthorized navigation or API access.
 Exit: report metric tests and export scope tests pass.
 
 ## Phase 10 — Hardening and clean-room run
-- Full lint/typecheck/unit/integration/E2E/security tests.
-- Dependency audit and secret scan.
+- Full lint/typecheck/unit/integration/E2E/security tests. (Status 2026-11-22: lint/typecheck/unit/integration/API hijau; E2E terotomasi BELUM DIOTOMASI — direncanakan.)
+- Dependency audit and secret scan. (BELUM DIOTOMASI — direncanakan; verifikasi saat ini = review manual dependensi ter-pin + `.env` gitignored + placeholder `.env.example`.)
 - Docker clean start.
 - Migration and seed from empty volumes.
 - Verify persistent volumes.
@@ -126,7 +126,7 @@ Exit: clean-room report with exact commands, results, known limitations, and unr
 - README setup/troubleshooting.
 - Test suites and test report.
 - Security checklist.
-- `docs/BUILD_LOG.md`.
+- `BUILD_LOG.md` (repo root).
 - List of pending KCIC policy decisions.
 
 
@@ -134,6 +134,6 @@ Exit: clean-room report with exact commands, results, known limitations, and unr
 
 - Update `REQUIREMENTS_TRACEABILITY.md` throughout all phases.
 - Add a preflight/doctor command and operational scripts.
-- Add architecture boundary tests and dependency/secret scanning.
+- Add architecture boundary tests and dependency/secret scanning. (BELUM DIOTOMASI per 2026-11-22 — direncanakan; verifikasi saat ini = review manual + typecheck/lint/test.)
 - Add local backup/restore scripts and verify them before clean-room completion.
 - Add Windows-friendly instructions because local development may run on Windows/Docker Desktop.

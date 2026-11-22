@@ -26,7 +26,7 @@ Before creating or modifying files:
 - Confirm whether the repository is truly empty.
 - Do not overwrite existing user work.
 - If non-empty, map existing structure and adapt without destructive rewrite.
-- Record findings in `docs/BUILD_LOG.md`.
+- Record findings in `BUILD_LOG.md` (root, not `docs/`).
 - Confirm available disk space and ports needed by Docker.
 - Do not ask the user to repeat information already specified in project documents.
 
@@ -153,7 +153,7 @@ Before final completion, run the full verification suite from a clean Docker env
 
 ## 12. Agent progress reporting
 
-Maintain `docs/BUILD_LOG.md` with:
+Maintain `BUILD_LOG.md` (root) with:
 - Date/time.
 - Phase and task.
 - Files created/changed.
