@@ -52,8 +52,8 @@ melalui Data Master.
 
 | Tab | Untuk apa |
 |---|---|
-| Biro / Divisi / Penempatan | struktur organisasi; nonaktifkan bila tutup, jangan hapus |
-| Peserta | profil magang (nomor, biro, periode, status) |
+| Direktorat / Biro / Penempatan | struktur organisasi (bureaus = Direktorat, divisions = Biro di bawahnya); nonaktifkan bila tutup, jangan hapus |
+| Peserta | profil magang (nomor, direktorat, biro, periode, status) |
 | Penugasan | relasi peserta ↔ pembimbing |
 | Cakupan (Scope) | wilayah administrasi admin (GLOBAL/BUREAU/DIVISION) |
 | Jadwal | jam kerja per scope GLOBAL/BUREAU/DIVISION/INDIVIDUAL dengan tanggal efektif |

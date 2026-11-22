@@ -4,6 +4,19 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — Istilah struktur organisasi KCIC: bureaus = Direktorat, divisions = Biro
+
+### Diubah
+- **Sesuai informasi tree organisasi KCIC dari user** (`departments` = Direktorat level atas → `divisions` = Biro/Sub-Divisi, FK ke parent): sistem sudah cocok 1:1 (`bureaus` = level atas, `divisions` = anak dengan FK `bureau_id`), jadi **cukup ganti istilah tanpa perubahan schema/tabel/endpoint/DB** — tebakan user benar ("keknya cuman ganti nama aja").
+- Pemetaan istilah: tab/kolom/form/filter **Biro → Direktorat**, **Divisi → Biro**. Berlaku seragam di: Data Master (tab, form "Nama direktorat"/"Nama biro", kolom, placeholder, dialog detail), dialog Tambah/Ubah Pengguna (combobox Direktorat + Biro + hint "Pilih direktorat terlebih dahulu."), filter "Semua direktorat"/"Semua biro" di dashboard admin/Monitoring/Laporan/Pengguna, kolom tabel Approval/Monitoring/Laporan, kartu data peserta beranda & profil, dialog import, label scope jadwal & cakupan. Kode teknis TIDAK diubah (field `bureauId`/`divisionId`, endpoint `/admin/organizations/bureaus|divisions`, kode seed BIO-OPS dll tetap).
+- Backend ikut konsisten: pesan error/guard 422 ("Direktorat masih dipakai N biro dan M profil peserta…", "Biro masih dipakai N profil peserta…", "Direktorat untuk scope jadwal tidak ditemukan.", dsb.), template import Excel (kolom **Direktorat** & **Biro**, petunjuk, contoh "Direktorat Operasi"), header laporan Excel (Direktorat | Biro), seed (Direktorat Operasi/Teknik, Biro di bawahnya). **Template import lama tak akan terbaca** (header kolom cocok persis) — unduh ulang template, pesan errornya jelas.
+- Data dev disesuaikan: nama bureaus/divisions di-rename mengikuti istilah baru (incl. "Biro Verifikasi F0" milik akun abhi — hanya nama, data & relasi utuh); 1 baris sampah UAT lama (`REPRO-ORG`, 0 referensi) dihapus.
+
+### Pembuktian (bukan klaim)
+- Gate: **api tsc+eslint bersih + test 97/97**, **web tsc+eslint bersih + test 48/48** (mock combobox test ikut istilah baru).
+- Playwright live 14/14 OK (log `uat_istilah.py`, screenshot): tab Direktorat & Biro tampil di Data Master, istilah "Divisi" hilang dari seluruh halaman yang dicek (master, dashboard), kolom "Direktorat" di tab Biro, form "Nama biro"+"Direktorat", filter dashboard, dialog pengguna setelah centang "Jadikan peserta magang" menampilkan Direktorat/Biro.
+- Docker api+web rebuilt & healthy; verifikasi DB: 2 bureaus + 3 divisions dengan nama baru.
+
 ## [2026-11-22] — UAT: Data Master kini punya Hapus (D) di tab yang bisa dihapus + validasi nilai parameter di backend
 
 ### Ditambahkan

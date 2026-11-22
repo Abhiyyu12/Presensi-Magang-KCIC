@@ -90,7 +90,7 @@ Perubahan data yang dilakukan selama uji (tanpa menghapus data pengguna):
 ## 5. Asumsi & keputusan ambigu (opsi paling sederhana untuk user)
 
 1. **Notifikasi inline, bukan toast library.** Pesan sukses/gagal memakai panel inline berwarna (`role="status"`/`"alert"`) — tanpa dependensi baru (aturan: jangan install dependency tanpa perlu).
-2. **"Hapus" data master = nonaktifkan.** Biro/divisi/penempatan/jadwal/kategori/parameter memakai toggle status ACTIVE/INACTIVE (data riwayat mengacu ke sana; delete fisik berbahaya). Delete fisik hanya untuk role yang tidak berpengguna dan bukan role sistem.
+2. **"Hapus" data master = nonaktifkan.** Direktorat/biro/penempatan/jadwal/kategori/parameter memakai toggle status ACTIVE/INACTIVE (data riwayat mengacu ke sana; delete fisik berbahaya). Delete fisik hanya untuk data yang belum pernah dipakai (backend menolak 422 bila masih direferensikan) dan untuk role yang tidak berpengguna dan bukan role sistem.
 3. **Menu Penugasan dihapus dari UI Data Master**; pembuatan peserta digabung ke tab Pengguna (user + profil sekaligus). Endpoint `/admin/assignments` tetap ada di API dan dipakai oleh fitur profil/test.
 4. **Template role disimpan di backend** (`permission-taxonomy.ts`) sehingga pohon permission tidak di-hardcode di frontend.
 5. **Pagination server-side default 15 baris** (konsisten kontrak API: default 15, maks 100); UI menawarkan 10/25/50/100.
