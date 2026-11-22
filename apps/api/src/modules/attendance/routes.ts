@@ -9,7 +9,7 @@ import { businessDate, businessHHmm } from '../../common/time.js';
 import { getDb } from '../../infrastructure/db.js';
 import { readMultipart, requireIdempotencyKey, parseCoords, parseClientSubmittedAt } from '../../common/multipart.js';
 import {
-  submitAttendance, getToday, listAttendance, getAttendanceDetail, getEvidenceUrl, correctAttendance,
+  submitAttendance, getToday, listAttendance, getAttendanceDetail, getEvidenceContent, correctAttendance,
 } from './service.js';
 
 export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
@@ -125,11 +125,15 @@ export async function attendanceRoutes(app: FastifyInstance): Promise<void> {
       schema: { params: z.object({ attendanceId: z.string().uuid() }), querystring: z.object({ eventId: z.string().uuid() }) },
       preHandler: authenticate,
     },
-    async (req) => {
+    async (req, reply) => {
       const ctx = requireCtx(req);
       const { attendanceId } = z.object({ attendanceId: z.string().uuid() }).parse(req.params);
       const { eventId } = z.object({ eventId: z.string().uuid() }).parse(req.query);
-      return ok(await getEvidenceUrl(ctx, attendanceId, eventId), req.id);
+      const evidence = await getEvidenceContent(ctx, attendanceId, eventId);
+      reply.type(evidence.mimeType);
+      reply.header('Cache-Control', 'private, max-age=60');
+      reply.header('Content-Disposition', 'inline');
+      return reply.send(evidence.stream);
     },
   );
 

@@ -436,10 +436,11 @@ export async function getAttendanceDetail(ctx: AccessContext, attendanceDayId: s
   };
 }
 
-/** Evidence access: authorize the underlying attendance record first, then sign. */
-export async function getEvidenceUrl(ctx: AccessContext, attendanceDayId: string, eventId: string): Promise<{ url: string; expiresInSeconds: number }> {
+/** Evidence access: authorize the underlying attendance record first, then stream bytes.
+ * Browser melihat gambar via API (same-origin, cookie sesi) — bucket MinIO tidak pernah
+ * terekspos langsung karena presigned URL memakai hostname internal Docker. */
+export async function getEvidenceContent(ctx: AccessContext, attendanceDayId: string, eventId: string): Promise<{ stream: NodeJS.ReadableStream; mimeType: string }> {
   const db = getDb();
-  const env = loadEnv();
   const event = await db.attendanceEvent.findFirst({
     where: { id: eventId, attendanceDayId },
     include: { attendanceDay: true, evidence: true },
@@ -455,9 +456,9 @@ export async function getEvidenceUrl(ctx: AccessContext, attendanceDayId: string
     objectId: event.id,
     requestId: null,
   });
-  const { presignedGetUrl } = await import('../../infrastructure/minio.js');
-  const url = await presignedGetUrl(event.evidence.bucket, event.evidence.objectKey, env.SIGNED_URL_TTL_SECONDS);
-  return { url, expiresInSeconds: env.SIGNED_URL_TTL_SECONDS };
+  const { getObjectStream } = await import('../../infrastructure/minio.js');
+  const stream = await getObjectStream(event.evidence.bucket, event.evidence.objectKey);
+  return { stream, mimeType: event.evidence.mimeType };
 }
 
 /**

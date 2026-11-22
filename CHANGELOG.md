@@ -4,6 +4,15 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: bukti selfie tidak tampil di detail absensi (bug preview)
+
+### Diperbaiki
+- **Critical (bug UAT)**: kotak bukti selfie di Detail Absensi menampilkan gambar rusak (alt text saja). Akar masalah: endpoint bukti mengembalikan **presigned URL MinIO dengan hostname internal Docker** (`http://minio:9000/...`) — browser pengguna tidak bisa menyelesaikan hostname tersebut, jadi `<img>` gagal memuat (API-nya sendiri sukses). Perbaikan: API kini **men-streaming langsung isi gambar** dari MinIO (endpoint sama, tetap ter-authorisasi via sesi + audit `EVIDENCE_ACCESS`, `Cache-Control: private`), dan komponen `EvidenceImage` me-render `<img src="/api/v1/attendance/{id}/evidence?eventId=…">` same-origin — cookie sesi otomatis terkirim, bucket MinIO tetap tertutup, tidak ada dependensi/konfigurasi baru. Berlaku untuk mode sendiri maupun monitoring admin/pembimbing.
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **83/83** (test evidence diubah: streaming image → 200 `image/*` dengan payload >0; peserta lain tetap 404 tanpa data leak); web tsc+eslint bersih + test **46/46**.
+- Playwright (peserta3, detail riwayat hari ini): 2 gambar "Bukti selfie" termuat semua (`naturalWidth > 0`); respons `/evidence?eventId=…` **200 image/jpeg** via path API yang sama; screenshot pembuktian. Skenario read-only tanpa menulis data uji.
+
 ## [2026-11-22] — UAT: alamat terperinci di lokasi tercatat (reverse-geocoding)
 
 ### Ditambahkan

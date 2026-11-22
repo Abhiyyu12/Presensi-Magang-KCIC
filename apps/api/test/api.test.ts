@@ -222,7 +222,7 @@ describe('attendance flow and idempotency', () => {
     expect(dup.statusCode).toBe(409);
   });
 
-  it('serves evidence via short-lived signed URL only', async () => {
+  it('streams evidence image to authorized viewer only', async () => {
     const day = envelope(await get(app, `/api/v1/attendance/${p1DayId}`, p1));
     const eventId =
       day.data.checkInEvent?.id ?? day.data.events?.find((e: any) => e.eventType === 'CHECK_IN')?.id ?? p1CheckInEventId;
@@ -230,11 +230,8 @@ describe('attendance flow and idempotency', () => {
 
     const res = await get(app, `/api/v1/attendance/${p1DayId}/evidence?eventId=${eventId}`, p1);
     expect(res.statusCode).toBe(200);
-    const url = envelope(res).data.url;
-    expect(url).toMatch(/^http/);
-    const fetched = await fetch(url);
-    expect(fetched.status).toBe(200);
-    expect(Number(fetched.headers.get('content-length'))).toBeGreaterThan(0);
+    expect(res.headers['content-type']).toContain('image/');
+    expect(res.rawPayload.length).toBeGreaterThan(0);
 
     // Another intern cannot access it: 404 without leaking existence.
     const denied = await get(app, `/api/v1/attendance/${p1DayId}/evidence?eventId=${eventId}`, p2);

@@ -1,11 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../lib/api';
-import { LoadingState } from './LoadingState';
-
-interface EvidenceResponse {
-  url: string;
-  expiresInSeconds: number;
-}
+import { useState } from 'react';
+import { API_BASE } from '../lib/api';
 
 interface EvidenceImageProps {
   attendanceId: string;
@@ -14,25 +8,11 @@ interface EvidenceImageProps {
   className?: string;
 }
 
-/** Fetches a short-lived signed URL for evidence and renders it in an <img>. */
+/** Bukti selfie disajikan langsung oleh API (same-origin, cookie sesi) — bucket MinIO tetap privat. */
 export function EvidenceImage({ attendanceId, eventId, alt, className }: EvidenceImageProps) {
-  const evidenceQuery = useQuery({
-    queryKey: ['evidence', attendanceId, eventId],
-    queryFn: () =>
-      api<EvidenceResponse>(`/attendance/${attendanceId}/evidence`, {
-        query: { eventId },
-      }),
-    staleTime: 30_000,
-  });
+  const [failed, setFailed] = useState(false);
 
-  if (evidenceQuery.isLoading) {
-    return (
-      <div className={`flex items-center justify-center rounded-lg bg-slate-100 ${className ?? 'h-24 w-24'}`}>
-        <LoadingState label="" />
-      </div>
-    );
-  }
-  if (evidenceQuery.isError || !evidenceQuery.data?.url) {
+  if (failed) {
     return (
       <p className="text-xs text-red-600" role="alert">
         Bukti foto tidak dapat dimuat.
@@ -41,9 +21,10 @@ export function EvidenceImage({ attendanceId, eventId, alt, className }: Evidenc
   }
   return (
     <img
-      src={evidenceQuery.data.url}
+      src={`${API_BASE}/attendance/${attendanceId}/evidence?eventId=${eventId}`}
       alt={alt}
-      className={`rounded-lg border border-slate-200 object-cover ${className ?? 'h-24 w-24'}`}
+      onError={() => setFailed(true)}
+      className={`rounded-lg border border-slate-200 bg-slate-100 object-cover ${className ?? 'h-24 w-24'}`}
     />
   );
 }
