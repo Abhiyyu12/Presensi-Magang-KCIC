@@ -99,6 +99,7 @@ Perubahan data yang dilakukan selama uji (tanpa menghapus data pengguna):
 8. **Import Excel dua langkah (validate → confirm)** agar admin melihat error per baris sebelum data dibuat; semua user hasil import `mustChangePassword`.
 9. **Login tidak menolak Origin asing.** Pemeriksaan Origin+CSRF dijalankan pada semua mutasi ber-sesi (`apps/api/src/app/auth.ts:18`); `POST /auth/login` memang dikecualikan karena belum ada sesi/cookie. Probe ulang membuktikan login Origin asing tetap 200 — ini *login-CSRF*, risiko rendah untuk aplikasi lokal dummy; sengaja tidak diubah di ujung arc agar tidak merusak alur login yang sudah terbukti, dicatat sebagai saran lanjutan (§8). Bukti A4 "Origin asing → 403" tetap valid untuk endpoint ber-sesi.
 10. **Rate-limit login 30/15 menit per IP bersifat in-memory.** Uji E2E beruntun bisa kena 429 lalu pulih setelah restart API — perilaku benar, bukan bug.
+11. **Lokasi absensi bukan syarat sah (keputusan UAT 22/11 malam).** Prinsip yang dipilih: "bebas absen di mana saja, yang penting tercatat di mana" — koordinat GPS diperlakukan seperti bukti/timestamp, dicatat bila perangkat menyediakan, NULL bila izin lokasi/GPS tidak tersedia. Tidak ada geofence dan tidak ada pemblokiran; backend tetap menolak koordinat yang tidak valid/non-numerik. Konsekuensi: kolom `latitude/longitude` pada `attendance_events` & `leave_events` menjadi nullable (migrasi `20261122120000_location_optional`, ada rencana rollback di komentarnya). UI selalu memberitahu pengguna bila koordinat tidak ikut tercatat.
 
 ## 6. Bukti pengujian (bukan klaim)
 

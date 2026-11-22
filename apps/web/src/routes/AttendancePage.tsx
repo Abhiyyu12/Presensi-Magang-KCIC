@@ -64,13 +64,14 @@ export default function AttendancePage() {
     setPhoto({ blob, previewUrl });
   }, []);
 
-  // Move to confirm once both photo and location exist.
+  // Move to confirm once the photo exists — lokasi bersifat opsional (dicatat
+  // bila tersedia; absen tetap dapat dikirim tanpa koordinat).
   useEffect(() => {
-    if (step === 'capture' && photo && location) setStep('confirm');
-  }, [step, photo, location]);
+    if (step === 'capture' && photo) setStep('confirm');
+  }, [step, photo]);
 
   const doSubmit = useCallback(async () => {
-    if (!photo || !location) return;
+    if (!photo) return;
     const result = await submitter.submit({ photo: photo.blob, location });
     if (result) setStep('done');
   }, [photo, location, submitter]);
@@ -144,7 +145,9 @@ export default function AttendancePage() {
             <div className="flex justify-between gap-2">
               <dt>Lokasi</dt>
               <dd className="font-medium">
-                Lokasi tercatat{location ? ` (±${formatMeters(location.accuracyMeters)})` : ''}
+                {location
+                  ? `Lokasi tercatat (±${formatMeters(location.accuracyMeters)})`
+                  : 'Lokasi tidak tercatat (izin/GPS tidak tersedia)'}
               </dd>
             </div>
           </dl>
@@ -189,7 +192,8 @@ export default function AttendancePage() {
           <div>
             <h2 className="text-sm font-semibold text-slate-800">{actionLabel}</h2>
             <p className="mt-1 text-xs text-slate-500">
-              Ambil selfie, lalu izinkan lokasi saat diminta. Waktu resmi memakai waktu server.
+              Ambil selfie, lalu izinkan lokasi saat diminta. Lokasi dicatat sebagai bukti bila
+              tersedia — absen tetap bisa dikirim tanpa lokasi. Waktu resmi memakai waktu server.
               Jangan tutup halaman selama pengiriman berlangsung.
             </p>
           </div>
@@ -208,7 +212,7 @@ export default function AttendancePage() {
             onRetry={() => void geolocation.acquire().then(setLocation)}
           />
 
-          {step === 'confirm' && photo && location ? (
+          {step === 'confirm' && photo ? (
             <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="text-sm font-semibold text-slate-800">Konfirmasi absensi</p>
               <dl className="space-y-1 text-sm text-slate-700">
@@ -222,9 +226,17 @@ export default function AttendancePage() {
                 </div>
                 <div className="flex justify-between gap-2">
                   <dt>Akurasi lokasi</dt>
-                  <dd className="font-medium">±{formatMeters(location.accuracyMeters)}</dd>
+                  <dd className="font-medium">
+                    {location ? `±${formatMeters(location.accuracyMeters)}` : 'Lokasi tidak tercatat'}
+                  </dd>
                 </div>
               </dl>
+              {!location ? (
+                <p className="text-xs text-amber-700">
+                  Izin lokasi/GPS tidak tersedia, jadi koordinat tidak ikut terkirim. Anda tetap
+                  dapat mengirim absensi ini.
+                </p>
+              ) : null}
               <img
                 src={photo.previewUrl}
                 alt="Foto yang akan dikirim sebagai bukti absensi"

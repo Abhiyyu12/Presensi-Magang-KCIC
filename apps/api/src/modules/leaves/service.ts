@@ -177,8 +177,8 @@ export async function cancelLeave(ctx: AccessContext, leaveId: string, requestId
 }
 
 export interface MovementInput {
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   accuracyMeters?: number | null;
   idempotencyKey: string;
   imageBuffer: Buffer;
@@ -224,7 +224,10 @@ export async function submitMovement(
   const replay = await findReplay(db, ctx.user.id, operation, input.idempotencyKey, requestHash);
   if (replay) return replay.responseBodyJson;
 
-  if (input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
+  if (input.latitude != null && (input.latitude < -90 || input.latitude > 90)) {
+    throw badRequest('Koordinat tidak valid.');
+  }
+  if (input.longitude != null && (input.longitude < -180 || input.longitude > 180)) {
     throw badRequest('Koordinat tidak valid.');
   }
   if (input.accuracyMeters != null && (input.accuracyMeters <= 0 || input.accuracyMeters > 100000)) {

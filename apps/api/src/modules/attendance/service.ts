@@ -19,8 +19,8 @@ import { internAccessKind, internScopeWhere, requirePermission } from '../access
 
 export interface SubmitInput {
   eventType: 'CHECK_IN' | 'CHECK_OUT';
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   accuracyMeters?: number | null;
   idempotencyKey: string;
   clientSubmittedAt?: string | null;
@@ -56,8 +56,12 @@ export async function submitAttendance(ctx: AccessContext, input: SubmitInput, r
   if (!ctx.internProfileId) throw forbidden('Hanya peserta magang yang dapat melakukan absensi sendiri.');
   const internProfileId = ctx.internProfileId;
 
-  if (input.latitude < -90 || input.latitude > 90) throw badRequest('Latitude tidak valid.', { latitude: ['Rentang -90..90'] });
-  if (input.longitude < -180 || input.longitude > 180) throw badRequest('Longitude tidak valid.', { longitude: ['Rentang -180..180'] });
+  if (input.latitude != null && (input.latitude < -90 || input.latitude > 90)) {
+    throw badRequest('Latitude tidak valid.', { latitude: ['Rentang -90..90'] });
+  }
+  if (input.longitude != null && (input.longitude < -180 || input.longitude > 180)) {
+    throw badRequest('Longitude tidak valid.', { longitude: ['Rentang -180..180'] });
+  }
   if (input.accuracyMeters != null && (input.accuracyMeters <= 0 || input.accuracyMeters > 100000)) {
     throw badRequest('Akurasi lokasi tidak valid.');
   }

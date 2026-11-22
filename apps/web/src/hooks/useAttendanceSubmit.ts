@@ -12,7 +12,8 @@ export type SubmitPhase = 'idle' | 'submitting' | 'success' | 'failed';
 
 export interface SubmitInput {
   photo: Blob;
-  location: LocationFix;
+  /** Koordinat opsional: absen tetap dikirim saat GPS/izin lokasi gagal. */
+  location: LocationFix | null;
   /** Optional endpoint override for leave movements. */
   endpoint?: string;
   /** Extra string fields for multipart bodies (leave movements etc.). */
@@ -64,9 +65,11 @@ export function useAttendanceSubmit({ eventType, onSuccess }: UseAttendanceSubmi
 
       const form = new FormData();
       form.append('image', input.photo, 'selfie.jpg');
-      form.append('latitude', String(input.location.latitude));
-      form.append('longitude', String(input.location.longitude));
-      form.append('accuracyMeters', String(input.location.accuracyMeters));
+      if (input.location) {
+        form.append('latitude', String(input.location.latitude));
+        form.append('longitude', String(input.location.longitude));
+        form.append('accuracyMeters', String(input.location.accuracyMeters));
+      }
       form.append('clientSubmittedAt', new Date().toISOString());
       for (const [field, value] of Object.entries(input.extraFields ?? {})) {
         form.append(field, value);

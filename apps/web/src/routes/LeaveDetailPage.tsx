@@ -68,7 +68,7 @@ export default function LeaveDetailPage() {
   );
 
   const submitMovement = useCallback(async () => {
-    if (!movement || !photo || !location || !leaveId) return;
+    if (!movement || !photo || !leaveId) return;
     const result = await submitter.submit({
       photo: photo.blob,
       location,
@@ -175,11 +175,13 @@ export default function LeaveDetailPage() {
                   {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
                 </p>
                 <p className="text-xs text-slate-500">{formatWib(event.occurredAtServer)}</p>
-                {event.accuracyMeters != null ? (
+                {event.latitude != null && event.longitude != null ? (
                   <p className="text-xs text-slate-500">
-                    Akurasi lokasi ±{formatMeters(event.accuracyMeters)}
+                    Lokasi tercatat · akurasi ±{formatMeters(event.accuracyMeters)}
                   </p>
-                ) : null}
+                ) : (
+                  <p className="text-xs text-slate-500">Lokasi tidak tercatat saat pergerakan ini.</p>
+                )}
               </li>
             ))}
           </ol>
@@ -192,7 +194,8 @@ export default function LeaveDetailPage() {
         <section className="card space-y-2">
           <h2 className="text-sm font-semibold text-slate-800">Catat pergerakan</h2>
           <p className="text-xs text-slate-500">
-            Pergerakan dicatat dengan selfie, lokasi, dan waktu server.
+            Pergerakan dicatat dengan selfie dan waktu server. Lokasi ikut tercatat bila izin
+            lokasi/GPS tersedia; pergerakan tetap dapat dikirim tanpa lokasi.
           </p>
           <div className="flex flex-wrap gap-2">
             {canDepart ? (
@@ -237,7 +240,7 @@ export default function LeaveDetailPage() {
             fix={geolocation.fix}
             onRetry={() => void geolocation.acquire().then(setLocation)}
           />
-          {photo && location ? (
+          {photo ? (
             <div className="flex gap-2">
               <button
                 type="button"

@@ -88,7 +88,7 @@ export default function ParticipantDashboardPage() {
                 <dd className="font-medium text-slate-800">{formatTimeWib(checkOut.occurredAtServer)} WIB</dd>
               </div>
             ) : null}
-            {lastEvent?.accuracyMeters != null ? (
+            {lastEvent?.latitude != null ? (
               <div className="col-span-2">
                 <dt className="text-slate-500">Lokasi terakhir tercatat</dt>
                 <dd className="font-medium text-slate-800">±{formatMeters(lastEvent.accuracyMeters)} dari titik absen</dd>

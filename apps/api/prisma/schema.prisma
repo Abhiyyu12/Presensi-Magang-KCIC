@@ -500,8 +500,8 @@ model AttendanceEvent {
   eventType         AttendanceEventType   @map("event_type")
   occurredAtServer  DateTime              @map("occurred_at_server")
   clientSubmittedAt DateTime?             @map("client_submitted_at")
-  latitude          Float                 @map("latitude")
-  longitude         Float                 @map("longitude")
+  latitude          Float?                @map("latitude")
+  longitude         Float?                @map("longitude")
   accuracyMeters    Float?                @map("accuracy_meters")
   evidenceId        String                @map("evidence_id") @db.Uuid
   idempotencyKey    String?               @map("idempotency_key")
@@ -586,8 +586,8 @@ model LeaveEvent {
   leaveRequestId   String         @map("leave_request_id") @db.Uuid
   eventType        LeaveEventType @map("event_type")
   occurredAtServer DateTime       @map("occurred_at_server")
-  latitude         Float          @map("latitude")
-  longitude        Float          @map("longitude")
+  latitude         Float?         @map("latitude")
+  longitude        Float?         @map("longitude")
   accuracyMeters   Float?         @map("accuracy_meters")
   evidenceId       String         @map("evidence_id") @db.Uuid
   idempotencyKey   String?        @map("idempotency_key")

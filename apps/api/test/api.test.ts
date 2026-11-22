@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app/buildApp.js';
 import { getDb } from '../src/infrastructure/db.js';
-import { addDays, businessDate, zonedTimeToUtc } from '../src/common/time.js';
+import { addDays, businessDate, parseDateOnly, zonedTimeToUtc } from '../src/common/time.js';
 import { authHeaders, buildMultipart, envelope, getHeaders, login, makeJpeg, type Session } from './helpers.js';
 import ExcelJS from 'exceljs';
 import { verifyPassword } from '../src/modules/auth/password.js';
@@ -320,6 +320,30 @@ describe('leave workflow (temporary departure + early checkout)', () => {
     });
     expect(retRes.statusCode).toBe(201);
     expect(envelope(retRes).data.leaveStatus).toBe('RETURNED');
+  });
+
+  it('pergerakan izin tanpa koordinat tetap tercatat (departure + return)', async () => {
+    // Reuse the TEMPORARY leave above: DEPARTURE is allowed from RETURNED, so
+    // both movements can be recorded without coordinates on the same leave.
+    const dep = buildMultipart({}, { field: 'image', filename: 'd2.jpg', contentType: 'image/jpeg', content: jpeg });
+    const depRes = await app.inject({
+      method: 'POST',
+      url: `/api/v1/leaves/${temporaryLeaveId}/departure`,
+      headers: authHeaders(p1, { 'content-type': dep.contentType, 'idempotency-key': `dep-noloc-${Date.now()}` }),
+      payload: dep.body,
+    });
+    expect(depRes.statusCode).toBe(201);
+    expect(envelope(depRes).data.leaveStatus).toBe('DEPARTED');
+
+    const ret2 = buildMultipart({}, { field: 'image', filename: 'r2.jpg', contentType: 'image/jpeg', content: jpeg });
+    const ret2Res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/leaves/${temporaryLeaveId}/return`,
+      headers: authHeaders(p1, { 'content-type': ret2.contentType, 'idempotency-key': `ret-noloc-${Date.now()}` }),
+      payload: ret2.body,
+    });
+    expect(ret2Res.statusCode).toBe(201);
+    expect(envelope(ret2Res).data.leaveStatus).toBe('RETURNED');
   });
 
   it('early checkout via approved EARLY_DEPARTURE leave completes the day', async () => {
@@ -1285,5 +1309,93 @@ describe('Fase UAT: kontrak list Data Master konsisten (pagination wajib)', () =
     });
     expect(res.statusCode).toBe(422);
     expect(envelope(res).error.message).toContain('Profil peserta');
+  });
+});
+
+describe('lokasi absensi opsional (absen tetap sah tanpa GPS)', () => {
+  it('check-in dan check-out tanpa koordinat tetap sah (latitude/longitude null)', async () => {
+    const p3 = await login(app, 'peserta3', DEV_PASSWORD);
+    const db = getDb();
+    const u3 = await db.user.findUniqueOrThrow({ where: { username: 'peserta3' }, include: { internProfile: true } });
+    const p3ProfileId = u3.internProfile!.id;
+    expect(p3ProfileId).toBeTruthy();
+
+    // Reset fixture p3: data absensi + snapshot beku dari run sebelumnya
+    // dihapus dan jadwal individu lama dinonaktifkan agar test deterministik.
+    const todayDate = parseDateOnly(today);
+    const priorDays = await db.attendanceDay.findMany({
+      where: { internProfileId: p3ProfileId, workDate: todayDate },
+      select: { id: true },
+    });
+    const priorDayIds = priorDays.map((d) => d.id);
+    if (priorDayIds.length > 0) {
+      await db.attendanceEvent.deleteMany({ where: { attendanceDayId: { in: priorDayIds } } });
+      await db.attendanceDay.deleteMany({ where: { id: { in: priorDayIds } } });
+    }
+    await db.workdaySnapshot.deleteMany({ where: { internProfileId: p3ProfileId, workDate: todayDate } });
+    await db.workSchedule.updateMany({
+      where: { scopeType: 'INDIVIDUAL', scopeId: p3ProfileId, status: 'ACTIVE' },
+      data: { status: 'INACTIVE' },
+    });
+
+    const days = [1, 2, 3, 4, 5, 6, 7].map((weekday) => ({
+      weekday,
+      isWorkingDay: true,
+      startTime: '09:00',
+      endTime: '18:00',
+      lateToleranceMinutes: 15,
+    }));
+    const sched = await post(app, '/api/v1/admin/schedules', admin, {
+      name: `Jadwal Individu Test P3 ${Date.now()}`,
+      scopeType: 'INDIVIDUAL',
+      scopeId: p3ProfileId,
+      validFrom: yesterday,
+      days,
+    });
+    expect(sched.statusCode).toBe(200);
+
+    const mp = buildMultipart({}, { field: 'image', filename: 's3.jpg', contentType: 'image/jpeg', content: jpeg });
+    const ci = await app.inject({
+      method: 'POST',
+      url: '/api/v1/attendance/check-in',
+      headers: authHeaders(p3, { 'content-type': mp.contentType, 'idempotency-key': `ci-noloc-${Date.now()}` }),
+      payload: mp.body,
+    });
+    expect(ci.statusCode).toBe(201);
+    const ciBody = envelope(ci);
+    const dayId = (ciBody.data.attendanceDayId ?? ciBody.data.day?.id) as string;
+    expect(dayId).toBeTruthy();
+
+    const detail = envelope(await get(app, `/api/v1/attendance/${dayId}`, admin));
+    const checkIn = (detail.data.events as Array<{ eventType: string; latitude: number | null; longitude: number | null }>).find(
+      (e) => e.eventType === 'CHECK_IN',
+    );
+    expect(checkIn).toBeTruthy();
+    expect(checkIn!.latitude).toBeNull();
+    expect(checkIn!.longitude).toBeNull();
+
+    const mp2 = buildMultipart({}, { field: 'image', filename: 's3b.jpg', contentType: 'image/jpeg', content: jpeg });
+    const co = await app.inject({
+      method: 'POST',
+      url: '/api/v1/attendance/check-out',
+      headers: authHeaders(p3, { 'content-type': mp2.contentType, 'idempotency-key': `co-noloc-${Date.now()}` }),
+      payload: mp2.body,
+    });
+    expect(co.statusCode).toBe(201);
+  });
+
+  it('koordinat non-numerik tetap ditolak 400', async () => {
+    const mp = buildMultipart(
+      { latitude: 'bukan-angka', longitude: '107.6098' },
+      { field: 'image', filename: 'bad.jpg', contentType: 'image/jpeg', content: jpeg },
+    );
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/attendance/check-in',
+      headers: authHeaders(p1, { 'content-type': mp.contentType, 'idempotency-key': `badcoord-${Date.now()}` }),
+      payload: mp.body,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(envelope(res).error.code).toBe('VALIDATION_ERROR');
   });
 });

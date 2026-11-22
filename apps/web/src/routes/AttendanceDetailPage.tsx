@@ -145,7 +145,9 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
                   <p className="text-xs text-slate-500">
                     Lokasi tercatat · akurasi ±{formatMeters(event.accuracyMeters)}
                   </p>
-                ) : null}
+                ) : (
+                  <p className="text-xs text-slate-500">Lokasi tidak tercatat pada event ini.</p>
+                )}
                 {canViewEvidence && event.evidenceId ? (
                   <div className="mt-2">
                     <EvidenceImage

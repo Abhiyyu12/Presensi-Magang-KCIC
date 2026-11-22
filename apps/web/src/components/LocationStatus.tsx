@@ -79,8 +79,8 @@ export function LocationStatus({ state, fix, onRetry }: LocationStatusProps) {
     <div className="rounded-lg border border-slate-200 bg-white p-3" aria-live="polite">
       <p className="text-sm font-medium text-slate-800">Status lokasi</p>
       <p className="mt-1 text-xs text-slate-500">
-        Lokasi diperlukan sebagai bukti saat absensi. Lokasi tidak digunakan untuk melacak Anda
-        terus-menerus.
+        Lokasi dicatat sebagai bukti absensi bila tersedia, dan tidak digunakan untuk melacak Anda
+        terus-menerus. Absensi tetap dapat dikirim tanpa lokasi.
       </p>
 
       {state === 'idle' ? <p className="mt-2 text-sm text-slate-600">Lokasi belum diminta.</p> : null}
@@ -120,7 +120,7 @@ export function LocationStatus({ state, fix, onRetry }: LocationStatusProps) {
         <div className="mt-2">
           <p className="text-sm text-red-600">
             Lokasi belum berhasil diperoleh. Periksa izin lokasi dan layanan lokasi, lalu coba
-            kembali.
+            kembali. Tanpa lokasi, absensi tetap dapat dikirim namun koordinatnya tidak tercatat.
           </p>
           <p className="mt-1 text-xs text-slate-500">
             Izinkan akses lokasi untuk situs ini melalui ikon pengaturan di bilah alamat browser,
@@ -138,7 +138,7 @@ export function LocationStatus({ state, fix, onRetry }: LocationStatusProps) {
         <div className="mt-2">
           <p className="text-sm text-red-600">
             Lokasi belum berhasil diperoleh. Periksa izin lokasi dan layanan lokasi, lalu coba
-            kembali.
+            kembali. Tanpa lokasi, absensi tetap dapat dikirim namun koordinatnya tidak tercatat.
           </p>
           <p className="mt-1 text-xs text-slate-500">
             Pastikan layanan lokasi (GPS) aktif pada perangkat dan browser mendukung akses lokasi.

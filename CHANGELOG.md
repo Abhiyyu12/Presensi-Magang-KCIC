@@ -4,6 +4,19 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: lokasi absensi opsional — absen dari mana saja, koordinat tercatat bila tersedia
+
+### Diperbaiki
+- **Critical (bug UAT role intern)**: absensi diblokir ketika izin lokasi/GPS tidak tersedia — tiga lapis pintu: (1) halaman Absensi hanya membuka panel konfirmasi bila ada foto **dan** lokasi, (2) halaman detail izin menahan tombol kirim pergerakan tanpa lokasi, (3) backend menolak 400 bila koordinat tidak dikirim dan kolom `latitude/longitude` DB tidak menerima NULL. Kini lokasi **bukan syarat absen**: prinsip "bebas di mana saja, yang penting tercatat di mana" (seperti timestamp). Koordinat dicatat sebagai bukti bila perangkat menyediakan; bila GPS/izin lokasi tidak ada, event tetap sah tersimpan tanpa koordinat dan UI memberitahu "Lokasi tidak tercatat". Berlaku untuk absen masuk/keluar **dan** pergerakan izin (keluar/kembali/pulang lebih awal).
+- Migrasi `20261122120000_location_optional`: `attendance_events.latitude/longitude` dan `leave_events.latitude/longitude` menjadi nullable (DROP NOT NULL — tanpa penulisan ulang data; rollback: SET NOT NULL setelah memastikan tidak ada NULL, tercatat di komentar migrasi).
+- `parseCoords` backend: koordinat boleh absen (null); nilai non-numerik tetap ditolak 400 dengan pesan per-field berbahasa Indonesia. Validasi rentang (lat ±90, lng ±180) tetap berjalan untuk nilai yang dikirim.
+- Frontend: panel konfirmasi absensi muncul dengan foto saja; peringatan kuning "koordinat tidak ikut terkirim, absensi tetap dapat dikirim"; layar sukses & timeline detail menampilkan "Lokasi tidak tercatat" bila null; dashboard peserta "Lokasi terakhir tercatat" kini benar-benar membaca koordinat (bukan akurasi).
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **79/79** (termasuk regresi baru: check-in/check-out tanpa koordinat → 201 dengan lat/lng NULL di DB, pergerakan izin tanpa koordinat → 201, koordinat non-numerik → 400); web tsc+eslint bersih + test **46/46**.
+- Browser (Playwright): skenario tanpa GPS — check-in sukses, layar sukses menampilkan "Lokasi tidak tercatat (izin/GPS tidak tersedia)"; skenario GPS aktif — check-out sukses dengan "Lokasi tercatat (±12 m)"; DB membuktikan `CHECK_IN | NULL | NULL | NULL` vs `CHECK_OUT | -6.9147 | 107.6098 | 12`. Panel konfirmasi 390px rapi + peringatan kuning tampil.
+- Data uji sendiri dibersihkan (baris DB + objek bukti MinIO dihapus).
+
 ## [2026-11-22] — UAT: fix jadwal INDIVIDUAL tidak berlaku (bug selfie abhi)
 
 ### Diperbaiki

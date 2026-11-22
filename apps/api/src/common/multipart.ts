@@ -53,14 +53,19 @@ export function parseClientSubmittedAt(fields: Record<string, string>): string |
   return new Date(ms).toISOString();
 }
 
-export function parseCoords(fields: Record<string, string>): { latitude: number; longitude: number; accuracyMeters: number | null } {
-  const lat = Number(fields.latitude);
-  const lng = Number(fields.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    throw badRequest('Koordinat lokasi wajib diperoleh dari perangkat (latitude/longitude).', {
-      latitude: ['nilainya harus numerik'],
-      longitude: ['nilainya harus numerik'],
-    });
+/**
+ * Koordinat opsional: absen tetap sah tanpa GPS (izin ditolak / GPS tidak
+ * tersedia), lokasi dicatat bila perangkat mengirimkannya. Nilai kosong → null;
+ * nilai yang ada wajib numerik.
+ */
+export function parseCoords(fields: Record<string, string>): { latitude: number | null; longitude: number | null; accuracyMeters: number | null } {
+  const lat = fields.latitude != null && fields.latitude !== '' ? Number(fields.latitude) : null;
+  const lng = fields.longitude != null && fields.longitude !== '' ? Number(fields.longitude) : null;
+  if ((lat != null && !Number.isFinite(lat)) || (lng != null && !Number.isFinite(lng))) {
+    const fieldErrors: Record<string, string[]> = {};
+    if (lat != null && !Number.isFinite(lat)) fieldErrors['latitude'] = ['nilainya harus numerik'];
+    if (lng != null && !Number.isFinite(lng)) fieldErrors['longitude'] = ['nilainya harus numerik'];
+    throw badRequest('Koordinat lokasi tidak valid.', fieldErrors);
   }
   const acc = fields.accuracyMeters != null && fields.accuracyMeters !== '' ? Number(fields.accuracyMeters) : null;
   return { latitude: lat, longitude: lng, accuracyMeters: acc != null && Number.isFinite(acc) ? acc : null };
