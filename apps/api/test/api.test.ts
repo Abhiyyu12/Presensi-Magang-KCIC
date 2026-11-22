@@ -921,6 +921,13 @@ describe('Fase 1.5f: import pengguna via Excel', () => {
       expect(refSheet, `dropdown ${cell} merujuk sheet internal`).toBe('DataMaster');
       expect(wb.getWorksheet(refSheet), `sheet ${refSheet} ada di workbook`).toBeDefined();
     }
+    // Kolom tanggal bertipe tanggal: validasi rentang + format tampilan yyyy-mm-dd.
+    for (const cell of ['J2', 'K2'] as const) {
+      const dv = pengguna.getCell(cell).dataValidation;
+      expect(dv?.type, `${cell} validasi tanggal`).toBe('date');
+      expect(dv?.operator).toBe('between');
+      expect(pengguna.getCell(cell).numFmt).toBe('yyyy-mm-dd');
+    }
     const db = getDb();
     bureauName = (await db.bureau.findFirstOrThrow({ where: { code: 'BIO-OPS' } })).name;
   });
@@ -948,6 +955,27 @@ describe('Fase 1.5f: import pengguna via Excel', () => {
     expect(data.errorCount).toBe(1);
     const bad = data.rows.find((r: { username: string }) => r.username === `uji.import.bad.${suffix}`);
     expect(bad.errors.join(' ')).toContain('tidak ada di daftar');
+  });
+
+  it('sel tanggal bertipe Date (hasil format tampilan tanggal Excel) tetap valid', async () => {
+    const buf = await buildImportWorkbook([
+      [
+        `uji.import.tgl.${suffix}`, 'Impor Tanggal Date Uji', '', '', 'INTERN', `UJIDT-${suffix}`,
+        bureauName, '', '', new Date(Date.UTC(2026, 0, 15)), '', 'AKTIF',
+      ],
+    ]);
+    const mp = buildMultipart({}, { field: 'file', filename: 'import.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', content: buf });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/users/import/validate',
+      headers: authHeaders(admin, { 'content-type': mp.contentType }),
+      payload: mp.body,
+    });
+    expect(res.statusCode).toBe(200);
+    const data = envelope(res).data;
+    expect(data.totalRows).toBe(1);
+    expect(data.errorCount).toBe(0);
+    expect(data.rows[0].errors).toEqual([]);
   });
 
   it('confirm membuat pengguna + profil + role, password sementara bekerja', async () => {

@@ -4,6 +4,19 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-22] — UAT: kolom tanggal template import kini bertipe tanggal (validasi + format yyyy-mm-dd)
+
+### Ditambahkan
+- **Kolom tanggal pada sheet `Pengguna` (Tanggal Mulai / Tanggal Selesai, kolom J & K) kini bertipe tanggal di Excel**: tampilan sel dipaksa format `yyyy-mm-dd`, lengkap dengan **validasi rentang 2020-01-01 s.d. 2035-12-31** — Excel menolak langsung nilai di luar rentang atau bukan tanggal, dengan pesan Bahasa Indonesia ("Tanggal tidak valid — Isi tanggal format YYYY-MM-DD (mis. 2026-01-15) antara tahun 2020-2035.") dan petunjuk saat sel dipilih ("Isi tanggal, mis. 2026-01-15."). Validasi dipasang di baris 2–201 (kapasitas maksimal impor).
+- **Batasan teknis yang jujur**: format .xlsx **tidak punya popup kalender bawaan** — date picker popup hanya bisa lewat macro/VBA yang diblokir di sebagian besar environment (termasuk yang memicu masalah link eksternal sebelumnya). Alternatif standar Excel untuk ini adalah sel bertipe tanggal + validasi + format tampilan, yang kini dipakai. Saat sel tanggal dipilih, Excel menampilkan petunjuk format; isi bisa diketik `2026-01-15` dan Excel menyimpannya sebagai tanggal asli.
+- **Parser impor sudah mendukung sel tanggal bertipe Date** (nilai dari sel berformat tanggal dikonversi ke `YYYY-MM-DD` di backend) — ditambah test regresi: workbook dengan sel tanggal asli Date tervalidasi tanpa error.
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **90/90**.
+- Template hasil unduhan dari API dev diperiksa XML-nya: `<dataValidation type="date" ... sqref="J10:K201">` dengan `<formula1>43831</formula1>` (serial Excel 2020-01-01) dan `<formula2>49674</formula2>` (2035-12-31); styles.xml memuat `formatCode="yyyy-mm-dd"`; tidak ada folder `xl/externalLinks`.
+- **Catatan ExcelJS (jebakan implementasi)**: untuk validasi `type: 'date'`, ExcelJS selalu mengonversi formula via `dateToExcel(new Date(formula))` — formula string `'=DATE(2020,1,1)'` menghasilkan `NaN` di XML; formulae wajib objek `Date`.
+- **Pengguna perlu mengunduh ulang template sekali lagi** (file sebelum fix fitur tanggal tidak punya validasi ini).
+
 ## [2026-11-22] — UAT: perbaikan template import pengguna (Excel "UNABLE TO REFRESH")
 
 ### Diperbaiki

@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import ExcelJS from 'exceljs';
-import type { CellValue } from 'exceljs';
+import type { CellValue, DataValidation } from 'exceljs';
 import crypto from 'node:crypto';
 import { getDb } from '../../infrastructure/db.js';
 import { ok } from '../../common/http.js';
@@ -152,7 +152,7 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
     '3. Kode Role, Biro, Divisi, Penempatan, dan Status Peserta memiliki dropdown dari data master terkini.',
     '4. Peserta magang (role INTERN) wajib mengisi Nomor Peserta, Biro, dan Tanggal Mulai.',
     '5. Jika Divisi diisi, kolom Biro juga wajib diisi dan divisi harus milik biro tersebut.',
-    '6. Format tanggal: YYYY-MM-DD, contoh 2026-01-15. Format No. HP: 08xxxxxxxxxx tanpa spasi atau tanda hubung.',
+    '6. Kolom tanggal bertipe tanggal (tampil YYYY-MM-DD) dengan validasi rentang 2020-2035 — Excel menolak nilai salah. Format No. HP: 08xxxxxxxxxx tanpa spasi atau tanda hubung.',
     '7. Setiap pengguna baru mendapat password sementara yang tampil sekali pada laporan setelah import.',
     `8. Maksimal ${MAX_IMPORT_ROWS} baris per file, ukuran file maksimal 2 MB.`,
     '9. Contoh baris berikut hanya ilustrasi — jangan ikut mengimpornya.',
@@ -234,6 +234,30 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
       sheet.getCell(`I${r}`).dataValidation = {
         type: 'list', allowBlank: true, formulae: [`=DataMaster!$E$2:$E$${placements.length + 1}`],
       };
+    }
+  }
+  // Kolom tanggal bertipe tanggal: format tampilan yyyy-mm-dd + validasi rentang.
+  // Excel/xlsx tidak punya kalender popup bawaan (hanya bisa via macro/VBA yang
+  // diblokir kebanyakan environment) — validasi + prompt adalah yang terdekat.
+  // CATATAN ExcelJS: untuk type 'date' formulae WAJIB Date object — string
+  // '=DATE(...)' dikonversi dateToExcel(new Date(string)) → NaN di XML.
+  const DATE_VALIDATION: DataValidation = {
+    type: 'date',
+    operator: 'between',
+    allowBlank: true,
+    formulae: [new Date(Date.UTC(2020, 0, 1)), new Date(Date.UTC(2035, 11, 31))],
+    showErrorMessage: true,
+    errorTitle: 'Tanggal tidak valid',
+    error: 'Isi tanggal format YYYY-MM-DD (mis. 2026-01-15) antara tahun 2020-2035.',
+    showInputMessage: true,
+    promptTitle: 'Tanggal (YYYY-MM-DD)',
+    prompt: 'Isi tanggal, mis. 2026-01-15.',
+  };
+  for (const colLetter of ['J', 'K'] as const) {
+    for (let r = 2; r <= dvLastRow; r += 1) {
+      const cell = sheet.getCell(`${colLetter}${r}`);
+      cell.numFmt = 'yyyy-mm-dd';
+      cell.dataValidation = { ...DATE_VALIDATION };
     }
   }
   for (let r = 2; r <= dvLastRow; r += 1) {
