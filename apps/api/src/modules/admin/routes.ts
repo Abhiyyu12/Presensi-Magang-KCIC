@@ -181,6 +181,12 @@ const userPatchBody = z.object({
   mustChangePassword: z.boolean().optional(),
   internProfile: internProfilePatchBody.optional(),
 });
+const userPasswordPatchBody = z.object({
+  password: z
+    .string()
+    .min(passwordSchemaMin, `Kata sandi minimal ${passwordSchemaMin} karakter.`)
+    .max(256),
+});
 const userListQuery = paginationQuery.extend({
   search: z.string().max(128).optional(),
   accountStatus: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
@@ -994,6 +1000,38 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         throw err;
       }
       return ok(user, req.id);
+    },
+  );
+
+  // Reset kata sandi oleh admin. Password lama TIDAK bisa dilihat siapa pun
+  // (tersimpan sebagai hash argon2); yang bisa dilakukan hanya menggantinya.
+  app.patch(
+    '/admin/users/:id/password',
+    { schema: { params: idParams, body: userPasswordPatchBody }, preHandler: authorize('admin:users:manage') },
+    async (req) => {
+      const ctx = requireCtx(req);
+      requireGlobalScope(ctx);
+      const { id } = idParams.parse(req.params);
+      const body = userPasswordPatchBody.parse(req.body);
+      const target = await db.user.findUnique({ where: { id }, select: { id: true, username: true } });
+      if (!target) throw notFound();
+      const passwordHash = await hashPassword(body.password);
+      await db.$transaction(async (tx) => {
+        await tx.user.update({ where: { id }, data: { passwordHash } });
+        // Password lama tidak lagi sah: cabut semua sesi aktif pengguna di semua device.
+        await tx.session.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+        await writeAudit(tx as never, {
+          actorUserId: ctx.user.id,
+          action: 'ADMIN_USER_PASSWORD_RESET',
+          objectType: 'user',
+          objectId: id,
+          before: null,
+          // Nilai password TIDAK pernah dicatat ke audit.
+          after: { passwordChanged: true },
+          requestId: req.id,
+        });
+      });
+      return ok({ passwordChanged: true }, req.id);
     },
   );
 

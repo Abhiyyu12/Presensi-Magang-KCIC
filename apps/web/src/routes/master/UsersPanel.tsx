@@ -147,6 +147,8 @@ export function UsersPanel() {
     accountStatus: 'ACTIVE',
     profile: { ...EMPTY_PROFILE },
   });
+  const [editPassword, setEditPassword] = useState('');
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const [editHadProfile, setEditHadProfile] = useState(false);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [supervisorId, setSupervisorId] = useState('');
@@ -218,8 +220,8 @@ export function UsersPanel() {
       if (!createForm.username.trim() || !createForm.displayName.trim() || !createForm.password) {
         throw new ApiError('VALIDATION', 'Username, nama tampilan, dan kata sandi wajib diisi.', 400);
       }
-      if (createForm.password.length < 8) {
-        throw new ApiError('VALIDATION', 'Kata sandi minimal 8 karakter.', 400);
+      if (createForm.password.length < 10) {
+        throw new ApiError('VALIDATION', 'Kata sandi minimal 10 karakter.', 400);
       }
       if (createForm.roleIds.length === 0) {
         throw new ApiError('VALIDATION', 'Pilih minimal satu role.', 400);
@@ -255,10 +257,13 @@ export function UsersPanel() {
   });
 
   const editMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const profileError = validateProfileForm(editForm.profile, !editHadProfile);
       if (profileError) throw new ApiError('VALIDATION', profileError, 400);
-      return api<Row>(`/admin/users/${asString(editRow?.['id'])}`, {
+      if (editPassword && editPassword.length < 10) {
+        throw new ApiError('VALIDATION', 'Kata sandi baru minimal 10 karakter.', 400);
+      }
+      const saved = await api<Row>(`/admin/users/${asString(editRow?.['id'])}`, {
         method: 'PATCH',
         body: {
           displayName: editForm.displayName || undefined,
@@ -268,11 +273,24 @@ export function UsersPanel() {
           ...(editForm.profile.asIntern ? { internProfile: profilePayload(editForm.profile) } : {}),
         },
       });
+      if (editPassword) {
+        await api<unknown>(`/admin/users/${asString(editRow?.['id'])}/password`, {
+          method: 'PATCH',
+          body: { password: editPassword },
+        });
+      }
+      return saved;
     },
     onSuccess: () => {
       setEditRow(null);
       setFormError(null);
-      setNotice('Perubahan data pengguna disimpan.');
+      setNotice(
+        editPassword
+          ? 'Perubahan disimpan. Kata sandi baru aktif dan semua sesi lama pengguna telah dicabut.'
+          : 'Perubahan data pengguna disimpan.',
+      );
+      setEditPassword('');
+      setShowEditPassword(false);
       invalidate();
     },
     onError: (error: unknown) => {
@@ -407,6 +425,8 @@ export function UsersPanel() {
                 accountStatus: asString(row['accountStatus'], 'ACTIVE'),
                 profile: profileFromRow(isRecord(row['internProfile']) ? row['internProfile'] : undefined),
               });
+              setEditPassword('');
+              setShowEditPassword(false);
               setFormError(null);
             }}
           >
@@ -697,7 +717,7 @@ export function UsersPanel() {
             [
               ['username', 'Username', 'text', true],
               ['displayName', 'Nama tampilan', 'text', true],
-              ['password', 'Kata sandi awal (min. 8 karakter)', 'password', true],
+              ['password', 'Kata sandi awal (min. 10 karakter)', 'password', true],
               ['email', 'Email', 'email', false],
               ['phone', 'Telepon', 'tel', false],
             ] as const
@@ -784,6 +804,34 @@ export function UsersPanel() {
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reset kata sandi</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Kata sandi lama tidak dapat dilihat siapa pun — sistem menyimpan hash, bukan teks asli. Isi di bawah hanya untuk mengganti.
+            </p>
+            <label className="label mt-2" htmlFor="user-edit-password">Kata sandi baru (opsional)</label>
+            <div className="flex items-center gap-1">
+              <input
+                id="user-edit-password"
+                type={showEditPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                className="input min-h-touch w-full min-w-0"
+                value={editPassword}
+                onChange={(e) => setEditPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn-secondary shrink-0 px-2"
+                aria-label={showEditPassword ? 'Sembunyikan kata sandi baru' : 'Lihat kata sandi baru'}
+                onClick={() => setShowEditPassword((v) => !v)}
+              >
+                {showEditPassword ? 'Sembunyikan' : 'Lihat'}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Minimal 10 karakter. Jika diisi, semua sesi aktif pengguna dicabut dan harus login ulang dengan sandi baru.
+            </p>
           </div>
           {editHadProfile ? null : (
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700">

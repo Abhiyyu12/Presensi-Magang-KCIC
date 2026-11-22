@@ -861,6 +861,102 @@ describe('Fase 1.5: role CRUD + gabung peserta ke pengguna + filter pengguna', (
     expect(envelope(res).error?.message).toContain('Role sistem');
   });
 
+  it('lets an admin reset a user password and revokes their sessions (hash-only, never stored)', async () => {
+    const db = getDb();
+    const suffix = randomUUID().slice(0, 8);
+    const roleRes = await post(app, '/api/v1/admin/access/roles', bootstrap, {
+      code: `PWRESET_${suffix}`,
+      name: 'Role Uji Reset Sandi',
+    });
+    expect(roleRes.statusCode).toBe(200);
+    const resetRoleId = envelope(roleRes).data.id;
+    const username = `pw.reset.${suffix}`;
+    const created = await post(app, '/api/v1/admin/users', admin, {
+      username,
+      displayName: 'Uji Reset Sandi',
+      password: DEV_PASSWORD,
+      roleIds: [resetRoleId],
+    });
+    expect(created.statusCode).toBe(200);
+    const userId = envelope(created).data.id;
+
+    try {
+      const before = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { passwordHash: true } });
+      await expect(verifyPassword(before.passwordHash, DEV_PASSWORD)).resolves.toBe(true);
+
+      const csrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+      const csrf = csrfRes.cookies.find((c) => c.name === 'csrf_token')?.value ?? '';
+      const loginAs = (password: string) =>
+        app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/login',
+          headers: { cookie: `csrf_token=${csrf}`, 'x-csrf-token': csrf, origin: 'http://localhost:5173' },
+          payload: { username, password },
+        });
+
+      const tooShort = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/admin/users/${userId}/password`,
+        headers: authHeaders(admin),
+        payload: { password: 'pendek123' },
+      });
+      expect(tooShort.statusCode).toBe(400);
+      expect(tooShort.body).toContain('minimal 10 karakter');
+
+      const reset = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/admin/users/${userId}/password`,
+        headers: authHeaders(admin),
+        payload: { password: 'SandiBaruUji123' },
+      });
+      expect(reset.statusCode).toBe(200);
+      expect(envelope(reset).data.passwordChanged).toBe(true);
+
+      // Sandi lama ditolak, sandi baru diterima.
+      const oldLogin = await loginAs(DEV_PASSWORD);
+      expect(oldLogin.statusCode).toBe(401);
+      const newLogin = await loginAs('SandiBaruUji123');
+      expect(newLogin.statusCode).toBe(200);
+
+      // Sesi aktif dicabut oleh reset berikutnya: token yang baru saja sah jadi 401.
+      const sid = newLogin.cookies.find((c) => c.name === 'sid')?.value;
+      expect(sid).toBeTruthy();
+      const secondReset = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/admin/users/${userId}/password`,
+        headers: authHeaders(admin),
+        payload: { password: 'SandiBaruUji456' },
+      });
+      expect(secondReset.statusCode).toBe(200);
+      const me = await app.inject({
+        method: 'GET',
+        url: '/api/v1/auth/me',
+        headers: { cookie: `sid=${sid}` },
+      });
+      expect(me.statusCode).toBe(401);
+
+      // Hash berganti, sandi lama tak cocok lagi; audit tercatat TANPA nilai sandi.
+      const after = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { passwordHash: true } });
+      expect(after.passwordHash).not.toBe(before.passwordHash);
+      await expect(verifyPassword(after.passwordHash, DEV_PASSWORD)).resolves.toBe(false);
+      await expect(verifyPassword(after.passwordHash, 'SandiBaruUji456')).resolves.toBe(true);
+      const audits = await db.auditEvent.findMany({ where: { action: 'ADMIN_USER_PASSWORD_RESET', objectId: userId } });
+      expect(audits.length).toBe(2);
+      for (const audit of audits) {
+        expect(JSON.stringify(audit.afterJson ?? null)).not.toContain('SandiBaruUji');
+      }
+    } finally {
+      await db.session.deleteMany({ where: { userId } });
+      await db.userRoleAssignment.deleteMany({ where: { userId } });
+      await db.user.deleteMany({ where: { id: userId } });
+      await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/admin/access/roles/${resetRoleId}`,
+        headers: authHeaders(bootstrap),
+      });
+    }
+  });
+
   it('deletes the role once its assignments are gone', async () => {
     const db = getDb();
     await db.session.deleteMany({ where: { userId: testUserId } });

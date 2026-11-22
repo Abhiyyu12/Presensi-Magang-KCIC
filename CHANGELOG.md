@@ -4,6 +4,18 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-23] — Admin bisa reset kata sandi pengguna di Data Master > Pengguna
+
+### Ditambah
+- **Reset kata sandi oleh admin** (permintaan user: "di pengguna juga bisa liat pasword usernya dong dan bisa di edit"). Kata sandi tersimpan sebagai hash argon2 (satu arah) sehingga **tidak mungkin ditampilkan** — yang diberikan adalah penggantian:
+  - Dialog **Ubah Pengguna** punya seksi **"Reset kata sandi"**: field opsional "Kata sandi baru" dengan tombol **Lihat/Sembunyikan** (hanya untuk sandi baru yang sedang diketik), catatan "Kata sandi lama tidak dapat dilihat siapa pun — sistem menyimpan hash, bukan teks asli", dan hint "Minimal 10 karakter. Jika diisi, semua sesi aktif pengguna dicabut dan harus login ulang dengan sandi baru."
+  - Endpoint baru `PATCH /admin/users/:id/password` (izin `admin:users:manage`, scope global): validasi min 10 karakter (sama dengan backend), hash argon2id, **mencabut semua sesi aktif pengguna di semua perangkat** (transaksi), dan mencatat audit `ADMIN_USER_PASSWORD_RESET` — **nilai sandi tidak pernah dicatat ke audit**, hanya `passwordChanged: true`.
+- Dialog **Tambah Pengguna**: validasi kata sandi awal disamakan dengan backend, **8 → 10 karakter** (label kini "Kata sandi awal (min. 10 karakter)").
+
+### Pembuktian (bukan klaim)
+- Gate: api tsc+eslint bersih + test **98/98** (test baru: reset → login sandi lama 401 → login sandi baru 200 → sesi lama dicabut → hash berganti & verify gagal/sukses → 2 baris audit & JSON audit bebas nilai sandi; sandi 9 karakter ditolak 400 "minimal 10 karakter"); web tsc+eslint bersih + test **48/48**.
+- Playwright live **8/8 OK** (login dev-admin; log `uat_resetpw.py`, screenshot `resetpw_*.png`): sandi 5 karakter ditolak dengan pesan jelas; seksi Reset kata sandi + tombol Lihat berfungsi (type password↔text); reset sandi peserta2 via UI berhasil dengan notice "Kata sandi baru aktif dan semua sesi lama pengguna telah dicabut"; **login peserta2 dengan sandi baru berhasil**; sandi peserta2 dikembalikan ke `DevPassword123!` (login asli kembali OK) — tidak ada data uji yang tertinggal.
+
 ## [2026-11-22] — Autofill tanggal berlaku di Cakupan & Jadwal dari periode magang pengguna
 
 ### Ditambah
