@@ -131,12 +131,25 @@ async function upsertFeatureNodes() {
   }
 }
 
-async function ensureUser(username: string, displayName: string, password: string, roleCodes: string[], mustChangePassword: boolean) {
+async function ensureUser(
+  username: string,
+  displayName: string,
+  password: string,
+  roleCodes: string[],
+  mustChangePassword: boolean,
+  contact?: { email?: string; phone?: string },
+) {
+  const email = contact?.email ?? `${username}@kcic.example.com`;
+  const phone = contact?.phone ?? null;
   const existing = await db.user.findUnique({ where: { username } });
-  if (existing) return existing;
+  if (existing) {
+    // Keep seeded accounts aligned with realistic dummy identities without
+    // touching credentials (password/mustChangePassword stay as-is).
+    return db.user.update({ where: { id: existing.id }, data: { displayName, email, ...(phone ? { phone } : {}) } });
+  }
   const passwordHash = await hashPassword(password);
   const user = await db.user.create({
-    data: { username, displayName, passwordHash, accountStatus: 'ACTIVE', mustChangePassword, email: `${username}@example.invalid` },
+    data: { username, displayName, passwordHash, accountStatus: 'ACTIVE', mustChangePassword, email, ...(phone ? { phone } : {}) },
   });
   for (const code of roleCodes) {
     const role = await db.role.findUniqueOrThrow({ where: { code } });
@@ -149,13 +162,31 @@ async function seedUsers() {
   const bootstrapUsername = process.env.BOOTSTRAP_ADMIN_USERNAME || 'dev-admin';
   const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD || '';
   if (bootstrapPassword) {
-    await ensureUser(bootstrapUsername, 'Bootstrap Administrator IT (dev)', bootstrapPassword, ['ADMIN_IT', 'ADMIN_HR'], true);
+    await ensureUser(bootstrapUsername, 'Ahmad Fauzi', bootstrapPassword, ['ADMIN_IT', 'ADMIN_HR'], true, {
+      email: 'ahmad.fauzi@kcic.example.com',
+      phone: '081234567801',
+    });
   }
-  const adminHr = await ensureUser('admin-hr', 'Admin HR Dummy', DEV_PASSWORD, ['ADMIN_HR'], false);
-  await ensureUser('supervisor1', 'Pembimbing Dummy Satu', DEV_PASSWORD, ['SUPERVISOR'], false);
-  await ensureUser('peserta1', 'Peserta Dummy Satu', DEV_PASSWORD, ['INTERN'], false);
-  await ensureUser('peserta2', 'Peserta Dummy Dua', DEV_PASSWORD, ['INTERN'], false);
-  await ensureUser('peserta3', 'Peserta Dummy Tiga', DEV_PASSWORD, ['INTERN'], false);
+  const adminHr = await ensureUser('admin-hr', 'Ratna Wijaya', DEV_PASSWORD, ['ADMIN_HR'], false, {
+    email: 'ratna.wijaya@kcic.example.com',
+    phone: '081234567802',
+  });
+  await ensureUser('supervisor1', 'Budi Santoso', DEV_PASSWORD, ['SUPERVISOR'], false, {
+    email: 'budi.santoso@kcic.example.com',
+    phone: '081234567803',
+  });
+  await ensureUser('peserta1', 'Andi Prasetyo', DEV_PASSWORD, ['INTERN'], false, {
+    email: 'andi.prasetyo@kcic.example.com',
+    phone: '081234567804',
+  });
+  await ensureUser('peserta2', 'Siti Nurhaliza', DEV_PASSWORD, ['INTERN'], false, {
+    email: 'siti.nurhaliza@kcic.example.com',
+    phone: '081234567805',
+  });
+  await ensureUser('peserta3', 'Dewi Lestari', DEV_PASSWORD, ['INTERN'], false, {
+    email: 'dewi.lestari@kcic.example.com',
+    phone: '081234567806',
+  });
 
   // Global admin scope for the seeded HR admin (dev convenience, managed via /admin/scopes).
   const existingScope = await db.adminScope.findFirst({ where: { userId: adminHr.id, scopeType: 'GLOBAL' } });
@@ -171,11 +202,11 @@ async function seedUsers() {
 }
 
 async function seedOrganization() {
-  const biro1 = await db.bureau.upsert({ where: { code: 'BIO-OPS' }, update: { name: 'Biro Operasi (dummy)' }, create: { code: 'BIO-OPS', name: 'Biro Operasi (dummy)', status: 'ACTIVE' } });
-  const biro2 = await db.bureau.upsert({ where: { code: 'BIO-TEK' }, update: { name: 'Biro Teknik (dummy)' }, create: { code: 'BIO-TEK', name: 'Biro Teknik (dummy)', status: 'ACTIVE' } });
-  const div1 = await db.division.upsert({ where: { bureauId_code: { bureauId: biro1.id, code: 'DIV-OPSDAL' } }, update: { name: 'Divisi Opsdal (dummy)' }, create: { bureauId: biro1.id, code: 'DIV-OPSDAL', name: 'Divisi Opsdal (dummy)', status: 'ACTIVE' } });
-  await db.division.upsert({ where: { bureauId_code: { bureauId: biro2.id, code: 'DIV-TEKNIK' } }, update: { name: 'Divisi Teknik (dummy)' }, create: { bureauId: biro2.id, code: 'DIV-TEKNIK', name: 'Divisi Teknik (dummy)', status: 'ACTIVE' } });
-  const placement = await db.placement.upsert({ where: { code: 'PLC-TEGALLUAR' }, update: { name: 'Depo Tegalluar (dummy)' }, create: { code: 'PLC-TEGALLUAR', name: 'Depo Tegalluar (dummy)', description: 'Lokasi dummy development', status: 'ACTIVE' } });
+  const biro1 = await db.bureau.upsert({ where: { code: 'BIO-OPS' }, update: { name: 'Biro Operasi' }, create: { code: 'BIO-OPS', name: 'Biro Operasi', status: 'ACTIVE' } });
+  const biro2 = await db.bureau.upsert({ where: { code: 'BIO-TEK' }, update: { name: 'Biro Teknik' }, create: { code: 'BIO-TEK', name: 'Biro Teknik', status: 'ACTIVE' } });
+  const div1 = await db.division.upsert({ where: { bureauId_code: { bureauId: biro1.id, code: 'DIV-OPSDAL' } }, update: { name: 'Divisi Operasi & Dengkel' }, create: { bureauId: biro1.id, code: 'DIV-OPSDAL', name: 'Divisi Operasi & Dengkel', status: 'ACTIVE' } });
+  await db.division.upsert({ where: { bureauId_code: { bureauId: biro2.id, code: 'DIV-TEKNIK' } }, update: { name: 'Divisi Teknik' }, create: { bureauId: biro2.id, code: 'DIV-TEKNIK', name: 'Divisi Teknik', status: 'ACTIVE' } });
+  const placement = await db.placement.upsert({ where: { code: 'PLC-TEGALLUAR' }, update: { name: 'Depo Tegalluar', description: 'Depo operasi kereta cepat' }, create: { code: 'PLC-TEGALLUAR', name: 'Depo Tegalluar', description: 'Depo operasi kereta cepat', status: 'ACTIVE' } });
 
   const sup = await db.user.findUniqueOrThrow({ where: { username: 'supervisor1' } });
   const start = parseDateOnly(addDays(businessDate(new Date()), -30));
@@ -196,12 +227,20 @@ async function seedOrganization() {
 
 async function seedSchedules() {
   // DUMMY schedule (Senin-Jumat 09:00-18:00, toleransi 15 menit) — PENDING konfirmasi KCIC.
-  const existing = await db.workSchedule.findFirst({ where: { name: 'Jadwal Global Default (dummy)' } });
-  if (existing) return;
+  // Old installs used a "(dummy)" name suffix; normalize it instead of creating a duplicate.
+  const existing = await db.workSchedule.findFirst({
+    where: { name: { in: ['Jadwal Global Default (dummy)', 'Jadwal Global Default'] } },
+  });
+  if (existing) {
+    if (existing.name !== 'Jadwal Global Default') {
+      await db.workSchedule.update({ where: { id: existing.id }, data: { name: 'Jadwal Global Default' } });
+    }
+    return;
+  }
   const validFrom = parseDateOnly(addDays(businessDate(new Date()), -60));
   await db.workSchedule.create({
     data: {
-      name: 'Jadwal Global Default (dummy)',
+      name: 'Jadwal Global Default',
       scopeType: 'GLOBAL',
       scopeId: null,
       validFrom,
