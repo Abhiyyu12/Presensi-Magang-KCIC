@@ -6,6 +6,7 @@ import { asString, isRecord, type AuditEntry, type Paginated } from '../lib/type
 import { DataTable, type Column } from '../components/DataTable';
 import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
+import { FetchIndicator } from '../components/FetchIndicator';
 import { FormField } from '../components/FormField';
 import { useDebouncedValue, usePagedFilters, useMemoizedObject } from '../hooks/useUiHelpers';
 
@@ -19,6 +20,56 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
         {value === undefined || value === null ? '(kosong)' : JSON.stringify(value, null, 2)}
       </pre>
     </div>
+  );
+}
+
+// Badge aksi audit: semantik, bukan warna-saja (teks kode tetap terbaca).
+const ACTION_CHIP: { test: (action: string) => boolean; cls: string }[] = [
+  { test: (a) => a.includes('LOGIN_FAILED'), cls: 'bg-red-50 text-red-700 border-red-200' },
+  { test: (a) => a.startsWith('EVIDENCE_ACCESS'), cls: 'bg-amber-50 text-amber-800 border-amber-200' },
+  { test: (a) => a === 'LOGIN', cls: 'bg-stone-100 text-stone-700 border-stone-300' },
+  { test: (a) => a === 'LOGOUT', cls: 'bg-white text-stone-500 border-stone-200' },
+];
+const ACTION_CHIP_DEFAULT = 'bg-stone-100 text-stone-700 border-stone-200';
+
+function ActionChip({ action }: { action: string }) {
+  const cls = ACTION_CHIP.find((c) => c.test(action))?.cls ?? ACTION_CHIP_DEFAULT;
+  return (
+    <span
+      className={`chip-enter inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-[11px] font-medium ${cls}`}
+    >
+      {action}
+    </span>
+  );
+}
+
+function CopyButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="btn-icon h-9 w-9 rounded-md p-0"
+      aria-label={`Salin ${label}`}
+      title={copied ? 'Tersalin' : 'Salin'}
+      onClick={(e) => {
+        e.stopPropagation();
+        void navigator.clipboard
+          ?.writeText(value)
+          .then(() => setCopied(true))
+          .finally(() => setTimeout(() => setCopied(false), 1200));
+      }}
+    >
+      {copied ? (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-green-600" aria-hidden="true">
+          <path d="m5 13 4 4L19 7" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+          <rect x="9" y="9" width="13" height="13" rx="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      )}
+    </button>
   );
 }
 
@@ -45,13 +96,43 @@ export default function AuditPage() {
   });
 
   const columns: Column<AuditEntry & Row>[] = [
-    { header: 'Waktu', cell: (row) => formatWib(asString(row['occurredAt'] ?? row['createdAt'], '')) },
+    {
+      header: 'Waktu',
+      className: 'font-mono text-[12px]',
+      cell: (row) => formatWib(asString(row['occurredAt'] ?? row['createdAt'], '')),
+    },
     {
       header: 'Aktor',
-      cell: (row) => asString(row['actorName'] ?? row['actorUsername'] ?? row['actor'], '-'),
+      cell: (row) => {
+        const actor = asString(row['actorName'] ?? row['actorUsername'] ?? row['actor'], '');
+        return actor ? actor : <span className="text-stone-300">-</span>;
+      },
     },
-    { header: 'Aksi', cell: (row) => asString(row['action'], '-') },
-    { header: 'Objek', cell: (row) => `${asString(row['objectType'], '-')} · ${asString(row['objectId'], '')}`.trim() },
+    {
+      header: 'Aksi',
+      cell: (row) => <ActionChip action={asString(row['action'], '-')} />,
+    },
+    {
+      header: 'Objek',
+      className: 'font-mono text-[12px]',
+      cell: (row) => {
+        const type = asString(row['objectType'], '-');
+        const id = asString(row['objectId'], '');
+        return (
+          <span className="flex items-center gap-1.5">
+            <span>{type}</span>
+            {id ? (
+              <>
+                <span className="max-w-[14ch] truncate text-stone-500" title={id}>
+                  {id}
+                </span>
+                <CopyButton value={id} label="ID objek" />
+              </>
+            ) : null}
+          </span>
+        );
+      },
+    },
   ];
 
   const items = (auditQuery.data?.items ?? []).filter(isRecord) as unknown as (AuditEntry & Row)[];
@@ -107,6 +188,7 @@ export default function AuditPage() {
         />
       ) : (
         <>
+          <FetchIndicator show={auditQuery.isFetching && !auditQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={items}
@@ -124,7 +206,7 @@ export default function AuditPage() {
               const entry = items.find((row) => asString(row['id']) === expandedId);
               if (!entry) return null;
               return (
-                <section className="card" aria-label="Diff audit (read-only)">
+                <section className="card notice-enter" aria-label="Diff audit (read-only)">
                   <h2 className="text-sm font-semibold text-stone-800">
                     Diff: {asString(entry['action'], '-')} pada {asString(entry['objectType'], '-')}
                   </h2>

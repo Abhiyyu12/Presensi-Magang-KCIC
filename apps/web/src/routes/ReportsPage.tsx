@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, API_BASE, buildQuery } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -9,6 +9,8 @@ import { DataTable, type Column } from '../components/DataTable';
 import { StatusBadge } from '../components/StatusBadge';
 import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
+import { FetchIndicator } from '../components/FetchIndicator';
+import { AnimatedNumber } from '../components/motion-primitives';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon } from '../components/Icon';
 import { FormField } from '../components/FormField';
@@ -22,20 +24,36 @@ interface ReportFilters {
   dayStatus: string;
 }
 
-const METRIC_LABELS: { key: keyof ReportMetrics; label: string }[] = [
-  { key: 'terjadwal', label: 'Terjadwal' },
-  { key: 'hadir', label: 'Hadir' },
-  { key: 'tepatWaktu', label: 'Tepat Waktu' },
-  { key: 'terlambat', label: 'Terlambat' },
-  { key: 'lengkap', label: 'Lengkap' },
-  { key: 'belumLengkap', label: 'Belum Lengkap' },
-  { key: 'tidakAdaCatatan', label: 'Tidak Ada Catatan' },
-  { key: 'izinPending', label: 'Izin Pending' },
-  { key: 'sedangIzin', label: 'Sedang Izin' },
-  { key: 'sudahKembali', label: 'Sudah Kembali' },
-  { key: 'perluReview', label: 'Perlu Review' },
-  { key: 'pulangAwal', label: 'Pulang Awal' },
-  { key: 'koreksi', label: 'Koreksi' },
+// 12 metrik dikelompokkan jadi 3 seksi (brief): hierarki konteks, bukan deretan kartu datar.
+const METRIC_GROUPS: { title: string; metrics: { key: keyof ReportMetrics; label: string }[] }[] = [
+  {
+    title: 'Kehadiran',
+    metrics: [
+      { key: 'terjadwal', label: 'Terjadwal' },
+      { key: 'hadir', label: 'Hadir' },
+      { key: 'tepatWaktu', label: 'Tepat Waktu' },
+      { key: 'terlambat', label: 'Terlambat' },
+    ],
+  },
+  {
+    title: 'Kelengkapan',
+    metrics: [
+      { key: 'lengkap', label: 'Lengkap' },
+      { key: 'belumLengkap', label: 'Belum Lengkap' },
+      { key: 'tidakAdaCatatan', label: 'Tidak Ada Catatan' },
+    ],
+  },
+  {
+    title: 'Izin & Koreksi',
+    metrics: [
+      { key: 'izinPending', label: 'Izin Pending' },
+      { key: 'sedangIzin', label: 'Sedang Izin' },
+      { key: 'sudahKembali', label: 'Sudah Kembali' },
+      { key: 'perluReview', label: 'Perlu Review' },
+      { key: 'pulangAwal', label: 'Pulang Awal' },
+      { key: 'koreksi', label: 'Koreksi' },
+    ],
+  },
 ];
 
 export default function ReportsPage() {
@@ -88,14 +106,80 @@ export default function ReportsPage() {
 
   const set = (patch: Partial<ReportFilters>) => setFilters((f) => ({ ...f, ...patch }));
 
+  // Feedback tombol ekspor: loading singkat → centang sukses → normal (unduhan tetap native).
+  const [exportFlash, setExportFlash] = useState<{ format: 'csv' | 'xlsx'; phase: 'busy' | 'done' } | null>(null);
+  const exportTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => exportTimers.current.forEach(clearTimeout), []);
+  const onExport = (format: 'csv' | 'xlsx') => {
+    setExportFlash({ format, phase: 'busy' });
+    exportTimers.current.push(setTimeout(() => setExportFlash({ format, phase: 'done' }), 700));
+    exportTimers.current.push(setTimeout(() => setExportFlash(null), 1400));
+  };
+
+  const exportButton = (format: 'csv' | 'xlsx') => {
+    const flash = exportFlash?.format === format ? exportFlash : null;
+    const primary = format === 'xlsx';
+    const label = `Ekspor ${format.toUpperCase()}`;
+    return (
+      <a
+        className={primary ? 'btn-primary' : 'btn-secondary'}
+        href={exportHref(format)}
+        download
+        onClick={() => onExport(format)}
+      >
+        {flash?.phase === 'busy' ? (
+          <>
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+              <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+            </svg>
+            Mengekspor…
+          </>
+        ) : flash?.phase === 'done' ? (
+          <>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="m5 13 4 4L19 7" />
+            </svg>
+            {label}
+          </>
+        ) : (
+          label
+        )}
+      </a>
+    );
+  };
+
   const columns: Column<ReportRow>[] = [
     { header: 'Tanggal', cell: (row) => formatDateWib(row.workDate) },
-    { header: 'No. ID', cell: (row) => row.participantNumber ?? '-' },
+    { header: 'No. ID', className: 'font-mono text-[13px]', cell: (row) => row.participantNumber ?? '-' },
     { header: 'Nama', cell: (row) => row.participantName },
     { header: 'Direktorat', cell: (row) => row.bureau ?? '-' },
     { header: 'Biro', cell: (row) => row.division ?? '-' },
-    { header: 'Masuk', cell: (row) => formatTimeWib(row.checkIn) },
-    { header: 'Pulang', cell: (row) => formatTimeWib(row.checkOut) },
+    {
+      header: 'Masuk',
+      className: 'font-mono text-[13px]',
+      cell: (row) => {
+        const v = formatTimeWib(row.checkIn);
+        return v === '-' ? <span className="text-stone-300">-</span> : v;
+      },
+    },
+    {
+      header: 'Pulang',
+      className: 'font-mono text-[13px]',
+      cell: (row) => {
+        const v = formatTimeWib(row.checkOut);
+        return v === '-' ? <span className="text-stone-300">-</span> : v;
+      },
+    },
     {
       header: 'Status',
       cell: (row) => (
@@ -112,9 +196,11 @@ export default function ReportsPage() {
     {
       header: 'Izin',
       cell: (row) =>
-        row.leaves && row.leaves.length > 0
-          ? row.leaves.map((l) => l.leaveType === 'TEMPORARY' ? 'Sementara' : 'Pulang awal').join(', ')
-          : '-',
+        row.leaves && row.leaves.length > 0 ? (
+          row.leaves.map((l) => (l.leaveType === 'TEMPORARY' ? 'Sementara' : 'Pulang awal')).join(', ')
+        ) : (
+          <span className="text-stone-300">-</span>
+        ),
     },
     {
       header: 'Aksi',
@@ -136,21 +222,12 @@ export default function ReportsPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-stone-900">Report & Statistik</h1>
+          <h1 className="text-lg font-bold text-stone-900">Laporan &amp; Statistik</h1>
           <p className="text-sm text-stone-600">
             Metrik dihitung server sesuai filter dan cakupan Anda. Denominator: terjadwal.
           </p>
         </div>
-        {canExport ? (
-          <div className="flex gap-2">
-            <a className="btn-secondary" href={exportHref('csv')} download>
-              Ekspor CSV
-            </a>
-            <a className="btn-primary" href={exportHref('xlsx')} download>
-              Ekspor XLSX
-            </a>
-          </div>
-        ) : null}
+        {canExport ? <div className="flex gap-2">{exportButton('csv')}{exportButton('xlsx')}</div> : null}
       </header>
 
       <form
@@ -252,21 +329,43 @@ export default function ReportsPage() {
         />
       ) : (
         <>
-          <section aria-labelledby="metrics-heading">
+          <FetchIndicator show={reportQuery.isFetching && !reportQuery.isLoading} />
+          <section aria-labelledby="metrics-heading" className="stagger space-y-3">
             <h2 id="metrics-heading" className="sr-only">
               Metrik laporan
             </h2>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-              {METRIC_LABELS.map((metric) => (
-                <div key={metric.key} className="card p-3">
-                  <p className="text-xl font-bold text-stone-900">
-                    {reportQuery.data?.metrics ? (reportQuery.data.metrics[metric.key] ?? '-') : '-'}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-stone-500">{metric.label}</p>
+            {METRIC_GROUPS.map((group) => (
+              <div key={group.title} className="card p-3">
+                <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-stone-400">
+                  <span aria-hidden="true" className="h-px w-4 bg-brand-300" />
+                  {group.title}
+                </p>
+                <div
+                  className={`grid gap-2 ${
+                    group.metrics.length > 4
+                      ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
+                      : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+                  }`}
+                >
+                  {group.metrics.map((metric, mi) => {
+                    const raw = reportQuery.data?.metrics?.[metric.key];
+                    const value = typeof raw === 'number' ? raw : undefined;
+                    return (
+                      <div
+                        key={metric.key}
+                        className={`rounded-lg p-2.5 ${mi === 0 ? 'bg-brand-50/50 ring-1 ring-brand-100' : 'bg-stone-50'}`}
+                      >
+                        <p className="font-display text-xl font-bold text-stone-900">
+                          <AnimatedNumber value={value} />
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-stone-500">{metric.label}</p>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-            <p className="mt-1 text-xs text-stone-500">
+              </div>
+            ))}
+            <p className="text-xs text-stone-500">
               Denominator: terjadwal. Kategori metrik bersifat eksklusif dan dihitung backend.
             </p>
           </section>

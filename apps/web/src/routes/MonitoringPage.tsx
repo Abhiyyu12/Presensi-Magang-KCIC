@@ -8,6 +8,7 @@ import { DataTable, type Column } from '../components/DataTable';
 import { StatusBadge } from '../components/StatusBadge';
 import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
+import { FetchIndicator } from '../components/FetchIndicator';
 import { Icon } from '../components/Icon';
 import { FormField } from '../components/FormField';
 import { useDebouncedValue, usePagedFilters } from '../hooks/useUiHelpers';
@@ -74,11 +75,13 @@ export default function MonitoringPage() {
     { header: 'Biro', cell: (row) => row.division ?? '-' },
     {
       header: 'Masuk',
+      className: 'font-mono text-[13px]',
       cell: (row) =>
         formatTimeWib(row.events.find((e) => e.eventType === 'CHECK_IN')?.occurredAtServer),
     },
     {
       header: 'Pulang',
+      className: 'font-mono text-[13px]',
       cell: (row) =>
         formatTimeWib(row.events.find((e) => e.eventType === 'CHECK_OUT')?.occurredAtServer),
     },
@@ -244,6 +247,7 @@ export default function MonitoringPage() {
         />
       ) : (
         <>
+          <FetchIndicator show={listQuery.isFetching && !listQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={listQuery.data?.items ?? []}
