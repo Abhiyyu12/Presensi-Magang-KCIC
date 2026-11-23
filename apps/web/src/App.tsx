@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { MotionConfig } from 'motion/react';
 import { Layout } from './components/Layout';
 import { LoadingState } from './components/LoadingState';
 import { RequireAuth, RequirePermission } from './routes/guards';
@@ -48,7 +49,8 @@ function PageFallback() {
 
 export default function App() {
   return (
-    <Suspense fallback={<PageFallback />}>
+    <MotionConfig reducedMotion="user">
+      <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
@@ -194,6 +196,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Route>
       </Routes>
-    </Suspense>
+      </Suspense>
+    </MotionConfig>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -20,6 +21,9 @@ interface ConfirmDialogProps {
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Kurva ease-out kuat untuk UI — konsisten dengan token CSS --ease-out-strong. */
+const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 /** Accessible modal dialog: focus trap, Esc closes, focus restored on close. */
 export function ConfirmDialog({
@@ -81,44 +85,55 @@ export function ConfirmDialog({
     };
   }, [open]);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !busy) onClose();
-      }}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
-        className={`w-full rounded-xl bg-white p-5 shadow-xl ${wide ? 'max-w-2xl' : 'max-w-md'}`}
-      >
-        <h2 id="confirm-dialog-title" className="text-base font-semibold text-slate-900">
-          {title}
-        </h2>
-        {description ? <p className="mt-2 text-sm text-slate-600">{description}</p> : null}
-        {children}
-        <div className="mt-4 flex justify-end gap-2">
-          {hideCancel ? null : (
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
-              {cancelLabel}
-            </button>
-          )}
-          <button
-            type="button"
-            className={danger ? 'btn-danger' : 'btn-primary'}
-            onClick={onConfirm}
-            disabled={busy}
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          key="confirm-dialog-root"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: EASE_OUT }}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !busy) onClose();
+          }}
+        >
+          <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-dialog-title"
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.96 }}
+            transition={{ duration: 0.22, ease: EASE_OUT }}
+            className={`w-full rounded-xl bg-white p-5 shadow-xl ${wide ? 'max-w-2xl' : 'max-w-md'}`}
           >
-            {busy ? 'Memproses…' : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+            <h2 id="confirm-dialog-title" className="text-base font-semibold text-slate-900">
+              {title}
+            </h2>
+            {description ? <p className="mt-2 text-sm text-slate-600">{description}</p> : null}
+            {children}
+            <div className="mt-4 flex justify-end gap-2">
+              {hideCancel ? null : (
+                <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
+                  {cancelLabel}
+                </button>
+              )}
+              <button
+                type="button"
+                className={danger ? 'btn-danger' : 'btn-primary'}
+                onClick={onConfirm}
+                disabled={busy}
+              >
+                {busy ? 'Memproses…' : confirmLabel}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
