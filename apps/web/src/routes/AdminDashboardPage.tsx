@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { isRecord } from '../lib/types';
+import { EASE_OUT_EXPO } from '../lib/motion';
+import { AnimatedNumber } from '../components/motion-primitives';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { MasterCombobox } from '../components/MasterCombobox';
@@ -35,8 +38,28 @@ function rangeLabel(mode: TimeMode, date: string, from: string, to: string, mont
   return `Tahun ${year || '-'}`;
 }
 
-/** Grafik batang harian: hadir vs terlambat, warna brand KCIC. */
+function CardIcon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+/** Grafik batang harian: hadir vs terlambat, warna brand KCIC.
+    Batang tumbuh dari baseline saat grafik PERTAMA muncul saja; pergantian
+    filter/refresh tidak menganimasikan ulang. Tooltip mengikuti hover kolom. */
 function AttendanceBarChart({ series }: { series: SeriesPoint[] }) {
+  const [hover, setHover] = useState<number | null>(null);
   const width = 720;
   const height = 220;
   const pad = { top: 12, right: 8, bottom: 28, left: 32 };
@@ -47,57 +70,85 @@ function AttendanceBarChart({ series }: { series: SeriesPoint[] }) {
   const barW = Math.max(4, Math.min(14, slot / 2.6));
   const y = (v: number) => pad.top + innerH - (v / max) * innerH;
   const labelEvery = Math.ceil(series.length / 12);
+  const hoverPoint = hover !== null ? series[hover] : undefined;
 
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className="h-56 w-full"
-      role="img"
-      aria-label="Grafik kehadiran harian"
-      preserveAspectRatio="none"
-    >
-      {[0, 0.5, 1].map((t) => (
-        <g key={t}>
-          <line x1={pad.left} x2={width - pad.right} y1={y(max * t)} y2={y(max * t)} stroke="#e2e8f0" strokeWidth="1" />
-          <text x={pad.left - 6} y={y(max * t) + 4} textAnchor="end" fontSize="10" fill="#64748b">
-            {Math.round(max * t)}
-          </text>
-        </g>
-      ))}
-      {series.map((s, i) => {
-        const cx = pad.left + slot * i + slot / 2;
-        return (
-          <g key={s.date}>
-            <title>{`${s.date}: hadir ${s.checkedIn}, terlambat ${s.late}, terjadwal ${s.scheduled}`}</title>
-            <rect
-              x={cx - barW - 1}
-              y={y(s.checkedIn)}
-              width={barW}
-              height={Math.max(0, pad.top + innerH - y(s.checkedIn))}
-              rx="2"
-              fill="#8b1a1a"
-            >
-              <title>{`${s.date}: hadir ${s.checkedIn}`}</title>
-            </rect>
-            <rect
-              x={cx + 1}
-              y={y(s.late)}
-              width={barW}
-              height={Math.max(0, pad.top + innerH - y(s.late))}
-              rx="2"
-              fill="#d97706"
-            >
-              <title>{`${s.date}: terlambat ${s.late}`}</title>
-            </rect>
-            {i % labelEvery === 0 ? (
-              <text x={cx} y={height - 8} textAnchor="middle" fontSize="10" fill="#64748b">
-                {s.date.slice(5)}
-              </text>
-            ) : null}
+    <div className="relative">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="h-56 w-full"
+        role="img"
+        aria-label="Grafik kehadiran harian"
+        preserveAspectRatio="none"
+      >
+        {[0, 0.5, 1].map((t) => (
+          <g key={t}>
+            <line x1={pad.left} x2={width - pad.right} y1={y(max * t)} y2={y(max * t)} stroke="#e7e5e4" strokeWidth="1" />
+            <text x={pad.left - 6} y={y(max * t) + 4} textAnchor="end" fontSize="10" fill="#78716c">
+              {Math.round(max * t)}
+            </text>
           </g>
-        );
-      })}
-    </svg>
+        ))}
+        {series.map((s, i) => {
+          const cx = pad.left + slot * i + slot / 2;
+          const growDelay = i < 12 ? i * 0.02 : 0;
+          return (
+            <g key={s.date}>
+              <motion.rect
+                x={cx - barW - 1}
+                y={y(s.checkedIn)}
+                width={barW}
+                height={Math.max(0, pad.top + innerH - y(s.checkedIn))}
+                rx="2"
+                fill="#8b1a1a"
+                style={{ transformBox: 'fill-box', transformOrigin: 'bottom' }}
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: 0.4, ease: EASE_OUT_EXPO, delay: growDelay }}
+              />
+              <motion.rect
+                x={cx + 1}
+                y={y(s.late)}
+                width={barW}
+                height={Math.max(0, pad.top + innerH - y(s.late))}
+                rx="2"
+                fill="#d97706"
+                style={{ transformBox: 'fill-box', transformOrigin: 'bottom' }}
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: 0.4, ease: EASE_OUT_EXPO, delay: growDelay + 0.05 }}
+              />
+              {i % labelEvery === 0 ? (
+                <text x={cx} y={height - 8} textAnchor="middle" fontSize="10" fill="#78716c">
+                  {s.date.slice(5)}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
+        {series.map((s, i) => (
+          <rect
+            key={`band-${s.date}`}
+            className="chart-band"
+            x={pad.left + slot * i}
+            y={pad.top}
+            width={slot}
+            height={innerH}
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover((v) => (v === i ? null : v))}
+          />
+        ))}
+      </svg>
+      {hoverPoint ? (
+        <div
+          className="menu-enter pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs shadow-md"
+          style={{ left: `${((pad.left + slot * (hover ?? 0) + slot / 2) / width) * 100}%` }}
+        >
+          <p className="font-semibold text-stone-800">{hoverPoint.date}</p>
+          <p className="text-stone-600">Hadir {hoverPoint.checkedIn} · Terlambat {hoverPoint.late} · Terjadwal {hoverPoint.scheduled}</p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -115,10 +166,10 @@ function DistributionDonut({
 }) {
   const total = onTime + late + needsReview + absent;
   const segments = [
-    { label: 'Hadir tepi waktu', value: onTime, color: '#8b1a1a' },
+    { label: 'Hadir tepat waktu', value: onTime, color: '#8b1a1a' },
     { label: 'Terlambat', value: late, color: '#d97706' },
-    { label: 'Perlu review', value: needsReview, color: '#dc2626' },
-    { label: 'Tidak hadir', value: absent, color: '#cbd5e1' },
+    { label: 'Perlu review', value: needsReview, color: '#b45309' },
+    { label: 'Tidak hadir', value: absent, color: '#d6d3d1' },
   ].filter((s) => s.value > 0);
   const r = 52;
   const c = 2 * Math.PI * r;
@@ -127,9 +178,9 @@ function DistributionDonut({
   return (
     <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-around">
       <svg viewBox="0 0 140 140" className="h-40 w-40" role="img" aria-label="Distribusi hari kerja">
-        <circle cx="70" cy="70" r={r} fill="none" stroke="#f1f5f9" strokeWidth="16" />
+        <circle cx="70" cy="70" r={r} fill="none" stroke="#f5f5f4" strokeWidth="16" />
         {total === 0 ? (
-          <text x="70" y="74" textAnchor="middle" fontSize="10" fill="#64748b">
+          <text x="70" y="74" textAnchor="middle" fontSize="10" fill="#78716c">
             Tidak ada data
           </text>
         ) : (
@@ -246,13 +297,82 @@ export default function AdminDashboardPage() {
     'admin:params:manage',
   ].some(has);
 
-  const cards: { label: string; value: number | undefined; to?: string }[] = [
-    { label: 'Izin menunggu approval', value: num('pendingLeaves'), to: canApproval ? '/approval' : undefined },
-    { label: 'Perlu review', value: num('needsReview'), to: canMonitoring ? '/monitoring' : undefined },
-    { label: 'Terjadwal', value: num('scheduled') },
-    { label: 'Hadir', value: num('checkedIn') },
-    { label: 'Terlambat', value: num('late') },
-    { label: 'Izin belum kembali', value: num('staleLeaves'), to: canApproval ? '/approval' : undefined },
+  const cards: {
+    label: string;
+    value: number | undefined;
+    to?: string;
+    icon: ReactNode;
+    action?: boolean;
+  }[] = [
+    {
+      label: 'Izin menunggu approval',
+      value: num('pendingLeaves'),
+      to: canApproval ? '/approval' : undefined,
+      action: true,
+      icon: (
+        <CardIcon>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 2" />
+        </CardIcon>
+      ),
+    },
+    {
+      label: 'Perlu review',
+      value: num('needsReview'),
+      to: canMonitoring ? '/monitoring' : undefined,
+      action: true,
+      icon: (
+        <CardIcon>
+          <path d="M12 3 2 20h20L12 3z" />
+          <path d="M12 10v4" />
+          <path d="M12 17h.01" />
+        </CardIcon>
+      ),
+    },
+    {
+      label: 'Terjadwal',
+      value: num('scheduled'),
+      icon: (
+        <CardIcon>
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M8 3v4M16 3v4M3 11h18" />
+        </CardIcon>
+      ),
+    },
+    {
+      label: 'Hadir',
+      value: num('checkedIn'),
+      icon: (
+        <CardIcon>
+          <circle cx="12" cy="12" r="9" />
+          <path d="m8.5 12.5 2.5 2.5 5-6" />
+        </CardIcon>
+      ),
+    },
+    {
+      label: 'Terlambat',
+      value: num('late'),
+      icon: (
+        <CardIcon>
+          <circle cx="12" cy="13" r="7" />
+          <path d="M12 10v3l2 2" />
+          <path d="M5 4 3 6M19 4l2 2" />
+        </CardIcon>
+      ),
+    },
+    {
+      label: 'Izin belum kembali',
+      value: num('staleLeaves'),
+      to: canApproval ? '/approval' : undefined,
+      action: true,
+      icon: (
+        <CardIcon>
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <path d="m16 17 5-5-5-5" />
+          <path d="M21 12H9" />
+        </CardIcon>
+      ),
+    },
   ];
 
   const checkedIn = num('checkedIn') ?? 0;
@@ -273,20 +393,31 @@ export default function AdminDashboardPage() {
 
       {/* Filter: sumber datanya backend, kartu + grafik mengikuti filter. */}
       <section aria-label="Filter dashboard" className="card space-y-3">
-        <div className="flex flex-wrap gap-2">
+        {/* Segmented control: pil latar bergeser ke opsi aktif (shared layout). */}
+        <div
+          role="group"
+          aria-label="Periode data"
+          className="flex w-fit max-w-full overflow-x-auto rounded-lg bg-stone-200/60 p-1"
+        >
           {TIME_MODES.map((m) => (
             <button
               key={m.value}
               type="button"
               aria-pressed={mode === m.value}
               onClick={() => setMode(m.value)}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
-                mode === m.value
-                  ? 'border-brand-700 bg-brand-700 text-white'
-                  : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+              className={`relative min-h-touch rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
+                mode === m.value ? 'text-brand-800' : 'text-stone-600 hover:text-stone-800'
               }`}
             >
-              {m.label}
+              {mode === m.value ? (
+                <motion.span
+                  layoutId="dash-mode-pill"
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  className="absolute inset-0 rounded-md bg-white shadow-sm"
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span className="relative">{m.label}</span>
             </button>
           ))}
         </div>
@@ -365,19 +496,37 @@ export default function AdminDashboardPage() {
       </section>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {cards.map((card) => (
-          <div key={card.label} className="card">
-            <p className="text-2xl font-bold text-stone-900">
-              {card.value !== undefined ? card.value : '-'}
-            </p>
-            <p className="mt-1 text-xs text-stone-500">{card.label}</p>
-            {card.to ? (
-              <Link to={card.to} className="mt-2 inline-block text-xs font-semibold text-brand-700 hover:underline">
-                Buka
-              </Link>
-            ) : null}
-          </div>
-        ))}
+        {cards.map((card) => {
+          const attention = card.action && (card.value ?? 0) > 0;
+          return (
+            <div
+              key={card.label}
+              className={`card relative ${attention ? 'border-brand-200 bg-brand-50/50' : ''}`}
+            >
+              <div className="flex items-start justify-between">
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                    attention ? 'bg-brand-100 text-brand-800' : 'bg-stone-100 text-stone-600'
+                  }`}
+                >
+                  {card.icon}
+                </span>
+                {attention ? (
+                  <span className="pulse-once relative mt-1.5 h-2 w-2 rounded-full bg-brand-600" aria-hidden="true" />
+                ) : null}
+              </div>
+              <p className="mt-3 font-display text-2xl font-bold text-stone-900">
+                <AnimatedNumber value={card.value} />
+              </p>
+              <p className="mt-0.5 text-xs text-stone-500">{card.label}</p>
+              {card.to ? (
+                <Link to={card.to} className="mt-2 inline-block text-xs font-semibold text-brand-700 hover:underline">
+                  Buka
+                </Link>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
 
       {/* Grafik (SVG, warna KCIC) — hanya di Beranda, mengikuti filter yang sama. */}
@@ -397,7 +546,12 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           {series.length === 0 ? (
-            <p className="py-8 text-center text-sm text-stone-500">Belum ada data pada rentang ini.</p>
+            <div className="py-8 text-center">
+              <p className="text-sm text-stone-500">Belum ada data pada rentang ini.</p>
+              <p className="mt-1 text-xs text-stone-400">
+                Coba ubah periode di atas atau hapus filter direktorat/biro.
+              </p>
+            </div>
           ) : (
             <AttendanceBarChart series={series} />
           )}

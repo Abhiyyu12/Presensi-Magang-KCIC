@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth';
 import { formatTimeWib, formatDateWib, formatWib, formatMeters, leaveStatusLabel } from '../lib/format';
 import type { AttendanceDay, Paginated, Profile, TodayResponse } from '../lib/types';
 import { StatusBadge } from '../components/StatusBadge';
+import { AnimatedNumber } from '../components/motion-primitives';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { MapsLink } from '../components/MapsLink';
@@ -15,11 +16,11 @@ const INTERN_STATUS_LABEL: Record<string, string> = {
   WITHDRAWN: 'Mundur',
 };
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex justify-between gap-2 border-b border-stone-100 py-1.5 last:border-b-0">
       <dt className="shrink-0 text-stone-500">{label}</dt>
-      <dd className="text-right font-medium">{value}</dd>
+      <dd className={`text-right font-medium ${mono ? 'font-mono text-[13px]' : ''}`}>{value}</dd>
     </div>
   );
 }
@@ -33,7 +34,9 @@ function StatTile({ label, value, tone }: { label: string; value: number; tone: 
   return (
     <div className={`rounded-lg p-2 text-center ${tones[tone]}`}>
       <dt className="text-xs">{label}</dt>
-      <dd className="text-lg font-bold">{value}</dd>
+      <dd className="text-lg font-bold">
+        <AnimatedNumber value={value} />
+      </dd>
     </div>
   );
 }
@@ -145,7 +148,7 @@ export default function ParticipantDashboardPage() {
           </p>
         ) : (
           <dl className="mt-1 text-sm">
-            <DetailRow label="Nomor peserta" value={intern.participantNumber} />
+            <DetailRow label="Nomor peserta" value={intern.participantNumber} mono />
             <DetailRow label="Direktorat" value={intern.bureauName ?? '-'} />
             <DetailRow label="Biro" value={intern.divisionName ?? '-'} />
             <DetailRow label="Penempatan" value={intern.placementName ?? '-'} />

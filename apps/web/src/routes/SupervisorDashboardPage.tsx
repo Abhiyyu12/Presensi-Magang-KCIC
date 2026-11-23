@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { isRecord, asString } from '../lib/types';
+import { AnimatedNumber } from '../components/motion-primitives';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { StatusBadge } from '../components/StatusBadge';
@@ -77,8 +78,8 @@ export default function SupervisorDashboardPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {cards.map((card) => (
           <div key={card.label} className="card">
-            <p className="text-2xl font-bold text-stone-900">
-              {card.value !== undefined ? card.value : '-'}
+            <p className="font-display text-2xl font-bold text-stone-900">
+              <AnimatedNumber value={card.value} />
             </p>
             <p className="mt-1 text-xs text-stone-500">{card.label}</p>
           </div>
