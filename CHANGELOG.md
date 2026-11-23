@@ -4,6 +4,30 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-23] — Redesign UI per brief: identitas "rel KCIC", tipografi karakter, motion kecepatan terkendali
+
+### Diubah (visual/UX/motion saja — logika, routing, kontrak API, dan struktur data tidak disentuh)
+- **Fondasi desain** (brief §Identitas): merah **#8B1A1A tetap** (hanya turunan hue yang sama: hover/pressed/tint/ring); **satu aksen kedua amber** (`--kcic-accent #b45309`) menggantikan ungu chip "Perlu Review"; netral biru-abu diganti **stone hangat**; **tipografi Sora (judul) / DM Sans (body) / IBM Plex Mono (ID, UUID, waktu, kode audit)** — self-host latin subset, `font-display: swap`, tanpa dependency runtime; **`tabular-nums` global** untuk semua angka/jam/tanggal.
+- **Token motion terpusat** `lib/motion.ts` — "kecepatan yang terkendali": skala durasi instant 100 / fast 160 / base 240 / slow 400 / hero 600 ms, kurva ease-out-expo masuk & ease-in-out perpindahan, spring stiffness 300 damping 30 tanpa bounce; varian fadeUp/fadeIn/scaleIn/slideInLeft + stagger 45 ms; `MotionConfig reducedMotion="user"` membungkus App sehingga **`prefers-reduced-motion` mematikan seluruh gerak**. Hanya `transform`+`opacity`; entrance hanya sekali saat mount pertama (filter/refresh/pagination tidak mengulang animasi).
+- **Shell**: sidebar dikelompokkan (Operasional / Administrasi / Lainnya), indikator aktif merah berpindah mulus antar item (`layoutId`), badge jumlah pengajuan menunggu di Approval, collapse + tooltip desktop; topbar breadcrumb.
+- **Login**: dua panel desktop (panel brand merah + panel form), motif streak diagonal (satu-satunya motif rel di app), orkestrasi masuk, **shake saat gagal**, ikon mata crossfade lihat/sembunyi. Tagline diperbarui (satu-satunya perubahan teks yang diizinkan brief).
+- **Beranda**: kartu statistik dengan ikon + angka count-up (AnimatedNumber), segmented control pil geser (Hari Ini/Minggu Ini/Bulan Ini), grafik bar bertulang grid + tooltip hover + legend, penanda "perlu tindakan" berdenyut halus.
+- **Tabel (Monitoring/Laporan/Audit/History)**: header sticky dalam kontainer scroll, row stagger maksimal 12 baris, chip status crossfade, indikator fetch saat refetch, kolom waktu/ID memakai mono, tombol salin untuk UUID objek audit, badge aksi semantik (LOGIN netral / LOGIN_FAILED merah / LOGOUT abu / EVIDENCE_ACCESS amber), teks header tanpa ALL-CAPS.
+- **Laporan**: 12 metrik dikelompokkan 3 seksi (Kehadiran / Kelengkapan / Izin & Koreksi) dengan penanda titik rel; tombol ekspor CSV/XLSX memberi umpan balik sibuk→centang.
+- **Data Master & Pengguna & Hak Akses**: komponen **Tabs** baru — indikator pil merah geser (`layoutId`) + tick "penanda rel" pada tab nonaktif, konten tab crossfade; toolbar filter digabung **satu baris** (cari + filter + Import Excel + Tambah Pengguna); kolom Aksi satu baris ikon; badge role memakai mono konsisten; empty state **"Pilih role dahulu"** di panel Hak Akses.
+- **Approval**: empty state mengikuti filter status (menunggu/disetujui/ditolak) dengan pesan kontekstual; notice hasil keputusan (disetujui/ditolak).
+- **Bantuan**: daftar artikel jadi **accordion** (chevron berputar 180°, body membuka halus, pratinjau saat tertutup), badge **Draf** amber, ikon kaca pembesar di pencarian.
+- **Profil**: header merah dengan motif streak diagonal, avatar lebih besar, seksi tetap Informasi Akun/Keamanan, tombol Simpan memberi umpan balik loading→centang.
+- Aksesibilitas & responsif: fokus terlihat di semua kontrol interaktif, target sentuh 40–44px, status tidak hanya warna (teks badge tetap ada), `aria-live` pada notice; dicek 360/768/1440.
+- Perbaikan kecil: `aria-label` dropdown Data Master "Filter biro" → **"Filter direktorat"** (menyamai istilah UI yang sudah berbahasa Indonesia).
+
+### Pembuktian (bukan klaim)
+- Gate per fase (6 commit): web `tsc -b` + `eslint --max-warnings 0` bersih; vitest **48/48** sebelum tambahan test terakhir; `pnpm build` sukses (17,23s); container web di-rebuild dan live di 5174.
+- **Playwright live 21/22 PASS** (`f8-verify-redesign.py`, screenshot `f8-*.png`, admin-hr, 360px & 1440px): header tabel `position: sticky` terbukti computed; header tabel tanpa uppercase; label 3 seksi Laporan + tombol Ekspor CSV/XLSX ada; chip aksi Audit mono + tombol "Salin ID objek" ada; tab Master `aria-selected` benar + toolbar satu baris (Cari pengguna, Import Excel, Tambah Pengguna); empty Approval sesuai filter; accordion Bantuan (`aria-expanded`, chevron `rotate-180`, tautan "Baca halaman lengkap", ikon pencarian); Profil memuat motif `.speed-lines` + avatar terukur 64px; **reduced-motion: `animationDuration` 1e-05s (animasi mati) tapi konten tetap terlihat**; tanpa console error di luar probe 401 login.
+- **1 "gagal" dari 22 bukan bug UI**: cek empty state /access memakai admin-hr yang memang **tidak punya izin** halaman akses → redirect ke Beranda (route guard terbukti bekerja). Sandi dev-admin berasal dari env `BOOTSTRAP_ADMIN_PASSWORD` (tidak tersedia di sesi ini); audit DB menunjukkan hanya dev-admin/admin-it memegang `ADMIN_IT`. Item ditutup dengan **test jsdom baru** `RolesPermissionsPanel.test.tsx` yang membuktikan empty state "Pilih role dahulu" ter-render — vitest kini **49/49** (8 file).
+- Keputusan desain yang dicatat: **notis inline dipertahankan alih-alih toast global** — brief menawarkan toast, tetapi pilihan sebelumnya (tervalidasi bersama user) dipertahankan agar tidak menumpuk notifikasi di app yang penuh dialog; semua teks UI tidak diubah kecuali typo (tagline login diizinkan brief).
+- Fitur dijamin tidak disentuh: filter, pagination, tab, ekspor CSV/XLSX, import Excel, aksi tabel, collapse sidebar, dan alur kamera absensi — selector uji (`tab-users`, `tab-schedules`, `access-tab-*`) dipertahankan lewat props `tabId`/`panelId` pada komponen Tabs.
+
 ## [2026-11-23] — Upgrade UI/UX: layer animasi halus di seluruh aplikasi
 
 ### Ditambah
