@@ -135,7 +135,6 @@ export function UsersPanel() {
   const [createForm, setCreateForm] = useState({
     username: '',
     displayName: '',
-    password: '',
     email: '',
     phone: '',
     roleIds: [] as string[],
@@ -218,23 +217,20 @@ export function UsersPanel() {
 
   const createMutation = useMutation({
     mutationFn: () => {
-      if (!createForm.username.trim() || !createForm.displayName.trim() || !createForm.password) {
-        throw new ApiError('VALIDATION', 'Username, nama tampilan, dan kata sandi wajib diisi.', 400);
-      }
-      if (createForm.password.length < 10) {
-        throw new ApiError('VALIDATION', 'Kata sandi minimal 10 karakter.', 400);
+      if (!createForm.username.trim() || !createForm.displayName.trim()) {
+        throw new ApiError('VALIDATION', 'Username dan nama tampilan wajib diisi.', 400);
       }
       if (createForm.roleIds.length === 0) {
         throw new ApiError('VALIDATION', 'Pilih minimal satu role.', 400);
       }
       const profileError = validateProfileForm(createForm.profile, true);
       if (profileError) throw new ApiError('VALIDATION', profileError, 400);
+      // Tanpa field password: backend memakai username sebagai sandi awal.
       return api<Row>('/admin/users', {
         method: 'POST',
         body: {
           username: createForm.username.trim(),
           displayName: createForm.displayName.trim(),
-          password: createForm.password,
           ...(createForm.email ? { email: createForm.email } : {}),
           ...(createForm.phone ? { phone: createForm.phone } : {}),
           roleIds: createForm.roleIds,
@@ -245,9 +241,9 @@ export function UsersPanel() {
     onSuccess: () => {
       setCreateOpen(false);
       setFormError(null);
-      setNotice('Pengguna baru berhasil dibuat.');
+      setNotice('Pengguna baru berhasil dibuat. Sandi awalnya sama dengan username-nya.');
       setCreateForm({
-        username: '', displayName: '', password: '', email: '', phone: '',
+        username: '', displayName: '', email: '', phone: '',
         roleIds: [], profile: { ...EMPTY_PROFILE },
       });
       invalidate();
@@ -733,7 +729,6 @@ export function UsersPanel() {
             [
               ['username', 'Username', 'text', true],
               ['displayName', 'Nama tampilan', 'text', true],
-              ['password', 'Kata sandi awal (min. 10 karakter)', 'password', true],
               ['email', 'Email', 'email', false],
               ['phone', 'Telepon', 'tel', false],
             ] as const
@@ -750,6 +745,9 @@ export function UsersPanel() {
                 value={createForm[name]}
                 onChange={(e) => setCreateForm((f) => ({ ...f, [name]: e.target.value }))}
               />
+              {name === 'username' ? (
+                <p className="mt-1 text-xs text-stone-500">Sandi awal pengguna otomatis sama dengan username-nya; pengguna bisa langsung login dengannya.</p>
+              ) : null}
             </div>
           ))}
           {roleCheckboxes(createForm.roleIds, (roleIds) =>

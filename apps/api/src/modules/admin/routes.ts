@@ -167,7 +167,8 @@ const userCreateBody = z.object({
     .string()
     .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/, 'Username hanya boleh huruf, angka, titik, garis bawah, atau hubung (diawali huruf/angka).'),
   displayName: z.string().min(1).max(128),
-  password: z.string().min(passwordSchemaMin).max(256),
+  // Kata sandi opsional: kalau kosong, dipakai username-nya (permintaan UAT).
+  password: z.string().min(passwordSchemaMin).max(256).optional(),
   email: z.string().email().max(255).optional(),
   phone: phoneIdSchema.optional(),
   roleIds: z.array(z.string().uuid()).min(1),
@@ -715,7 +716,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       const body = userCreateBody.parse(req.body);
       const roleCount = await db.role.count({ where: { id: { in: body.roleIds } } });
       if (roleCount !== new Set(body.roleIds).size) throw badRequest('Satu atau lebih role tidak ditemukan.');
-      const passwordHash = await hashPassword(body.password);
+      const passwordHash = await hashPassword(body.password ?? body.username);
       let user;
       try {
         user = await db.$transaction(async (tx) => {
@@ -726,7 +727,6 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
               passwordHash,
               email: body.email,
               phone: body.phone,
-              mustChangePassword: true,
               accountStatus: 'ACTIVE',
               roleAssignments: {
                 create: body.roleIds.map((roleId) => ({ roleId, validFrom: new Date(), assignedBy: ctx.user.id })),

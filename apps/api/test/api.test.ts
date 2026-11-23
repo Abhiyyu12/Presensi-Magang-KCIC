@@ -849,6 +849,56 @@ describe('Fase 1.5: role CRUD + gabung peserta ke pengguna + filter pengguna', (
     expect(listed.data.items.length).toBe(0);
   });
 
+  it('membuat pengguna tanpa kata sandi: sandi awal = username, tanpa paksa ganti, langsung bisa login', async () => {
+    const db = getDb();
+    const suffix = randomUUID().slice(0, 8);
+    const username = `nopass.${suffix}`;
+    const created = await post(app, '/api/v1/admin/users', admin, {
+      username,
+      displayName: 'Uji Sandi Default Username',
+      roleIds: [roleId],
+    });
+    expect(created.statusCode).toBe(200);
+    const userId = envelope(created).data.id;
+
+    try {
+      const dbUser = await db.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { mustChangePassword: true, passwordHash: true },
+      });
+      expect(dbUser.mustChangePassword).toBe(false);
+      await expect(verifyPassword(dbUser.passwordHash, username)).resolves.toBe(true);
+
+      const csrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+      const csrf = csrfRes.cookies.find((c) => c.name === 'csrf_token')?.value ?? '';
+      const loginAs = app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        headers: { cookie: `csrf_token=${csrf}`, 'x-csrf-token': csrf, origin: 'http://localhost:5173' },
+        payload: { username, password: username },
+      });
+      expect((await loginAs).statusCode).toBe(200);
+
+      // Sandi eksplisit tetap divalidasi min 10 karakter.
+      const tooShort = await post(app, '/api/v1/admin/users', admin, {
+        username: `short.${suffix}`,
+        displayName: 'Uji Sandi Pendek',
+        password: 'pendek',
+        roleIds: [roleId],
+      });
+      expect(tooShort.statusCode).toBe(400);
+    } finally {
+      const users = await db.user.findMany({ where: { username: { startsWith: `nopass.${suffix}` } } });
+      const shorts = await db.user.findMany({ where: { username: { startsWith: `short.${suffix}` } } });
+      for (const u of [...users, ...shorts]) {
+        await db.session.deleteMany({ where: { userId: u.id } });
+        await db.internProfile.deleteMany({ where: { userId: u.id } });
+        await db.userRoleAssignment.deleteMany({ where: { userId: u.id } });
+        await db.user.deleteMany({ where: { id: u.id } });
+      }
+    }
+  });
+
   it('blocks delete of a system role', async () => {
     const db = getDb();
     const systemRole = await db.role.findFirstOrThrow({ where: { isSystem: true } });
@@ -1102,7 +1152,7 @@ describe('Fase 1.5f: import pengguna via Excel', () => {
     expect(bad.errors.join(' ')).toContain('No. HP tidak valid');
   });
 
-  it('confirm membuat pengguna + profil + role, password sementara bekerja', async () => {
+  it('confirm membuat pengguna + profil + role, sandi awal = username tanpa paksa ganti', async () => {
     const db = getDb();
     const buf = await buildImportWorkbook([
       [
@@ -1125,10 +1175,10 @@ describe('Fase 1.5f: import pengguna via Excel', () => {
     expect(data.skipped).toBe(1);
     for (const u of data.users) {
       expect(u.username).toContain('uji.import.');
-      expect(u.temporaryPassword).toMatch(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{12}$/);
+      expect(u.initialPassword).toBe(u.username);
       const dbUser = await db.user.findUniqueOrThrow({ where: { username: u.username } });
-      expect(dbUser.mustChangePassword).toBe(true);
-      expect(await verifyPassword(dbUser.passwordHash, u.temporaryPassword)).toBe(true);
+      expect(dbUser.mustChangePassword).toBe(false);
+      expect(await verifyPassword(dbUser.passwordHash, u.username)).toBe(true);
       importedUsernames.push(u.username);
     }
 

@@ -4,6 +4,22 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-23] — User baru: tanpa paksa ganti sandi + sandi awal = username
+
+### Diubah (permintaan UAT: "masa suruh ubah password… default pw nya username aja")
+- **Pembuatan pengguna tanpa paksa ganti sandi**: `mustChangePassword` tidak lagi diset `true` di jalur pembuatan (dialog Tambah Pengguna dan import Excel), jadi pengguna baru **langsung masuk Beranda saat login pertama** tanpa layar wajib ganti sandi. Mekanisme `mustChangePassword` di backend/skema tetap ada (dipakai admin bootstrap via seed); alur LoginPage tidak diubah.
+- **Sandi awal = username di semua jalur pembuatan**:
+  - **Import Excel**: sandi acak sementara + paksa ganti dihapus — sandi awal tiap pengguna **sama dengan username-nya** (laporan hasil kini menyebut `initialPassword` alih-alih `temporaryPassword`; catatan audit tidak pernah menyimpan nilai sandi). Sheet Petunjuk baris ke-7 diperbarui; **kolom template TIDAK berubah**, jadi template Excel lama masih bisa dipakai.
+  - **Dialog Tambah Pengguna**: field "Kata sandi awal" **dihapus sama sekali** — diganti hint "Sandi awal pengguna otomatis sama dengan username-nya". Backend: `password` jadi opsional; kalau kosong dipakai username (validasi min-10 tetap berlaku kalau admin mengisi manual).
+- Yang **tetap tidak berubah**: reset sandi oleh admin (PATCH + dialog Ubah Pengguna) tetap min. 10 karakter; login pakai username sebagai sandi tetap lolos validasi karena backend membandingkan hash, bukan panjang input login.
+
+### Pembuktian (bukan klaim)
+- Gate: api `tsc --noEmit` + `eslint --max-warnings 0` bersih, vitest **99/99** (+1 test baru: POST /admin/users tanpa sandi → hash = username, `mustChangePassword=false`, alur csrf→login penuh 200; sandi 'pendek' manual tetap 400); web tsc+eslint bersih + vitest **49/49**. Container api+web di-rebuild dan live (3002/5174).
+- **Playwright live 7/7 PASS** (`uat_nopass.py`, admin-hr → /master → tab Pengguna): field sandi TIDAK ada di dialog Tambah Pengguna; hint "sandi awal = username" tampil; notice sukses menyebut sandi = username; **user baru `uji.nopass.*` langsung login dengan sandi = username-nya**; TIDAK ada layar wajib ganti sandi (langsung Beranda); tanpa console error. Screenshot `nopass_1_create.png`, `nopass_2_login.png`.
+- Import Excel dibuktikan lewat test API: `initialPassword === username`, `mustChangePassword=false`, `verifyPassword(hash, username) === true`.
+- Temuan sampingan (bukan regresi): INTERN tanpa profil peserta mendapat 403 `/attendance/today` — guard backend lama ("Hanya peserta magang."), UI menampilkan ErrorState dengan tombol coba lagi; UAT akhir memakai profil peserta lengkap sehingga alur normal.
+- Bersih-bersih: semua user uji (`uji.nopass.*`) + profil/sesi/snapshot terkait dihapus dari DB (verifikasi count = 0).
+
 ## [2026-11-23] — Redesign UI per brief: identitas "rel KCIC", tipografi karakter, motion kecepatan terkendali
 
 ### Diubah (visual/UX/motion saja — logika, routing, kontrak API, dan struktur data tidak disentuh)

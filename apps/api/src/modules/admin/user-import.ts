@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import ExcelJS from 'exceljs';
 import type { CellValue, DataValidation } from 'exceljs';
-import crypto from 'node:crypto';
 import { getDb } from '../../infrastructure/db.js';
 import { ok } from '../../common/http.js';
 import { badRequest, forbidden, unprocessable } from '../../common/errors.js';
@@ -14,8 +13,8 @@ import type { AccessContext } from '../access/context.js';
 
 // Fase 1.5f: import pengguna massal via Excel (.xlsx).
 // Template dibangun dinamis dari data master terkini (dropdown pada sheet
-// tersembunyi), validasi per baris di backend, password awal acak yang hanya
-// ditampilkan sekali pada laporan (tidak pernah masuk audit/log).
+// tersembunyi), validasi per baris di backend, password awal = username
+// (permintaan UAT) dan pengguna tidak dipaksa ganti sandi saat login pertama.
 
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 const MAX_IMPORT_ROWS = 200;
@@ -112,26 +111,6 @@ function isValidDateOnly(s: string): boolean {
   return Number.isFinite(ms);
 }
 
-function generateTemporaryPassword(): string {
-  const lower = 'abcdefghijkmnpqrstuvwxyz';
-  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const digits = '23456789';
-  const symbols = '!@#$%^&*';
-  const all = lower + upper + digits + symbols;
-  const chars = [
-    lower[crypto.randomInt(lower.length)],
-    upper[crypto.randomInt(upper.length)],
-    digits[crypto.randomInt(digits.length)],
-    symbols[crypto.randomInt(symbols.length)],
-  ];
-  for (let i = chars.length; i < 12; i += 1) chars.push(all[crypto.randomInt(all.length)]);
-  for (let i = chars.length - 1; i > 0; i -= 1) {
-    const j = crypto.randomInt(i + 1);
-    [chars[i], chars[j]] = [chars[j], chars[i]];
-  }
-  return chars.join('');
-}
-
 export async function buildUserImportTemplate(): Promise<Buffer> {
   const db = getDb();
   const [roles, bureaus, divisions, placements] = await Promise.all([
@@ -154,7 +133,7 @@ export async function buildUserImportTemplate(): Promise<Buffer> {
     '4. Peserta magang (role INTERN) wajib mengisi Nomor Peserta, Direktorat, dan Tanggal Mulai.',
     '5. Jika Biro diisi, kolom Direktorat juga wajib diisi dan biro harus milik direktorat tersebut.',
     '6. Kolom tanggal bertipe tanggal (tampil YYYY-MM-DD) dengan validasi rentang 2020-2035 — Excel menolak nilai salah. Kolom No. HP bertipe teks (Excel tidak menghapus 0 di depan): isi 08xxxxxxxxxx atau kode negara apa pun, mis. +6281234567890.',
-    '7. Setiap pengguna baru mendapat password sementara yang tampil sekali pada laporan setelah import.',
+    '7. Password awal setiap pengguna sama dengan username-nya — pengguna bisa langsung login dengan itu.',
     `8. Maksimal ${MAX_IMPORT_ROWS} baris per file, ukuran file maksimal 2 MB.`,
     '9. Contoh baris berikut hanya ilustrasi — jangan ikut mengimpornya.',
   ];
@@ -601,10 +580,10 @@ export function registerUserImportRoutes(app: FastifyInstance): void {
     }
 
     const report = await getDb().$transaction(async (tx) => {
-      const created: { row: number; username: string; displayName: string; temporaryPassword: string }[] = [];
+      const created: { row: number; username: string; displayName: string; initialPassword: string }[] = [];
       for (const v of valid) {
-        const temporaryPassword = generateTemporaryPassword();
-        const passwordHash = await hashPassword(temporaryPassword);
+        const initialPassword = v.username;
+        const passwordHash = await hashPassword(initialPassword);
         const user = await tx.user.create({
           data: {
             username: v.username,
@@ -612,7 +591,6 @@ export function registerUserImportRoutes(app: FastifyInstance): void {
             passwordHash,
             email: v.email,
             phone: v.phone,
-            mustChangePassword: true,
             accountStatus: 'ACTIVE',
             roleAssignments: {
               create: { roleId: v.roleId, validFrom: new Date(), assignedBy: ctx.user.id },
@@ -643,9 +621,9 @@ export function registerUserImportRoutes(app: FastifyInstance): void {
           after: { username: user.username, displayName: user.displayName, importRow: v.row },
           requestId: req.id,
         });
-        created.push({ row: v.row, username: user.username, displayName: user.displayName, temporaryPassword });
+        created.push({ row: v.row, username: user.username, displayName: user.displayName, initialPassword });
       }
-      // Ringkasan audit sengaja tidak menyimpan password sementara.
+      // Ringkasan audit sengaja tidak menyimpan nilai password (sama dengan username).
       await writeAudit(tx as never, {
         actorUserId: ctx.user.id,
         action: 'ADMIN_USER_IMPORT',

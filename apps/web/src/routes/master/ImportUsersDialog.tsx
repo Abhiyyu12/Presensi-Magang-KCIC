@@ -23,7 +23,7 @@ interface ConfirmUser {
   row: number;
   username: string;
   displayName: string;
-  temporaryPassword: string;
+  initialPassword: string;
 }
 
 interface ConfirmResult {
@@ -279,19 +279,17 @@ export function ImportUsersDialog({ open, onClose, onImported }: ImportUsersDial
               {result.created} pengguna berhasil dibuat, {result.skipped} baris dilewati.
             </p>
             {result.users.length > 0 ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <p className="text-sm font-semibold text-amber-900">Password sementara (tampil sekali)</p>
+              <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+                <p className="text-sm font-semibold text-stone-800">Pengguna baru</p>
                 <ul className="mt-2 space-y-1.5">
                   {result.users.map((u) => (
-                    <li key={u.username} className="text-sm text-amber-900">
-                      <span className="font-medium">{u.username}</span> —{' '}
-                      <span className="break-all font-mono text-xs">{u.temporaryPassword}</span>
+                    <li key={u.username} className="text-sm text-stone-700">
+                      <span className="font-medium">{u.username}</span> — {u.displayName}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-xs text-amber-700">
-                  Pengguna wajib mengganti password saat login pertama. Catat sekarang; tidak
-                  ditampilkan lagi.
+                <p className="mt-2 text-xs text-stone-600">
+                  Sandi awal setiap pengguna sama dengan username-nya; pengguna bisa langsung login dengannya.
                 </p>
               </div>
             ) : null}
