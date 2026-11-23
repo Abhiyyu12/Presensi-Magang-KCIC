@@ -4,6 +4,23 @@ Semua perubahan penting proyek ini dicatat di sini. Format mengikuti semangat
 [Keep a Changelog](https://keepachangelog.com/id/1.0.0/); tanggal memakai zona waktu proyek (WIB).
 Aplikasi ini hanya untuk lingkungan lokal/development dengan data dummy.
 
+## [2026-11-23] — Upgrade UI/UX: layer animasi halus di seluruh aplikasi
+
+### Ditambah
+- **Bahasa gerak yang konsisten** (permintaan user: "upgrade ui/ux biar tampilannya bagus"): semua animasi ≤300ms, hanya properti `transform`+`opacity` (GPU, tidak memicu layout), kurva ease-out kuat dari token baru `--ease-out-strong` / `--ease-drawer` di index.css, dan **otomatis dimatikan oleh `prefers-reduced-motion`** (blok CSS global yang sudah ada + `MotionConfig reducedMotion="user"`).
+- **Dialog keluar-masuk halus** — backdrop fade 180ms, panel scale 0.96→1 + naik 12px (220ms), keluar simetris via `AnimatePresence` dari library **`motion`** (satu-satunya dependency baru; dipilih alih-alih GSAP karena deklaratif untuk React dan sesuai tips user "pilih salah satu GSAP atau Motion"; exit animation memang mustahil dengan CSS murni). Berlaku otomatis untuk SEMUA dialog app (Tambah/Ubah/Hapus, konfirmasi, wajib ganti sandi). **Lenis smooth-scroll sengaja tidak dipakai** — scroll hijack mengganggu app dashboard yang banyak form/dialog; bisa ditambah belakangan bila diminta.
+- **Transisi halaman**: konten utama naik-halus 180ms tiap pindah route (key per pathname).
+- **Stagger dashboard**: kartu Beranda (peserta, admin, pembimbing) masuk bergiliran 40ms.
+- **Drawer HP**: panel geser dari kiri 220ms (kurva drawer ala iOS) + backdrop fade.
+- **Dropdown halus**: menu akun header & dropdown MasterCombobox pop 150ms dengan transform-origin di pemicu.
+- **Momen sukses absen**: kartu hijau naik halus + ikon centang baru yang pop (satu-satunya momen "delight" — aksi paling penting app).
+- **Feedback tekan tombol**: semua tombol `.btn`/`.btn-icon` mengecil halus (scale 0.98/0.96, 150ms) saat ditekan.
+
+### Pembuktian (bukan klaim)
+- Gate: web tsc+eslint bersih + vitest **48/48** (termasuk 2 test fokus ConfirmDialog — perilaku fokus & restore focus saat tutup tidak berubah).
+- Playwright live **16/16 OK** (login dev-admin + peserta1; log `uat_animasi.py`, screenshot `anim_*.png`): computed style membuktikan `rise-in` terpasang di `main` tiap pindah halaman & stagger anak ke-2 delay 0.04s; dialog buka→tutup bersih (exit tidak meninggalkan DOM); dropdown combobox Jadwal-INDIVIDUAL tampil (9 opsi) dan opsi tetap bisa dipilih; drawer HP buka/tutup bersih; menu akun & dropdown ter-animasi; **reduced-motion: durasi 1e-05s tapi konten tetap terlihat**; nol error console di luar probe sesi 401 saat login.
+- Fungsional tidak disentuh: alur kamera getUserMedia absensi tetap apa adanya, selector/data/kontrak API tidak berubah.
+
 ## [2026-11-23] — Admin bisa reset kata sandi pengguna di Data Master > Pengguna
 
 ### Ditambah

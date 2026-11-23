@@ -132,8 +132,21 @@ export default function AttendancePage() {
           </Link>
         </section>
       ) : step === 'done' && submitter.result ? (
-        <section className="card border-green-200 bg-green-50" aria-live="polite">
-          <p className="text-sm font-semibold text-green-800">Absensi berhasil disimpan.</p>
+        <section
+          className="card border-green-200 bg-green-50 success-enter"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="success-pop flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-600 text-white"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+            <p className="text-sm font-semibold text-green-800">Absensi berhasil disimpan.</p>
+          </div>
           <dl className="mt-3 space-y-1 text-sm text-green-900">
             <div className="flex justify-between gap-2">
               <dt>Waktu server</dt>

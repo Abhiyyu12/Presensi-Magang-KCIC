@@ -66,7 +66,7 @@ export default function SupervisorDashboardPage() {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="stagger space-y-4">
       <header>
         <h1 className="text-lg font-bold text-slate-900">Beranda Pembimbing</h1>
         <p className="text-sm text-slate-600">

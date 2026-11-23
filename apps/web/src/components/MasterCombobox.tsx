@@ -177,7 +177,7 @@ export function MasterCombobox({
       ) : null}
 
       {open ? (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg">
+        <div className="menu-enter absolute z-50 mt-1 w-full origin-top rounded-lg border border-slate-200 bg-white shadow-lg">
           <div className="border-b border-slate-100 p-2">
             <input
               type="text"

@@ -263,7 +263,7 @@ export default function AdminDashboardPage() {
     checkedIn > 0 || lateCount > 0 || absent > 0 || (num('needsReview') ?? 0) > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="stagger space-y-4">
       <header>
         <h1 className="text-lg font-bold text-slate-900">Beranda Admin</h1>
         <p className="text-sm text-slate-600">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -69,6 +69,7 @@ const COLLAPSE_KEY = 'presensi.nav.collapsed';
 export function Layout() {
   const { user, has, loading, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -210,7 +211,7 @@ export function Layout() {
                 />
                 <div
                   role="menu"
-                  className="absolute right-0 z-50 mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                  className="menu-enter absolute right-0 z-50 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
                 >
                   <p className="border-b border-slate-100 px-4 py-2 sm:hidden">
                     <span className="block truncate text-sm font-semibold text-slate-800">{displayName}</span>
@@ -277,7 +278,7 @@ export function Layout() {
           </div>
         </nav>
 
-        <main className="w-full min-w-0 flex-1 px-4 pb-10 pt-4">
+        <main key={location.pathname} className="page-enter w-full min-w-0 flex-1 px-4 pb-10 pt-4">
           <Outlet />
         </main>
       </div>
@@ -288,14 +289,14 @@ export function Layout() {
           <button
             type="button"
             aria-label="Tutup menu navigasi"
-            className="absolute inset-0 bg-slate-900/40"
+            className="backdrop-enter absolute inset-0 bg-slate-900/40"
             onClick={() => setDrawerOpen(false)}
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Menu navigasi"
-            className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl"
+            className="drawer-enter absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl"
           >
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
               <p className="text-sm font-bold text-slate-900">Menu</p>

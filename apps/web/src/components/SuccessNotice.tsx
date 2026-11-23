@@ -6,7 +6,7 @@ interface SuccessNoticeProps {
 export function SuccessNotice({ message, onDismiss }: SuccessNoticeProps) {
   return (
     <div
-      className="flex items-start justify-between gap-2 rounded-lg border border-green-200 bg-green-50 p-3"
+      className="notice-enter flex items-start justify-between gap-2 rounded-lg border border-green-200 bg-green-50 p-3"
       role="status"
     >
       <p className="text-sm font-medium text-green-800">{message}</p>
