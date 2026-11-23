@@ -126,7 +126,7 @@ export function SimulatePanel() {
               {result.reason}
             </p>
           ) : null}
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-stone-500">
             Diagnostik, tidak memberi akses. Keputusan sebenarnya tetap dievaluasi server pada
             setiap request.
           </p>

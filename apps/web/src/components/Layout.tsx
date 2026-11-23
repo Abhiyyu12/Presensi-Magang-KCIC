@@ -126,7 +126,7 @@ export function Layout() {
 
   const linkClass = (isActive: boolean) =>
     `flex min-h-touch items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
-      isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-700 hover:bg-slate-50'
+      isActive ? 'bg-brand-50 text-brand-800' : 'text-stone-700 hover:bg-stone-50'
     }`;
 
   const displayName = user?.displayName ?? user?.username ?? 'Akun';
@@ -156,7 +156,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-40 border-b border-stone-200 bg-white">
         <div className="flex h-14 items-center justify-between gap-2 px-4">
           <div className="flex min-w-0 items-center gap-2">
             <button
@@ -168,7 +168,7 @@ export function Layout() {
             >
               <MenuIcon />
             </button>
-            <NavLink to="/" className="flex min-w-0 items-center gap-2 font-bold text-slate-900">
+            <NavLink to="/" className="flex min-w-0 items-center gap-2 font-bold text-stone-900">
               <span
                 aria-hidden="true"
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-700 text-sm text-white"
@@ -181,7 +181,7 @@ export function Layout() {
           <div className="relative shrink-0">
             <button
               type="button"
-              className="flex min-h-touch items-center gap-2 rounded-lg px-2 hover:bg-slate-50"
+              className="flex min-h-touch items-center gap-2 rounded-lg px-2 hover:bg-stone-50"
               aria-expanded={profileMenuOpen}
               aria-haspopup="menu"
               aria-label={`Menu akun ${displayName}`}
@@ -194,10 +194,10 @@ export function Layout() {
                 {initials}
               </span>
               <span className="hidden min-w-0 flex-col items-start leading-tight sm:flex">
-                <span className="max-w-[10rem] truncate text-sm font-semibold text-slate-800">{displayName}</span>
-                <span className="max-w-[10rem] truncate text-[11px] text-slate-500">{roleLabel(user)}</span>
+                <span className="max-w-[10rem] truncate text-sm font-semibold text-stone-800">{displayName}</span>
+                <span className="max-w-[10rem] truncate text-[11px] text-stone-500">{roleLabel(user)}</span>
               </span>
-              <span aria-hidden="true" className="text-slate-400">
+              <span aria-hidden="true" className="text-stone-400">
                 ▾
               </span>
             </button>
@@ -211,16 +211,16 @@ export function Layout() {
                 />
                 <div
                   role="menu"
-                  className="menu-enter absolute right-0 z-50 mt-1 w-48 origin-top-right rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                  className="menu-enter absolute right-0 z-50 mt-1 w-48 origin-top-right rounded-lg border border-stone-200 bg-white py-1 shadow-lg"
                 >
-                  <p className="border-b border-slate-100 px-4 py-2 sm:hidden">
-                    <span className="block truncate text-sm font-semibold text-slate-800">{displayName}</span>
-                    <span className="block truncate text-[11px] text-slate-500">{roleLabel(user)}</span>
+                  <p className="border-b border-stone-100 px-4 py-2 sm:hidden">
+                    <span className="block truncate text-sm font-semibold text-stone-800">{displayName}</span>
+                    <span className="block truncate text-[11px] text-stone-500">{roleLabel(user)}</span>
                   </p>
                   <NavLink
                     to="/profil"
                     role="menuitem"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50"
                     onClick={() => setProfileMenuOpen(false)}
                   >
                     Profil / Akun
@@ -228,7 +228,7 @@ export function Layout() {
                   <button
                     type="button"
                     role="menuitem"
-                    className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50"
+                    className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-stone-50"
                     onClick={() => void handleLogout()}
                   >
                     Keluar
@@ -244,15 +244,15 @@ export function Layout() {
         {/* Desktop sidebar: collapsible. */}
         <nav
           aria-label="Navigasi utama"
-          className={`sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 flex-col justify-between border-r border-slate-200 bg-white py-3 transition-[width] lg:flex ${
+          className={`sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 flex-col justify-between border-r border-stone-200 bg-white py-3 transition-[width] lg:flex ${
             collapsed ? 'w-[4.25rem]' : 'w-60'
           }`}
         >
           <div className={collapsed ? 'px-2' : 'px-3'}>{sidebarNav}</div>
-          <div className="border-t border-slate-100 px-2 pt-2">
+          <div className="border-t border-stone-100 px-2 pt-2">
             <button
               type="button"
-              className={`flex min-h-touch w-full items-center rounded-lg px-2 text-slate-500 transition-colors hover:bg-brand-50 hover:text-brand-700 ${
+              className={`flex min-h-touch w-full items-center rounded-lg px-2 text-stone-500 transition-colors hover:bg-brand-50 hover:text-brand-700 ${
                 collapsed ? 'justify-center' : 'gap-2'
               }`}
               aria-pressed={collapsed}
@@ -289,7 +289,7 @@ export function Layout() {
           <button
             type="button"
             aria-label="Tutup menu navigasi"
-            className="backdrop-enter absolute inset-0 bg-slate-900/40"
+            className="backdrop-enter absolute inset-0 bg-stone-900/40"
             onClick={() => setDrawerOpen(false)}
           />
           <div
@@ -298,8 +298,8 @@ export function Layout() {
             aria-label="Menu navigasi"
             className="drawer-enter absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <p className="text-sm font-bold text-slate-900">Menu</p>
+            <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
+              <p className="text-sm font-bold text-stone-900">Menu</p>
               <button
                 type="button"
                 className="btn-secondary px-2 py-1 text-xs"
@@ -328,7 +328,7 @@ export function Layout() {
                 ))}
               </ul>
             </nav>
-            <div className="border-t border-slate-100 p-3">
+            <div className="border-t border-stone-100 p-3">
               <button
                 type="button"
                 className="btn-secondary w-full justify-start text-sm"

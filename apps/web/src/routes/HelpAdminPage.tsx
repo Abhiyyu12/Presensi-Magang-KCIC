@@ -134,8 +134,8 @@ export default function HelpAdminPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Kelola Artikel Bantuan</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-lg font-bold text-stone-900">Kelola Artikel Bantuan</h1>
+          <p className="text-sm text-stone-600">
             Artikel draft tidak terlihat pengguna sampai dipublikasikan.
           </p>
         </div>
@@ -227,7 +227,7 @@ export default function HelpAdminPage() {
               value={form.content}
               onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
             />
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-stone-500">
               Konten dirender sebagai teks biasa; HTML tidak didukung demi keamanan.
             </p>
           </div>

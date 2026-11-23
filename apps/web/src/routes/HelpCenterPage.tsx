@@ -41,8 +41,8 @@ export function HelpCenterPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Pusat Bantuan</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-lg font-bold text-stone-900">Pusat Bantuan</h1>
+        <p className="text-sm text-stone-600">
           Panduan absensi dengan kamera dan lokasi, izin tengah hari, dan penggunaan aplikasi.
         </p>
       </header>
@@ -106,8 +106,8 @@ export function HelpCenterPage() {
             {(articlesQuery.data?.items ?? []).map((article) => (
               <li key={article.id}>
                 <Link to={`/bantuan/${article.slug}`} className="card block hover:border-brand-600">
-                  <p className="text-sm font-semibold text-slate-800">{article.title}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-slate-500">{article.content}</p>
+                  <p className="text-sm font-semibold text-stone-800">{article.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-stone-500">{article.content}</p>
                   {article.categoryName ? (
                     <p className="mt-1 text-[11px] text-brand-700">{article.categoryName}</p>
                   ) : null}
@@ -146,13 +146,13 @@ export function HelpArticlePage() {
   return (
     <article className="mx-auto max-w-2xl space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">{article.title}</h1>
+        <h1 className="text-lg font-bold text-stone-900">{article.title}</h1>
         {article.categoryName ? (
           <p className="text-xs text-brand-700">{article.categoryName}</p>
         ) : null}
       </header>
       {/* Plain-text rendering only — never dangerouslySetInnerHTML. */}
-      <div className="card whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+      <div className="card whitespace-pre-wrap text-sm leading-relaxed text-stone-700">
         {article.content}
       </div>
       <Link to="/bantuan" className="btn-secondary">

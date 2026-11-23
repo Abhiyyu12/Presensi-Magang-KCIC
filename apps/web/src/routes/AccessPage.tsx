@@ -24,12 +24,12 @@ export default function AccessPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Pengguna &amp; Hak Akses</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-lg font-bold text-stone-900">Pengguna &amp; Hak Akses</h1>
+        <p className="text-sm text-stone-600">
           Atur role, pohon permission, policy, dan simulasi akses. Semua perubahan diaudit server.
         </p>
       </header>
-      <div role="tablist" aria-label="Bagian manajemen akses" className="flex gap-1 overflow-x-auto border-b border-slate-200">
+      <div role="tablist" aria-label="Bagian manajemen akses" className="flex gap-1 overflow-x-auto border-b border-stone-200">
         {visibleTabs.map((item) => (
           <button
             key={item.key}
@@ -41,7 +41,7 @@ export default function AccessPage() {
             className={`min-h-touch shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${
               activeTab === item.key
                 ? 'border-brand-700 text-brand-800'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
+                : 'border-transparent text-stone-600 hover:text-stone-900'
             }`}
             onClick={() => setTab(item.key)}
           >

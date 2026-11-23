@@ -91,8 +91,8 @@ export default function HistoryPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Riwayat Absensi</h1>
-          <p className="text-sm text-slate-600">Data riwayat milik Anda sendiri.</p>
+          <h1 className="text-lg font-bold text-stone-900">Riwayat Absensi</h1>
+          <p className="text-sm text-stone-600">Data riwayat milik Anda sendiri.</p>
         </div>
         {user?.internProfileId ? (
           <a className="btn-secondary" href={exportHref} download>
@@ -114,7 +114,7 @@ export default function HistoryPage() {
               className={`min-h-touch rounded-full border px-4 text-sm font-medium ${
                 active
                   ? 'border-brand-600 bg-brand-600 text-white'
-                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+                  : 'border-stone-300 bg-white text-stone-700 hover:bg-stone-50'
               }`}
               onClick={() => {
                 setFilters(range);

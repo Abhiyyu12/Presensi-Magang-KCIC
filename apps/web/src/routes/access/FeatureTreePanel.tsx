@@ -9,13 +9,13 @@ function TreeNode({ node, depth }: { node: FeatureNode; depth: number }) {
   return (
     <li>
       <div
-        className="flex flex-wrap items-baseline gap-2 rounded px-2 py-1 hover:bg-slate-50"
+        className="flex flex-wrap items-baseline gap-2 rounded px-2 py-1 hover:bg-stone-50"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
-        <span className="text-sm font-medium text-slate-800">{node.label}</span>
-        <span className="font-mono text-xs text-slate-500">{node.code}</span>
+        <span className="text-sm font-medium text-stone-800">{node.label}</span>
+        <span className="font-mono text-xs text-stone-500">{node.code}</span>
         {node.nodeType ? (
-          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+          <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-600">
             {node.nodeType}
           </span>
         ) : null}
@@ -64,8 +64,8 @@ export function FeatureTreePanel() {
 
   return (
     <div className="card">
-      <h2 className="text-sm font-semibold text-slate-800">Feature Tree (read-only)</h2>
-      <p className="mt-1 text-xs text-slate-500">
+      <h2 className="text-sm font-semibold text-stone-800">Feature Tree (read-only)</h2>
+      <p className="mt-1 text-xs text-stone-500">
         Struktur navigasi dan fitur yang dilayani server. Perubahan dilakukan lewat konfigurasi
         backend yang diaudit.
       </p>

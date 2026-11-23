@@ -60,7 +60,7 @@ function TriCheckbox({
   return (
     <input
       type="checkbox"
-      className="h-4 w-4 rounded border-slate-300"
+      className="h-4 w-4 rounded border-stone-300"
       checked={checked}
       aria-label={ariaLabel}
       ref={(el) => {
@@ -252,8 +252,8 @@ export function RolesPermissionsPanel() {
           ))}
         </select>
         {roleId && (templatesQuery.data?.items ?? []).length > 0 ? (
-          <div className="mt-3 border-t border-slate-100 pt-3">
-            <p className="text-xs font-semibold uppercase text-slate-500">Isi cepat dengan template</p>
+          <div className="mt-3 border-t border-stone-100 pt-3">
+            <p className="text-xs font-semibold uppercase text-stone-500">Isi cepat dengan template</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {(templatesQuery.data?.items ?? []).map((t) => (
                 <button
@@ -278,7 +278,7 @@ export function RolesPermissionsPanel() {
       {roleId ? (
         <div className="card">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-800">
+            <h2 className="text-sm font-semibold text-stone-800">
               Pohon permission (centang = boleh, kosong = tidak boleh)
             </h2>
             <div className="flex flex-wrap items-center gap-2">
@@ -322,7 +322,7 @@ export function RolesPermissionsPanel() {
                 </button>
               </>
             )}
-            <span className="text-xs text-slate-500">{allowed.size} dari {allCodes.length} permission dipilih</span>
+            <span className="text-xs text-stone-500">{allowed.size} dari {allCodes.length} permission dipilih</span>
           </div>
 
           <div className="mt-3 space-y-2">
@@ -332,11 +332,11 @@ export function RolesPermissionsPanel() {
               const menuSome = menuCodes.some((c) => allowed.has(c));
               const menuOpen = q !== '' || expanded.has(menu.key);
               return (
-                <section key={menu.key} className="rounded-lg border border-slate-200">
-                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-2">
+                <section key={menu.key} className="rounded-lg border border-stone-200">
+                  <div className="flex items-center gap-2 bg-stone-50 px-3 py-2">
                     <button
                       type="button"
-                      className="text-slate-500 hover:text-slate-800"
+                      className="text-stone-500 hover:text-stone-800"
                       aria-expanded={menuOpen}
                       aria-label={`${menuOpen ? 'Tutup' : 'Buka'} menu ${menu.label}`}
                       onClick={() =>
@@ -358,11 +358,11 @@ export function RolesPermissionsPanel() {
                       ariaLabel={`Pilih semua permission menu ${menu.label}`}
                       onChange={(on) => toggleNode(menuCodes, on)}
                     />
-                    <span className="text-sm font-semibold text-slate-800">{menu.label}</span>
-                    <span className="text-xs text-slate-400">{menuCodes.filter((c) => allowed.has(c)).length}/{menuCodes.length}</span>
+                    <span className="text-sm font-semibold text-stone-800">{menu.label}</span>
+                    <span className="text-xs text-stone-400">{menuCodes.filter((c) => allowed.has(c)).length}/{menuCodes.length}</span>
                   </div>
                   {menuOpen ? (
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-stone-100">
                       {menu.submenus.map((submenu) => {
                         const subCodes = submenu.permissions.map((p) => p.code);
                         const subOn = subCodes.every((c) => allowed.has(c));
@@ -374,7 +374,7 @@ export function RolesPermissionsPanel() {
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                className="text-slate-400 hover:text-slate-700"
+                                className="text-stone-400 hover:text-stone-700"
                                 aria-expanded={subOpen}
                                 aria-label={`${subOpen ? 'Tutup' : 'Buka'} submenu ${submenu.label}`}
                                 onClick={() =>
@@ -396,16 +396,16 @@ export function RolesPermissionsPanel() {
                                 ariaLabel={`Pilih semua permission submenu ${submenu.label}`}
                                 onChange={(on) => toggleNode(subCodes, on)}
                               />
-                              <span className="text-sm font-medium text-slate-700">{submenu.label}</span>
+                              <span className="text-sm font-medium text-stone-700">{submenu.label}</span>
                             </div>
                             {subOpen ? (
                               <ul className="mt-1.5 grid grid-cols-1 gap-x-4 gap-y-1 pl-7 sm:grid-cols-2 lg:grid-cols-3">
                                 {submenu.permissions.map((p) => (
                                   <li key={p.code}>
-                                    <label className="flex items-start gap-2 rounded px-1 py-0.5 text-sm text-slate-700 hover:bg-slate-50">
+                                    <label className="flex items-start gap-2 rounded px-1 py-0.5 text-sm text-stone-700 hover:bg-stone-50">
                                       <input
                                         type="checkbox"
-                                        className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                                        className="mt-0.5 h-4 w-4 rounded border-stone-300"
                                         checked={allowed.has(p.code)}
                                         aria-label={`ALLOW ${p.code}`}
                                         onChange={(e) =>
@@ -418,9 +418,9 @@ export function RolesPermissionsPanel() {
                                         }
                                       />
                                       <span>
-                                        <span className="block font-mono text-xs text-slate-800">{p.code}</span>
+                                        <span className="block font-mono text-xs text-stone-800">{p.code}</span>
                                         {p.description ? (
-                                          <span className="block text-xs text-slate-500">{p.description}</span>
+                                          <span className="block text-xs text-stone-500">{p.description}</span>
                                         ) : null}
                                       </span>
                                     </label>
@@ -437,12 +437,12 @@ export function RolesPermissionsPanel() {
               );
             })}
             {visibleMenus.length === 0 ? (
-              <p className="text-sm text-slate-500">Tidak ada permission yang cocok dengan pencarian.</p>
+              <p className="text-sm text-stone-500">Tidak ada permission yang cocok dengan pencarian.</p>
             ) : null}
           </div>
         </div>
       ) : (
-        <p className="text-sm text-slate-500">Pilih role untuk melihat dan mengubah permission.</p>
+        <p className="text-sm text-stone-500">Pilih role untuk melihat dan mengubah permission.</p>
       )}
 
       <ConfirmDialog

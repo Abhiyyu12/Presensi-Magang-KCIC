@@ -78,11 +78,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-stone-100 p-4">
       <div className="page-enter w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-bold text-slate-900">Presensi Magang KCIC</h1>
-          <p className="mt-1 text-sm text-slate-600">Masuk dengan akun yang diberikan admin.</p>
+          <h1 className="text-xl font-bold text-stone-900">Presensi Magang KCIC</h1>
+          <p className="mt-1 text-sm text-stone-600">Masuk dengan akun yang diberikan admin.</p>
         </div>
 
         <form className="card space-y-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>

@@ -120,8 +120,8 @@ export default function ApprovalsPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Approval Izin</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-lg font-bold text-stone-900">Approval Izin</h1>
+          <p className="text-sm text-stone-600">
             Antrean pengajuan izin sesuai cakupan Anda. Penolakan wajib disertai catatan.
           </p>
         </div>
@@ -186,7 +186,7 @@ export default function ApprovalsPage() {
         onConfirm={() => setDecision('approve')}
       >
         {selected ? (
-          <div className="mt-3 space-y-1 text-sm text-slate-700">
+          <div className="mt-3 space-y-1 text-sm text-stone-700">
             <p>
               <strong>{selected.participantName ?? 'Peserta'}</strong>
               {selected.bureau ? ` · ${selected.bureau}` : ''}

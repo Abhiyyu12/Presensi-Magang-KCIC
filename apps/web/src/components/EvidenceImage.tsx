@@ -24,7 +24,7 @@ export function EvidenceImage({ attendanceId, eventId, alt, className }: Evidenc
       src={`${API_BASE}/attendance/${attendanceId}/evidence?eventId=${eventId}`}
       alt={alt}
       onError={() => setFailed(true)}
-      className={`rounded-lg border border-slate-200 bg-slate-100 object-cover ${className ?? 'h-24 w-24'}`}
+      className={`rounded-lg border border-stone-200 bg-stone-100 object-cover ${className ?? 'h-24 w-24'}`}
     />
   );
 }

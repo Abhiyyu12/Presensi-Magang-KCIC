@@ -65,9 +65,9 @@ function initialsOf(name: string | undefined, fallback: string): string {
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-2 border-b border-slate-100 py-2">
-      <dt className="shrink-0 text-sm text-slate-500">{label}</dt>
-      <dd className="text-right text-sm font-medium text-slate-800">{value}</dd>
+    <div className="flex justify-between gap-2 border-b border-stone-100 py-2">
+      <dt className="shrink-0 text-sm text-stone-500">{label}</dt>
+      <dd className="text-right text-sm font-medium text-stone-800">{value}</dd>
     </div>
   );
 }
@@ -75,7 +75,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function SectionCard({ title, headingId, children }: { title: string; headingId: string; children: ReactNode }) {
   return (
     <section className="card space-y-3" aria-labelledby={headingId}>
-      <h2 id={headingId} className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+      <h2 id={headingId} className="text-sm font-semibold uppercase tracking-wide text-stone-500">
         {title}
       </h2>
       {children}
@@ -199,7 +199,7 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Profil</h1>
+        <h1 className="text-lg font-bold text-stone-900">Profil</h1>
       </header>
 
       {notice ? (
@@ -215,7 +215,7 @@ export default function ProfilePage() {
         </p>
       ) : null}
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 shadow-sm" aria-label="Identitas akun">
+      <section className="overflow-hidden rounded-xl border border-stone-200 shadow-sm" aria-label="Identitas akun">
         <div className="bg-gradient-to-br from-brand-700 to-brand-800 p-5">
           <div className="flex items-center gap-4">
             <span
@@ -305,8 +305,8 @@ export default function ProfilePage() {
           </dl>
 
           {intern.supervisors.length > 0 ? (
-            <div className="border-t border-slate-100 pt-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pembimbing</h3>
+            <div className="border-t border-stone-100 pt-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Pembimbing</h3>
               <ul className="mt-2 space-y-2">
                 {intern.supervisors.map((s) => (
                   <li key={s.displayName} className="flex items-center gap-3">
@@ -317,8 +317,8 @@ export default function ProfilePage() {
                       {initialsOf(s.displayName, 'P')}
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-800">{s.displayName}</p>
-                      <p className="truncate text-xs text-slate-500">{s.email ?? '-'}</p>
+                      <p className="truncate text-sm font-medium text-stone-800">{s.displayName}</p>
+                      <p className="truncate text-xs text-stone-500">{s.email ?? '-'}</p>
                     </div>
                   </li>
                 ))}
@@ -330,14 +330,14 @@ export default function ProfilePage() {
 
       {schedule && schedule.days.length > 0 ? (
         <SectionCard title="Jadwal kerja" headingId="schedule-heading">
-          <p className="text-sm text-slate-500">{schedule.name}</p>
-          <ul className="divide-y divide-slate-100">
+          <p className="text-sm text-stone-500">{schedule.name}</p>
+          <ul className="divide-y divide-stone-100">
             {schedule.days.map((day) => (
               <li key={day.weekday} className="flex items-center justify-between gap-2 py-2">
-                <span className="text-sm text-slate-700">{WEEKDAY_LABELS[day.weekday - 1] ?? `Hari ${day.weekday}`}</span>
+                <span className="text-sm text-stone-700">{WEEKDAY_LABELS[day.weekday - 1] ?? `Hari ${day.weekday}`}</span>
                 <span
                   className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                    day.isWorkingDay ? 'bg-brand-soft text-brand-800' : 'bg-slate-100 text-slate-500'
+                    day.isWorkingDay ? 'bg-brand-soft text-brand-800' : 'bg-stone-100 text-stone-500'
                   }`}
                 >
                   {scheduleRowLabel(day)}

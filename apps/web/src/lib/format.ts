@@ -83,13 +83,13 @@ export const DAY_STATUS_LABELS: Record<string, string> = {
 };
 
 export const DAY_STATUS_COLORS: Record<string, string> = {
-  SCHEDULED: 'bg-slate-100 text-slate-700 border-slate-300',
+  SCHEDULED: 'bg-stone-100 text-stone-700 border-stone-300',
   PRESENT: 'bg-green-100 text-green-800 border-green-300',
   LATE: 'bg-amber-100 text-amber-800 border-amber-300',
   INCOMPLETE: 'bg-orange-100 text-orange-800 border-orange-300',
-  NEEDS_REVIEW: 'bg-purple-100 text-purple-800 border-purple-300',
+  NEEDS_REVIEW: 'bg-amber-100 text-amber-800 border-amber-300',
   EARLY_DEPARTURE_APPROVED: 'bg-sky-100 text-sky-800 border-sky-300',
-  NOT_SCHEDULED: 'bg-slate-100 text-slate-500 border-slate-300',
+  NOT_SCHEDULED: 'bg-stone-100 text-stone-500 border-stone-300',
 };
 
 export const LEAVE_STATUS_LABELS: Record<string, string> = {
@@ -107,11 +107,11 @@ export const LEAVE_STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-amber-100 text-amber-800 border-amber-300',
   APPROVED: 'bg-green-100 text-green-800 border-green-300',
   REJECTED: 'bg-red-100 text-red-800 border-red-300',
-  CANCELLED: 'bg-slate-100 text-slate-600 border-slate-300',
+  CANCELLED: 'bg-stone-100 text-stone-600 border-stone-300',
   DEPARTED: 'bg-sky-100 text-sky-800 border-sky-300',
   RETURNED: 'bg-teal-100 text-teal-800 border-teal-300',
   COMPLETED: 'bg-green-100 text-green-800 border-green-300',
-  NEEDS_REVIEW: 'bg-purple-100 text-purple-800 border-purple-300',
+  NEEDS_REVIEW: 'bg-amber-100 text-amber-800 border-amber-300',
 };
 
 export const LEAVE_TYPE_LABELS: Record<string, string> = {

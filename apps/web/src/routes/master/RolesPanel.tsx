@@ -174,7 +174,7 @@ export function RolesPanel() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm">
-          <span className="text-slate-600">Status</span>
+          <span className="text-stone-600">Status</span>
           <select
             aria-label="Filter status role"
             className="input w-auto min-h-touch"
@@ -229,7 +229,7 @@ export function RolesPanel() {
         onConfirm={() => createMutation.mutate()}
       >
         <div className="mt-3 space-y-3">
-          <p className="text-sm text-slate-600">Role baru dibuat tanpa permission. Atur permission-nya pada menu Akses.</p>
+          <p className="text-sm text-stone-600">Role baru dibuat tanpa permission. Atur permission-nya pada menu Akses.</p>
           <div>
             <label className="label" htmlFor="role-create-code">Kode role<span className="ml-0.5 text-red-600">*</span></label>
             <input
@@ -303,7 +303,7 @@ export function RolesPanel() {
               <option value="INACTIVE">Nonaktif</option>
             </select>
             {editRow?.isSystem ? (
-              <p className="mt-1 text-xs text-slate-500">Role sistem tidak dapat mengubah status.</p>
+              <p className="mt-1 text-xs text-stone-500">Role sistem tidak dapat mengubah status.</p>
             ) : null}
           </div>
         </div>

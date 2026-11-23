@@ -26,7 +26,7 @@ export function FormField({ label, error, hint, required, children }: FormFieldP
       </label>
       {children({ id, 'aria-describedby': describedBy, 'aria-invalid': error ? true : undefined })}
       {hint && !error ? (
-        <p id={hintId} className="mt-1 text-xs text-slate-500">
+        <p id={hintId} className="mt-1 text-xs text-stone-500">
           {hint}
         </p>
       ) : null}

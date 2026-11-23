@@ -39,26 +39,26 @@ export function DataTable<T>({
   }
   return (
     <div>
-      <p className="mb-1 text-xs text-slate-500 sm:hidden" aria-hidden="true">
+      <p className="mb-1 text-xs text-stone-500 sm:hidden" aria-hidden="true">
         Geser tabel ke samping untuk melihat semua kolom →
       </p>
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
+      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
+      <table className="min-w-full divide-y divide-stone-200 text-sm">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
-        <thead className="bg-slate-50">
+        <thead className="bg-stone-50">
           <tr>
             {columns.map((col) => (
               <th
                 key={col.header}
                 scope="col"
-                className={`whitespace-nowrap px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 ${col.className ?? ''}`}
+                className={`whitespace-nowrap px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-stone-600 ${col.className ?? ''}`}
               >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-stone-100">
           {rows.map((row) => {
             const key = rowKey(row);
             const clickable = Boolean(onRowClick);
@@ -83,7 +83,7 @@ export function DataTable<T>({
                 {columns.map((col) => (
                   <td
                     key={col.header}
-                    className={`whitespace-nowrap px-3 py-2.5 text-slate-700 ${col.className ?? ''}`}
+                    className={`whitespace-nowrap px-3 py-2.5 text-stone-700 ${col.className ?? ''}`}
                   >
                     {col.cell(row)}
                   </td>

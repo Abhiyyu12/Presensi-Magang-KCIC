@@ -13,7 +13,7 @@ interface StatusBadgeProps {
   label?: string;
 }
 
-const NEUTRAL = 'bg-slate-100 text-slate-700 border-slate-300';
+const NEUTRAL = 'bg-stone-100 text-stone-700 border-stone-300';
 
 export function StatusBadge({ kind = 'dayStatus', status, label }: StatusBadgeProps) {
   if (!status) {
@@ -29,7 +29,8 @@ export function StatusBadge({ kind = 'dayStatus', status, label }: StatusBadgePr
   const color = colors[status] ?? NEUTRAL;
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${color}`}
+      key={text}
+      className={`chip-enter inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${color}`}
     >
       {text}
     </span>

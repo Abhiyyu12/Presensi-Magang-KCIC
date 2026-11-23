@@ -126,8 +126,8 @@ export default function LeaveDetailPage() {
     <div className="mx-auto max-w-lg space-y-4">
       <header className="flex items-start justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Detail Izin</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-lg font-bold text-stone-900">Detail Izin</h1>
+          <p className="text-sm text-stone-600">
             {LEAVE_TYPE_LABELS[leave.leaveType] ?? leave.leaveType}
             {leave.categoryName ? ` · ${leave.categoryName}` : ''}
           </p>
@@ -135,23 +135,23 @@ export default function LeaveDetailPage() {
         <StatusBadge kind="leaveStatus" status={leave.status} />
       </header>
 
-      <section className="card space-y-2 text-sm text-slate-700">
+      <section className="card space-y-2 text-sm text-stone-700">
         <p>
-          <span className="text-slate-500">Alasan:</span> {leave.reason ?? '-'}
+          <span className="text-stone-500">Alasan:</span> {leave.reason ?? '-'}
         </p>
         <p>
-          <span className="text-slate-500">Estimasi keluar:</span>{' '}
+          <span className="text-stone-500">Estimasi keluar:</span>{' '}
           {formatWib(leave.estimatedDepartureAt)}
         </p>
         {isTemporary ? (
           <p>
-            <span className="text-slate-500">Estimasi kembali:</span>{' '}
+            <span className="text-stone-500">Estimasi kembali:</span>{' '}
             {formatWib(leave.estimatedReturnAt)}
           </p>
         ) : null}
         {leave.decisionNote ? (
           <p>
-            <span className="text-slate-500">Catatan keputusan:</span> {leave.decisionNote}
+            <span className="text-stone-500">Catatan keputusan:</span> {leave.decisionNote}
           </p>
         ) : null}
         {status === 'PENDING' ? (
@@ -163,44 +163,44 @@ export default function LeaveDetailPage() {
       </section>
 
       <section className="card" aria-labelledby="timeline-heading">
-        <h2 id="timeline-heading" className="text-sm font-semibold text-slate-800">
+        <h2 id="timeline-heading" className="text-sm font-semibold text-stone-800">
           Timeline pergerakan
         </h2>
         {leave.events && leave.events.length > 0 ? (
-          <ol className="mt-3 space-y-3 border-l-2 border-slate-200 pl-4">
+          <ol className="mt-3 space-y-3 border-l-2 border-stone-200 pl-4">
             {leave.events.map((event) => (
               <li key={event.id} className="relative text-sm">
                 <span
                   aria-hidden="true"
                   className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-brand-600"
                 />
-                <p className="font-medium text-slate-800">
+                <p className="font-medium text-stone-800">
                   {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
                 </p>
-                <p className="text-xs text-slate-500">{formatWib(event.occurredAtServer)}</p>
+                <p className="text-xs text-stone-500">{formatWib(event.occurredAtServer)}</p>
                 {event.latitude != null && event.longitude != null ? (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-stone-500">
                     Lokasi tercatat · akurasi ±{formatMeters(event.accuracyMeters)} ·{' '}
                     <MapsLink latitude={event.latitude} longitude={event.longitude} />
                   </p>
                 ) : (
-                  <p className="text-xs text-slate-500">Lokasi tidak tercatat saat pergerakan ini.</p>
+                  <p className="text-xs text-stone-500">Lokasi tidak tercatat saat pergerakan ini.</p>
                 )}
                 {event.address ? (
-                  <p className="text-xs text-slate-600">Alamat: {event.address}</p>
+                  <p className="text-xs text-stone-600">Alamat: {event.address}</p>
                 ) : null}
               </li>
             ))}
           </ol>
         ) : (
-          <p className="mt-2 text-sm text-slate-500">Belum ada pergerakan tercatat.</p>
+          <p className="mt-2 text-sm text-stone-500">Belum ada pergerakan tercatat.</p>
         )}
       </section>
 
       {(canDepart || canReturn || canEarlyCheckout) && movement === null ? (
         <section className="card space-y-2">
-          <h2 className="text-sm font-semibold text-slate-800">Catat pergerakan</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-sm font-semibold text-stone-800">Catat pergerakan</h2>
+          <p className="text-xs text-stone-500">
             Pergerakan dicatat dengan selfie dan waktu server. Lokasi ikut tercatat bila izin
             lokasi/GPS tersedia; pergerakan tetap dapat dikirim tanpa lokasi.
           </p>
@@ -230,7 +230,7 @@ export default function LeaveDetailPage() {
 
       {movement !== null ? (
         <section className="card space-y-3" aria-label={`Catat ${MOVEMENT_LABELS[movement]}`}>
-          <h2 className="text-sm font-semibold text-slate-800">
+          <h2 className="text-sm font-semibold text-stone-800">
             Catat {MOVEMENT_LABELS[movement]}
           </h2>
           {actionError ? (

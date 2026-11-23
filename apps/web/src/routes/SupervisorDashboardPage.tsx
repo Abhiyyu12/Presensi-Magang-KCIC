@@ -68,8 +68,8 @@ export default function SupervisorDashboardPage() {
   return (
     <div className="stagger space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Beranda Pembimbing</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-lg font-bold text-stone-900">Beranda Pembimbing</h1>
+        <p className="text-sm text-stone-600">
           Ringkasan peserta binaan Anda hari ini.
         </p>
       </header>
@@ -77,24 +77,24 @@ export default function SupervisorDashboardPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {cards.map((card) => (
           <div key={card.label} className="card">
-            <p className="text-2xl font-bold text-slate-900">
+            <p className="text-2xl font-bold text-stone-900">
               {card.value !== undefined ? card.value : '-'}
             </p>
-            <p className="mt-1 text-xs text-slate-500">{card.label}</p>
+            <p className="mt-1 text-xs text-stone-500">{card.label}</p>
           </div>
         ))}
       </div>
 
       {data.todayStatus.length > 0 ? (
         <section className="card" aria-labelledby="today-list">
-          <h2 id="today-list" className="text-sm font-semibold text-slate-800">
+          <h2 id="today-list" className="text-sm font-semibold text-stone-800">
             Status peserta hari ini
           </h2>
-          <ul className="mt-2 divide-y divide-slate-100">
+          <ul className="mt-2 divide-y divide-stone-100">
             {data.todayStatus.map((row, index) => (
               <li key={`${row.name}-${index}`} className="flex items-center justify-between gap-2 py-2">
-                <span className="truncate text-sm text-slate-700">{row.name}</span>
-                {row.dayStatus ? <StatusBadge status={row.dayStatus} /> : <span className="text-xs text-slate-400">-</span>}
+                <span className="truncate text-sm text-stone-700">{row.name}</span>
+                {row.dayStatus ? <StatusBadge status={row.dayStatus} /> : <span className="text-xs text-stone-400">-</span>}
               </li>
             ))}
           </ul>

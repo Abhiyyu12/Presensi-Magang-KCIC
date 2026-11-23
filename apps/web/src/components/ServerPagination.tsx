@@ -21,11 +21,11 @@ export function ServerPagination({ pagination, onPageChange, pageSize, onPageSiz
       aria-label="Paginasi data"
     >
       <div className="flex flex-wrap items-center gap-3">
-        <p className="text-xs text-slate-500" aria-live="polite">
+        <p className="text-xs text-stone-500" aria-live="polite">
           Menampilkan {from}&ndash;{to} dari {total} data
         </p>
         {onPageSizeChange ? (
-          <label className="flex items-center gap-1 text-xs text-slate-500">
+          <label className="flex items-center gap-1 text-xs text-stone-500">
             Baris
             <select
               className="input w-auto py-1 text-xs"
@@ -43,7 +43,7 @@ export function ServerPagination({ pagination, onPageChange, pageSize, onPageSiz
       </div>
       {totalPages > 1 ? (
         <p className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-stone-500">
             Halaman {page} dari {totalPages}
           </span>
           <button

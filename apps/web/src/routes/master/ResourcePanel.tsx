@@ -188,7 +188,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
         <span className="flex gap-2">
           <button
             type="button"
-            className="min-h-touch rounded-lg border border-slate-200 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50"
+            className="min-h-touch rounded-lg border border-stone-200 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50"
             onClick={(e) => {
               e.stopPropagation();
               setEditing(row);
@@ -322,7 +322,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
                       allowClear={!field.required}
                     />
                     {field.hint && !error ? (
-                      <p className="mt-1 text-xs text-slate-500">{field.hint}</p>
+                      <p className="mt-1 text-xs text-stone-500">{field.hint}</p>
                     ) : null}
                   </div>
                 );
@@ -368,7 +368,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
                     />
                   )}
                   {field.hint && !error ? (
-                    <p className="mt-1 text-xs text-slate-500">{field.hint}</p>
+                    <p className="mt-1 text-xs text-stone-500">{field.hint}</p>
                   ) : null}
                   {error ? (
                     <p className="mt-1 text-xs font-medium text-red-600" role="alert">{error}</p>

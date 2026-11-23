@@ -135,7 +135,7 @@ export function ParametersPanel({ path, label }: ParametersPanelProps) {
       cell: (row) => (
         <button
           type="button"
-          className="min-h-touch rounded-lg border border-slate-200 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50"
+          className="min-h-touch rounded-lg border border-stone-200 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50"
           onClick={(e) => {
             e.stopPropagation();
             setEditing(row);
@@ -156,7 +156,7 @@ export function ParametersPanel({ path, label }: ParametersPanelProps) {
   return (
     <div className="space-y-3">
       {notice ? <SuccessNotice message={notice} onDismiss={() => setNotice(null)} /> : null}
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-stone-600">
         Parameter hanya dapat diubah nilainya; key baru ditambahkan lewat migrasi/seed oleh tim IT.
       </p>
 
@@ -198,7 +198,7 @@ export function ParametersPanel({ path, label }: ParametersPanelProps) {
             <>
               <div>
                 <span className="label">Kunci</span>
-                <p className="rounded-lg bg-slate-50 px-3 py-2 font-mono text-sm text-slate-700">{asString(editing['key'])}</p>
+                <p className="rounded-lg bg-stone-50 px-3 py-2 font-mono text-sm text-stone-700">{asString(editing['key'])}</p>
               </div>
               {editingKind === 'number' ? (
                 <div>
@@ -222,7 +222,7 @@ export function ParametersPanel({ path, label }: ParametersPanelProps) {
                         className={`flex min-h-touch cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-sm font-medium ${
                           editedWorkdays.includes(idx)
                             ? 'border-brand-600 bg-brand-50 text-brand-800'
-                            : 'border-slate-200 bg-white text-slate-600'
+                            : 'border-stone-200 bg-white text-stone-600'
                         }`}
                       >
                         <input
@@ -265,7 +265,7 @@ export function ParametersPanel({ path, label }: ParametersPanelProps) {
                     value={valueJsonText}
                     onChange={(e) => setValueJsonText(e.target.value)}
                   />
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-stone-500">
                     Format khusus — ubah hanya jika Anda memahami isinya; bila ragu, minta bantuan IT.
                   </p>
                 </div>

@@ -102,8 +102,8 @@ export default function AttendancePage() {
   return (
     <div className="mx-auto max-w-lg space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Absensi</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-lg font-bold text-stone-900">Absensi</h1>
+        <p className="text-sm text-stone-600">
           Status hari ini:{' '}
           <StatusBadge
             status={today.attendanceDay?.dayStatus ?? (isWorkingDay ? 'SCHEDULED' : 'NOT_SCHEDULED')}
@@ -119,11 +119,11 @@ export default function AttendancePage() {
       </header>
 
       {!isWorkingDay ? (
-        <section className="card border-slate-200 bg-slate-50">
-          <p className="text-sm font-semibold text-slate-800">
+        <section className="card border-stone-200 bg-stone-50">
+          <p className="text-sm font-semibold text-stone-800">
             Hari ini bukan hari kerja terjadwal.
           </p>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-stone-600">
             Absen masuk dan absen pulang tidak tersedia. Jika jadwal Anda seharusnya berbeda,
             hubungi admin HR.
           </p>
@@ -201,7 +201,7 @@ export default function AttendancePage() {
         </section>
       ) : completeToday ? (
         <section className="card">
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-stone-700">
             Absensi hari ini sudah lengkap (absen masuk dan absen pulang tercatat). Status:{' '}
             <StatusBadge status={today.attendanceDay?.dayStatus} />
           </p>
@@ -217,8 +217,8 @@ export default function AttendancePage() {
       ) : (
         <section className="card space-y-4">
           <div>
-            <h2 className="text-sm font-semibold text-slate-800">{actionLabel}</h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <h2 className="text-sm font-semibold text-stone-800">{actionLabel}</h2>
+            <p className="mt-1 text-xs text-stone-500">
               Ambil selfie, lalu izinkan lokasi saat diminta. Lokasi dicatat sebagai bukti bila
               tersedia — absen tetap bisa dikirim tanpa lokasi. Waktu resmi memakai waktu server.
               Jangan tutup halaman selama pengiriman berlangsung.
@@ -241,9 +241,9 @@ export default function AttendancePage() {
           />
 
           {step === 'confirm' && photo ? (
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-sm font-semibold text-slate-800">Konfirmasi absensi</p>
-              <dl className="space-y-1 text-sm text-slate-700">
+            <div className="space-y-3 rounded-lg border border-stone-200 bg-stone-50 p-3">
+              <p className="text-sm font-semibold text-stone-800">Konfirmasi absensi</p>
+              <dl className="space-y-1 text-sm text-stone-700">
                 <div className="flex justify-between gap-2">
                   <dt>Waktu server</dt>
                   <dd className="font-medium">{formatWib(today.serverTime)}</dd>
@@ -268,7 +268,7 @@ export default function AttendancePage() {
               <img
                 src={photo.previewUrl}
                 alt="Foto yang akan dikirim sebagai bukti absensi"
-                className="w-24 rounded-lg border border-slate-200 object-cover"
+                className="w-24 rounded-lg border border-stone-200 object-cover"
               />
               {submitter.phase === 'failed' ? (
                 <p className="text-sm text-red-600" role="alert">

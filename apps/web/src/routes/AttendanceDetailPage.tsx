@@ -87,8 +87,8 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Detail Absensi</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-lg font-bold text-stone-900">Detail Absensi</h1>
+        <p className="text-sm text-stone-600">
           {day.participantName ? `${day.participantName} · ` : ''}
           {formatDateWib(day.workDate)} · <StatusBadge status={day.dayStatus} />
           {day.correctionFlag ? (
@@ -98,7 +98,7 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
           ) : null}
         </p>
         {day.bureau || day.division ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-stone-500">
             {[day.bureau, day.division].filter(Boolean).join(' · ')}
           </p>
         ) : null}
@@ -106,10 +106,10 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
 
       {snapshot ? (
         <section className="card text-sm" aria-labelledby="snapshot-heading">
-          <h2 id="snapshot-heading" className="font-semibold text-slate-800">
+          <h2 id="snapshot-heading" className="font-semibold text-stone-800">
             Jadwal (snapshot server)
           </h2>
-          <p className="mt-1 text-slate-600">
+          <p className="mt-1 text-stone-600">
             {snapshot.isWorkingDay
               ? `${formatTimeWib(snapshot.startTime)}–${formatTimeWib(snapshot.endTime)} WIB · toleransi ${snapshot.lateToleranceMinutes != null ? `${snapshot.lateToleranceMinutes} menit` : 'tidak tercatat'}`
               : 'Tidak terjadwal'}
@@ -118,22 +118,22 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
       ) : null}
 
       <section className="card" aria-labelledby="events-heading">
-        <h2 id="events-heading" className="text-sm font-semibold text-slate-800">
+        <h2 id="events-heading" className="text-sm font-semibold text-stone-800">
           Timeline event
         </h2>
         {day.events.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-stone-500">
             Tidak ada event. {checkIn ? '' : 'Peserta terjadwal tetap tercatat meski tanpa event.'}
           </p>
         ) : (
-          <ol className="mt-3 space-y-4 border-l-2 border-slate-200 pl-4">
+          <ol className="mt-3 space-y-4 border-l-2 border-stone-200 pl-4">
             {day.events.map((event) => (
               <li key={event.id} className="relative">
                 <span
                   aria-hidden="true"
                   className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-brand-600"
                 />
-                <p className="text-sm font-medium text-slate-800">
+                <p className="text-sm font-medium text-stone-800">
                   {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
                   {event.isLate ? (
                     <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">
@@ -141,17 +141,17 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
                     </span>
                   ) : null}
                 </p>
-                <p className="text-xs text-slate-500">Waktu server: {formatWib(event.occurredAtServer)}</p>
+                <p className="text-xs text-stone-500">Waktu server: {formatWib(event.occurredAtServer)}</p>
                 {event.latitude != null && event.longitude != null ? (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-stone-500">
                     Lokasi tercatat · akurasi ±{formatMeters(event.accuracyMeters)} ·{' '}
                     <MapsLink latitude={event.latitude} longitude={event.longitude} />
                   </p>
                 ) : (
-                  <p className="text-xs text-slate-500">Lokasi tidak tercatat pada event ini.</p>
+                  <p className="text-xs text-stone-500">Lokasi tidak tercatat pada event ini.</p>
                 )}
                 {event.address ? (
-                  <p className="text-xs text-slate-600">Alamat: {event.address}</p>
+                  <p className="text-xs text-stone-600">Alamat: {event.address}</p>
                 ) : null}
                 {canViewEvidence && event.evidenceId ? (
                   <div className="mt-2">
@@ -170,11 +170,11 @@ export default function AttendanceDetailPage({ mode }: AttendanceDetailPageProps
 
       {canCorrect ? (
         <section className="card" aria-labelledby="correction-heading">
-          <h2 id="correction-heading" className="text-sm font-semibold text-slate-800">
+          <h2 id="correction-heading" className="text-sm font-semibold text-stone-800">
             Koreksi absensi
           </h2>
           {checkIn ? (
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-stone-500">
               Nilai saat ini (absen masuk): {formatWib(checkIn.occurredAtServer)}
             </p>
           ) : null}

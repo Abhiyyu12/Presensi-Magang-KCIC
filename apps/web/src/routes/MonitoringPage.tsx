@@ -110,8 +110,8 @@ export default function MonitoringPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Monitoring Absensi</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-lg font-bold text-stone-900">Monitoring Absensi</h1>
+        <p className="text-sm text-stone-600">
           Data sesuai cakupan yang diizinkan server. Klik baris untuk detail dan bukti.
         </p>
       </header>

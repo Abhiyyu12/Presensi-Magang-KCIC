@@ -14,8 +14,8 @@ type Row = Record<string, unknown>;
 function JsonBlock({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="min-w-0 flex-1">
-      <p className="text-xs font-semibold text-slate-600">{label}</p>
-      <pre className="mt-1 max-h-64 overflow-auto rounded-lg bg-slate-900 p-2 font-mono text-[11px] leading-relaxed text-slate-100">
+      <p className="text-xs font-semibold text-stone-600">{label}</p>
+      <pre className="mt-1 max-h-64 overflow-auto rounded-lg bg-stone-900 p-2 font-mono text-[11px] leading-relaxed text-stone-100">
         {value === undefined || value === null ? '(kosong)' : JSON.stringify(value, null, 2)}
       </pre>
     </div>
@@ -59,8 +59,8 @@ export default function AuditPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Audit</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-lg font-bold text-stone-900">Audit</h1>
+        <p className="text-sm text-stone-600">
           Log perubahan sistem (read-only). Klik baris untuk melihat diff sebelum/sesudah.
         </p>
       </header>
@@ -125,14 +125,14 @@ export default function AuditPage() {
               if (!entry) return null;
               return (
                 <section className="card" aria-label="Diff audit (read-only)">
-                  <h2 className="text-sm font-semibold text-slate-800">
+                  <h2 className="text-sm font-semibold text-stone-800">
                     Diff: {asString(entry['action'], '-')} pada {asString(entry['objectType'], '-')}
                   </h2>
                   <div className="mt-3 flex flex-col gap-3 md:flex-row">
                     <JsonBlock label="Sebelum (before)" value={entry['before']} />
                     <JsonBlock label="Sesudah (after)" value={entry['after']} />
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">Tampilan read-only untuk pemeriksaan.</p>
+                  <p className="mt-2 text-xs text-stone-500">Tampilan read-only untuk pemeriksaan.</p>
                 </section>
               );
             })()

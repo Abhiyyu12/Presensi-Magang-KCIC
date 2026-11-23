@@ -273,7 +273,7 @@ export function SchedulesPanel() {
                 <option value="DIVISION">Biro — satu biro</option>
                 <option value="INDIVIDUAL">Peserta (individu) — satu peserta</option>
               </select>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-stone-500">
                 Saat peserta absen, dipakai jadwal paling spesifik yang berlaku: individu lebih utama dari biro, biro dari direktorat, direktorat dari global.
               </p>
             </div>
@@ -327,10 +327,10 @@ export function SchedulesPanel() {
             <div className="space-y-2">
               {days.map((day, index) => (
                 <div key={day.weekday} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 text-xs">
-                  <label className="flex items-center gap-1.5 text-sm text-slate-700">
+                  <label className="flex items-center gap-1.5 text-sm text-stone-700">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300"
+                      className="h-4 w-4 rounded border-stone-300"
                       checked={day.isWorkingDay}
                       aria-label={`${DAY_NAMES[index] ?? day.weekday} adalah hari kerja`}
                       onChange={(e) =>
@@ -396,7 +396,7 @@ export function SchedulesPanel() {
                 </div>
               ))}
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-stone-500">
               Kolom terakhir adalah toleransi keterlambatan dalam menit. Kosongkan untuk memakai
               default dari Parameter bisnis (tab Parameter). Perhitungan terlambat tetap dilakukan server.
             </p>

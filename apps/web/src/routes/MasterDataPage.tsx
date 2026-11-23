@@ -55,8 +55,8 @@ export default function MasterDataPage() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Data Master</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-lg font-bold text-stone-900">Data Master</h1>
+        <p className="text-sm text-stone-600">
           Kelola data master operasional. Perubahan tervalidasi server dan tercatat pada audit.
           Penghapusan hanya bisa bila data belum pernah dipakai; jika sudah dipakai, gunakan
           penonaktifan dan tanggal efektif.
@@ -66,7 +66,7 @@ export default function MasterDataPage() {
       <div
         role="tablist"
         aria-label="Kategori data master"
-        className="flex gap-1 overflow-x-auto border-b border-slate-200 pb-px"
+        className="flex gap-1 overflow-x-auto border-b border-stone-200 pb-px"
       >
         {tabs.map((key) => (
           <button
@@ -79,7 +79,7 @@ export default function MasterDataPage() {
             className={`min-h-touch shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${
               activeTab === key
                 ? 'border-brand-700 text-brand-800'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
+                : 'border-transparent text-stone-600 hover:text-stone-900'
             }`}
             onClick={() => setTab(key)}
           >

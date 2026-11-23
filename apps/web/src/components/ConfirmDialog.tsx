@@ -90,7 +90,7 @@ export function ConfirmDialog({
       {open ? (
         <motion.div
           key="confirm-dialog-root"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 p-4 sm:items-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -110,10 +110,10 @@ export function ConfirmDialog({
             transition={{ duration: 0.22, ease: EASE_OUT }}
             className={`w-full rounded-xl bg-white p-5 shadow-xl ${wide ? 'max-w-2xl' : 'max-w-md'}`}
           >
-            <h2 id="confirm-dialog-title" className="text-base font-semibold text-slate-900">
+            <h2 id="confirm-dialog-title" className="text-base font-semibold text-stone-900">
               {title}
             </h2>
-            {description ? <p className="mt-2 text-sm text-slate-600">{description}</p> : null}
+            {description ? <p className="mt-2 text-sm text-stone-600">{description}</p> : null}
             {children}
             <div className="mt-4 flex justify-end gap-2">
               {hideCancel ? null : (

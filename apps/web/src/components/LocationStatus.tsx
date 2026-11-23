@@ -76,19 +76,19 @@ interface LocationStatusProps {
 
 export function LocationStatus({ state, fix, address, onRetry }: LocationStatusProps) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3" aria-live="polite">
-      <p className="text-sm font-medium text-slate-800">Status lokasi</p>
-      <p className="mt-1 text-xs text-slate-500">
+    <div className="rounded-lg border border-stone-200 bg-white p-3" aria-live="polite">
+      <p className="text-sm font-medium text-stone-800">Status lokasi</p>
+      <p className="mt-1 text-xs text-stone-500">
         Lokasi dicatat sebagai bukti absensi bila tersedia, dan tidak digunakan untuk melacak Anda
         terus-menerus. Absensi tetap dapat dikirim tanpa lokasi.
       </p>
 
-      {state === 'idle' ? <p className="mt-2 text-sm text-slate-600">Lokasi belum diminta.</p> : null}
+      {state === 'idle' ? <p className="mt-2 text-sm text-stone-600">Lokasi belum diminta.</p> : null}
 
       {state === 'requesting_permission' ? (
-        <p className="mt-2 flex items-center gap-2 text-sm text-slate-600" role="status">
+        <p className="mt-2 flex items-center gap-2 text-sm text-stone-600" role="status">
           <span
-            className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-700"
+            className="h-4 w-4 animate-spin rounded-full border-2 border-stone-300 border-t-brand-700"
             aria-hidden="true"
           />
           Mengambil lokasi saat ini…
@@ -102,7 +102,7 @@ export function LocationStatus({ state, fix, address, onRetry }: LocationStatusP
             perangkat dan tidak membatasi absensi.
           </p>
           {address ? (
-            <p className="mt-1 text-xs text-slate-600">
+            <p className="mt-1 text-xs text-stone-600">
               Alamat terperinci (© OpenStreetMap): {address}
             </p>
           ) : null}
@@ -115,7 +115,7 @@ export function LocationStatus({ state, fix, address, onRetry }: LocationStatusP
             Lokasi belum berhasil diperoleh. Periksa izin lokasi dan layanan lokasi, lalu coba
             kembali. Tanpa lokasi, absensi tetap dapat dikirim namun koordinatnya tidak tercatat.
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-stone-500">
             Izinkan akses lokasi untuk situs ini melalui ikon pengaturan di bilah alamat browser,
             lalu tekan tombol di bawah.
           </p>
@@ -133,7 +133,7 @@ export function LocationStatus({ state, fix, address, onRetry }: LocationStatusP
             Lokasi belum berhasil diperoleh. Periksa izin lokasi dan layanan lokasi, lalu coba
             kembali. Tanpa lokasi, absensi tetap dapat dikirim namun koordinatnya tidak tercatat.
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-stone-500">
             Pastikan layanan lokasi (GPS) aktif pada perangkat dan browser mendukung akses lokasi.
           </p>
           {onRetry ? (

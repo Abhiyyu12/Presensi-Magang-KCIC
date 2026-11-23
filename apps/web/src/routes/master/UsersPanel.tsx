@@ -483,10 +483,10 @@ export function UsersPanel() {
     <fieldset className="space-y-1">
       <legend className="label">Role<span className="ml-0.5 text-red-600">*</span></legend>
       {roles.map((role) => (
-        <label key={role.id} className="flex items-center gap-2 text-sm text-slate-700">
+        <label key={role.id} className="flex items-center gap-2 text-sm text-stone-700">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-slate-300"
+            className="h-4 w-4 rounded border-stone-300"
             checked={selected.includes(role.id)}
             onChange={(e) =>
               onChange(
@@ -497,7 +497,7 @@ export function UsersPanel() {
             }
           />
           {role.name ?? role.code ?? role.id}
-          {role.code ? <span className="text-xs text-slate-400">({role.code})</span> : null}
+          {role.code ? <span className="text-xs text-stone-400">({role.code})</span> : null}
         </label>
       ))}
     </fieldset>
@@ -507,8 +507,8 @@ export function UsersPanel() {
     f: ProfileFormState,
     set: (next: ProfileFormState) => void,
   ) => (
-    <div className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Data peserta magang</p>
+    <div className="mt-3 space-y-3 rounded-lg border border-stone-200 bg-stone-50 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Data peserta magang</p>
       <div>
         <label className="label" htmlFor="profile-participant-number">Nomor peserta<span className="ml-0.5 text-red-600">*</span></label>
         <input
@@ -739,10 +739,10 @@ export function UsersPanel() {
           {roleCheckboxes(createForm.roleIds, (roleIds) =>
             setCreateForm((f) => ({ ...f, roleIds })),
           )}
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <label className="flex items-center gap-2 text-sm font-medium text-stone-700">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-slate-300"
+              className="h-4 w-4 rounded border-stone-300"
               checked={createForm.profile.asIntern}
               onChange={(e) => {
                 const { checked } = e.target;
@@ -805,9 +805,9 @@ export function UsersPanel() {
               ))}
             </select>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reset kata sandi</p>
-            <p className="mt-1 text-xs text-slate-500">
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Reset kata sandi</p>
+            <p className="mt-1 text-xs text-stone-500">
               Kata sandi lama tidak dapat dilihat siapa pun — sistem menyimpan hash, bukan teks asli. Isi di bawah hanya untuk mengganti.
             </p>
             <label className="label mt-2" htmlFor="user-edit-password">Kata sandi baru (opsional)</label>
@@ -829,15 +829,15 @@ export function UsersPanel() {
                 {showEditPassword ? 'Sembunyikan' : 'Lihat'}
               </button>
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-stone-500">
               Minimal 10 karakter. Jika diisi, semua sesi aktif pengguna dicabut dan harus login ulang dengan sandi baru.
             </p>
           </div>
           {editHadProfile ? null : (
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <label className="flex items-center gap-2 text-sm font-medium text-stone-700">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-slate-300"
+                className="h-4 w-4 rounded border-stone-300"
                 checked={editForm.profile.asIntern}
                 onChange={(e) => {
                   const { checked } = e.target;
@@ -882,17 +882,17 @@ export function UsersPanel() {
           ) : detail ? (
             <>
               <section>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Akun</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Akun</p>
                 <dl className="mt-1 grid grid-cols-[8rem_1fr] gap-y-1 text-sm">
-                  <dt className="text-slate-500">Nama tampilan</dt><dd className="font-medium">{asString(detail['displayName'])}</dd>
-                  <dt className="text-slate-500">Email</dt><dd>{asString(detail['email']) || '-'}</dd>
-                  <dt className="text-slate-500">Telepon</dt><dd>{asString(detail['phone']) || '-'}</dd>
-                  <dt className="text-slate-500">Status akun</dt><dd>{asString(detail['accountStatus'])}</dd>
-                  <dt className="text-slate-500">Dibuat</dt><dd>{datePart(detail['createdAt'])}</dd>
+                  <dt className="text-stone-500">Nama tampilan</dt><dd className="font-medium">{asString(detail['displayName'])}</dd>
+                  <dt className="text-stone-500">Email</dt><dd>{asString(detail['email']) || '-'}</dd>
+                  <dt className="text-stone-500">Telepon</dt><dd>{asString(detail['phone']) || '-'}</dd>
+                  <dt className="text-stone-500">Status akun</dt><dd>{asString(detail['accountStatus'])}</dd>
+                  <dt className="text-stone-500">Dibuat</dt><dd>{datePart(detail['createdAt'])}</dd>
                 </dl>
               </section>
               <section>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Role</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Role</p>
                 <p className="mt-1 text-sm">
                   {detailRoles.length > 0
                     ? detailRoles
@@ -902,36 +902,36 @@ export function UsersPanel() {
                 </p>
               </section>
               <section>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Peserta magang</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Peserta magang</p>
                 {detailProfile ? (
                   <dl className="mt-1 grid grid-cols-[8rem_1fr] gap-y-1 text-sm">
-                    <dt className="text-slate-500">No. peserta</dt><dd className="font-medium">{asString(detailProfile['participantNumber'])}</dd>
-                    <dt className="text-slate-500">Direktorat</dt><dd>{isRecord(detailProfile['bureau']) ? asString(detailProfile['bureau']['name']) : '-'}</dd>
-                    <dt className="text-slate-500">Biro</dt><dd>{isRecord(detailProfile['division']) ? asString(detailProfile['division']['name']) : '-'}</dd>
-                    <dt className="text-slate-500">Penempatan</dt><dd>{isRecord(detailProfile['placement']) ? asString(detailProfile['placement']['name']) : '-'}</dd>
-                    <dt className="text-slate-500">Periode</dt><dd>{datePart(detailProfile['startDate'])} s/d {datePart(detailProfile['endDate']) || '-'}</dd>
-                    <dt className="text-slate-500">Status</dt><dd>{asString(detailProfile['status'])}</dd>
+                    <dt className="text-stone-500">No. peserta</dt><dd className="font-medium">{asString(detailProfile['participantNumber'])}</dd>
+                    <dt className="text-stone-500">Direktorat</dt><dd>{isRecord(detailProfile['bureau']) ? asString(detailProfile['bureau']['name']) : '-'}</dd>
+                    <dt className="text-stone-500">Biro</dt><dd>{isRecord(detailProfile['division']) ? asString(detailProfile['division']['name']) : '-'}</dd>
+                    <dt className="text-stone-500">Penempatan</dt><dd>{isRecord(detailProfile['placement']) ? asString(detailProfile['placement']['name']) : '-'}</dd>
+                    <dt className="text-stone-500">Periode</dt><dd>{datePart(detailProfile['startDate'])} s/d {datePart(detailProfile['endDate']) || '-'}</dd>
+                    <dt className="text-stone-500">Status</dt><dd>{asString(detailProfile['status'])}</dd>
                   </dl>
                 ) : (
-                  <p className="mt-1 text-sm text-slate-500">Belum terdaftar sebagai peserta magang. Gunakan menu Ubah untuk mendaftarkan.</p>
+                  <p className="mt-1 text-sm text-stone-500">Belum terdaftar sebagai peserta magang. Gunakan menu Ubah untuk mendaftarkan.</p>
                 )}
               </section>
               <section>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pembimbing aktif</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Pembimbing aktif</p>
                 {detailSupervisors.length > 0 ? (
                   <ul className="mt-1 space-y-1 text-sm">
                     {detailSupervisors.map((sa) => (
                       <li key={asString(sa['id'])}>
                         {isRecord(sa['supervisor']) ? asString(sa['supervisor']['displayName']) : '-'}
-                        <span className="text-xs text-slate-400"> · sejak {datePart(sa['validFrom'])}</span>
+                        <span className="text-xs text-stone-400"> · sejak {datePart(sa['validFrom'])}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-1 text-sm text-slate-500">Belum ada pembimbing aktif.</p>
+                  <p className="mt-1 text-sm text-stone-500">Belum ada pembimbing aktif.</p>
                 )}
                 {has('admin:assignments:manage') && detailProfile ? (
-                  <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="mt-2 rounded-lg border border-stone-200 bg-stone-50 p-3">
                     <MasterCombobox
                       id="assign-supervisor"
                       label="Tugaskan pembimbing"
@@ -957,7 +957,7 @@ export function UsersPanel() {
               </section>
             </>
           ) : (
-            <p className="text-sm text-slate-500">Memuat…</p>
+            <p className="text-sm text-stone-500">Memuat…</p>
           )}
         </div>
       </ConfirmDialog>

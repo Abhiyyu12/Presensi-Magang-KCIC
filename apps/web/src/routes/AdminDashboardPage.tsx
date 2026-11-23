@@ -156,15 +156,15 @@ function DistributionDonut({
           })
         )}
       </svg>
-      <ul className="space-y-1 text-xs text-slate-600">
+      <ul className="space-y-1 text-xs text-stone-600">
         {segments.map((s) => (
           <li key={s.label} className="flex items-center gap-2">
             <span aria-hidden="true" className="h-3 w-3 rounded" style={{ backgroundColor: s.color }} />
             <span>{s.label}</span>
-            <span className="font-semibold text-slate-800">{s.value}</span>
+            <span className="font-semibold text-stone-800">{s.value}</span>
           </li>
         ))}
-        {total === 0 ? <li className="text-slate-500">Belum ada data pada rentang ini.</li> : null}
+        {total === 0 ? <li className="text-stone-500">Belum ada data pada rentang ini.</li> : null}
       </ul>
     </div>
   );
@@ -265,8 +265,8 @@ export default function AdminDashboardPage() {
   return (
     <div className="stagger space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">Beranda Admin</h1>
-        <p className="text-sm text-slate-600">
+        <h1 className="text-lg font-bold text-stone-900">Beranda Admin</h1>
+        <p className="text-sm text-stone-600">
           Ringkasan operasional — {rangeLabel(mode, date, from, to, month, year)} (dihitung server).
         </p>
       </header>
@@ -283,7 +283,7 @@ export default function AdminDashboardPage() {
               className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
                 mode === m.value
                   ? 'border-brand-700 bg-brand-700 text-white'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  : 'border-stone-200 text-stone-600 hover:bg-stone-50'
               }`}
             >
               {m.label}
@@ -367,10 +367,10 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {cards.map((card) => (
           <div key={card.label} className="card">
-            <p className="text-2xl font-bold text-slate-900">
+            <p className="text-2xl font-bold text-stone-900">
               {card.value !== undefined ? card.value : '-'}
             </p>
-            <p className="mt-1 text-xs text-slate-500">{card.label}</p>
+            <p className="mt-1 text-xs text-stone-500">{card.label}</p>
             {card.to ? (
               <Link to={card.to} className="mt-2 inline-block text-xs font-semibold text-brand-700 hover:underline">
                 Buka
@@ -384,8 +384,8 @@ export default function AdminDashboardPage() {
       <section aria-label="Grafik dashboard" className="space-y-3">
         <div className="card">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-slate-900">Kehadiran harian</h2>
-            <div className="flex items-center gap-3 text-xs text-slate-600">
+            <h2 className="text-sm font-bold text-stone-900">Kehadiran harian</h2>
+            <div className="flex items-center gap-3 text-xs text-stone-600">
               <span className="flex items-center gap-1">
                 <span aria-hidden="true" className="h-2.5 w-2.5 rounded" style={{ backgroundColor: '#8b1a1a' }} />
                 Hadir
@@ -397,20 +397,20 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           {series.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">Belum ada data pada rentang ini.</p>
+            <p className="py-8 text-center text-sm text-stone-500">Belum ada data pada rentang ini.</p>
           ) : (
             <AttendanceBarChart series={series} />
           )}
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-stone-500">
             Menampilkan maksimal 31 hari terakhir dalam rentang {range.from || '-'} s.d. {range.to || '-'}.
           </p>
         </div>
         <div className="card">
-          <h2 className="mb-2 text-sm font-bold text-slate-900">Distribusi hari kerja</h2>
+          <h2 className="mb-2 text-sm font-bold text-stone-900">Distribusi hari kerja</h2>
           {hasData ? (
             <DistributionDonut onTime={onTime} late={lateCount} needsReview={num('needsReview') ?? 0} absent={absent} />
           ) : (
-            <p className="py-6 text-center text-sm text-slate-500">Belum ada data pada rentang ini.</p>
+            <p className="py-6 text-center text-sm text-stone-500">Belum ada data pada rentang ini.</p>
           )}
         </div>
       </section>

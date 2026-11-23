@@ -17,8 +17,8 @@ const INTERN_STATUS_LABEL: Record<string, string> = {
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-2 border-b border-slate-100 py-1.5 last:border-b-0">
-      <dt className="shrink-0 text-slate-500">{label}</dt>
+    <div className="flex justify-between gap-2 border-b border-stone-100 py-1.5 last:border-b-0">
+      <dt className="shrink-0 text-stone-500">{label}</dt>
       <dd className="text-right font-medium">{value}</dd>
     </div>
   );
@@ -28,7 +28,7 @@ function StatTile({ label, value, tone }: { label: string; value: number; tone: 
   const tones: Record<'ok' | 'warn' | 'info', string> = {
     ok: 'bg-emerald-50 text-emerald-800',
     warn: 'bg-amber-50 text-amber-800',
-    info: 'bg-slate-100 text-slate-700',
+    info: 'bg-stone-100 text-stone-700',
   };
   return (
     <div className={`rounded-lg p-2 text-center ${tones[tone]}`}>
@@ -127,20 +127,20 @@ export default function ParticipantDashboardPage() {
   return (
     <div className="stagger space-y-4">
       <header>
-        <h1 className="text-lg font-bold text-slate-900">
+        <h1 className="text-lg font-bold text-stone-900">
           Halo, {user?.displayName ?? user?.username}
         </h1>
-        <p className="text-sm text-slate-600">{formatDateWib(today.workDate)}</p>
+        <p className="text-sm text-stone-600">{formatDateWib(today.workDate)}</p>
       </header>
 
       <section className="card" aria-labelledby="identity-heading">
-        <h2 id="identity-heading" className="text-sm font-semibold text-slate-800">
+        <h2 id="identity-heading" className="text-sm font-semibold text-stone-800">
           Data peserta
         </h2>
         {profileQuery.isLoading ? (
-          <p className="mt-2 text-sm text-slate-500">Memuat data peserta…</p>
+          <p className="mt-2 text-sm text-stone-500">Memuat data peserta…</p>
         ) : profileQuery.isError || !intern ? (
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-stone-500">
             Data peserta tidak dapat dimuat. Coba muat ulang halaman.
           </p>
         ) : (
@@ -161,33 +161,33 @@ export default function ParticipantDashboardPage() {
 
       <section className="card space-y-3" aria-labelledby="today-heading">
         <div className="flex items-center justify-between gap-2">
-          <h2 id="today-heading" className="text-sm font-semibold text-slate-800">
+          <h2 id="today-heading" className="text-sm font-semibold text-stone-800">
             Absensi hari ini
           </h2>
           <StatusBadge status={day?.dayStatus ?? (isWorkingDay ? 'SCHEDULED' : 'NOT_SCHEDULED')} />
         </div>
-        <p className="text-sm text-slate-700">{summary}</p>
+        <p className="text-sm text-stone-700">{summary}</p>
 
         {isWorkingDay ? (
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <dt className="text-slate-500">Jam masuk jadwal</dt>
-              <dd className="font-medium text-slate-800">{formatTimeWib(workday?.startTime)} WIB</dd>
+              <dt className="text-stone-500">Jam masuk jadwal</dt>
+              <dd className="font-medium text-stone-800">{formatTimeWib(workday?.startTime)} WIB</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Jam pulang jadwal</dt>
-              <dd className="font-medium text-slate-800">{formatTimeWib(workday?.endTime)} WIB</dd>
+              <dt className="text-stone-500">Jam pulang jadwal</dt>
+              <dd className="font-medium text-stone-800">{formatTimeWib(workday?.endTime)} WIB</dd>
             </div>
             {workday?.lateToleranceMinutes != null ? (
               <div>
-                <dt className="text-slate-500">Toleransi terlambat</dt>
-                <dd className="font-medium text-slate-800">{workday.lateToleranceMinutes} menit</dd>
+                <dt className="text-stone-500">Toleransi terlambat</dt>
+                <dd className="font-medium text-stone-800">{workday.lateToleranceMinutes} menit</dd>
               </div>
             ) : null}
             {checkIn ? (
               <div>
-                <dt className="text-slate-500">Absen masuk</dt>
-                <dd className="font-medium text-slate-800">
+                <dt className="text-stone-500">Absen masuk</dt>
+                <dd className="font-medium text-stone-800">
                   {formatTimeWib(checkIn.occurredAtServer)} WIB
                   {checkIn.isLate ? (
                     <span className="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">
@@ -199,25 +199,25 @@ export default function ParticipantDashboardPage() {
             ) : null}
             {checkOut ? (
               <div>
-                <dt className="text-slate-500">Absen pulang</dt>
-                <dd className="font-medium text-slate-800">{formatTimeWib(checkOut.occurredAtServer)} WIB</dd>
+                <dt className="text-stone-500">Absen pulang</dt>
+                <dd className="font-medium text-stone-800">{formatTimeWib(checkOut.occurredAtServer)} WIB</dd>
               </div>
             ) : null}
             {lastEvent?.latitude != null && lastEvent.longitude != null ? (
               <div className="col-span-2">
-                <dt className="text-slate-500">Lokasi terakhir tercatat</dt>
-                <dd className="font-medium text-slate-800">
+                <dt className="text-stone-500">Lokasi terakhir tercatat</dt>
+                <dd className="font-medium text-stone-800">
                   ±{formatMeters(lastEvent.accuracyMeters)} dari titik absen ·{' '}
                   <MapsLink latitude={lastEvent.latitude} longitude={lastEvent.longitude} />
                 </dd>
                 {lastEvent.address ? (
-                  <dd className="mt-1 text-xs text-slate-600">Alamat: {lastEvent.address}</dd>
+                  <dd className="mt-1 text-xs text-stone-600">Alamat: {lastEvent.address}</dd>
                 ) : null}
               </div>
             ) : null}
           </dl>
         ) : (
-          <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+          <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-600">
             Tidak ada jadwal kerja hari ini, jadi tombol absen dinonaktifkan. Jika menurut Anda ini
             keliru, hubungi admin HR.
           </p>
@@ -254,7 +254,7 @@ export default function ParticipantDashboardPage() {
           </button>
         )}
         {isWorkingDay && !checkIn ? (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-stone-500">
             Absen pulang terbuka setelah absen masuk berhasil. Waktu resmi memakai waktu server.
           </p>
         ) : null}
@@ -293,15 +293,15 @@ export default function ParticipantDashboardPage() {
 
       <section className="card" aria-labelledby="summary-heading">
         <div className="flex items-center justify-between gap-2">
-          <h2 id="summary-heading" className="text-sm font-semibold text-slate-800">
+          <h2 id="summary-heading" className="text-sm font-semibold text-stone-800">
             Kehadiran bulan ini
           </h2>
-          <span className="text-xs text-slate-500">{month?.label}</span>
+          <span className="text-xs text-stone-500">{month?.label}</span>
         </div>
         {monthQuery.isLoading ? (
-          <p className="mt-2 text-sm text-slate-500">Memuat ringkasan…</p>
+          <p className="mt-2 text-sm text-stone-500">Memuat ringkasan…</p>
         ) : monthQuery.isError ? (
-          <p className="mt-2 text-sm text-slate-500">Ringkasan tidak dapat dimuat.</p>
+          <p className="mt-2 text-sm text-stone-500">Ringkasan tidak dapat dimuat.</p>
         ) : (
           <>
             <dl className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -310,7 +310,7 @@ export default function ParticipantDashboardPage() {
               <StatTile label="Belum lengkap" value={countStatus('INCOMPLETE')} tone="warn" />
               <StatTile label="Perlu review" value={countStatus('NEEDS_REVIEW')} tone="info" />
             </dl>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-stone-500">
               Dari {scheduledCount} hari kerja terjadwal bulan ini · {belumAbsenCount} hari belum
               ada absen sama sekali.
             </p>
@@ -322,7 +322,7 @@ export default function ParticipantDashboardPage() {
       </section>
 
       <section className="card">
-        <h2 className="text-sm font-semibold text-slate-800">Menu cepat</h2>
+        <h2 className="text-sm font-semibold text-stone-800">Menu cepat</h2>
         <div className="mt-3 grid grid-cols-3 gap-2">
           <Link to="/riwayat" className="btn-secondary px-2 py-2 text-xs">
             Riwayat

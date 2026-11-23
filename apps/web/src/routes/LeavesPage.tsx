@@ -104,8 +104,8 @@ export default function LeavesPage() {
     <div className="space-y-4">
       <header className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">{canRequest ? 'Izin' : 'Izin Peserta'}</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-lg font-bold text-stone-900">{canRequest ? 'Izin' : 'Izin Peserta'}</h1>
+          <p className="text-sm text-stone-600">
             {canRequest
               ? 'Pengajuan izin hanya dapat dilakukan setelah absen masuk.'
               : 'Daftar izin peserta dalam cakupan Anda (hanya baca).'}
@@ -130,7 +130,7 @@ export default function LeavesPage() {
           noValidate
           aria-labelledby="leave-form-heading"
         >
-          <h2 id="leave-form-heading" className="text-sm font-semibold text-slate-800">
+          <h2 id="leave-form-heading" className="text-sm font-semibold text-stone-800">
             Form pengajuan izin
           </h2>
           {formError ? (
@@ -163,7 +163,7 @@ export default function LeavesPage() {
                   Kategori izin belum dapat dimuat, hubungi admin
                 </p>
               ) : categoriesQuery.isLoading ? (
-                <p className="text-sm text-slate-500">Memuat kategori…</p>
+                <p className="text-sm text-stone-500">Memuat kategori…</p>
               ) : (
                 <select {...props} {...form.register('categoryId')} className="input" defaultValue="">
                   <option value="" disabled>
@@ -264,13 +264,13 @@ export default function LeavesPage() {
                   >
                     <div className="min-w-0">
                       {!canRequest && leave.participantName ? (
-                        <p className="truncate text-sm font-semibold text-slate-900">{leave.participantName}</p>
+                        <p className="truncate text-sm font-semibold text-stone-900">{leave.participantName}</p>
                       ) : null}
-                      <p className="truncate text-sm font-medium text-slate-800">
+                      <p className="truncate text-sm font-medium text-stone-800">
                         {LEAVE_TYPE_LABELS[leave.leaveType] ?? leave.leaveType}
                         {leave.categoryName ? ` · ${leave.categoryName}` : ''}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-stone-500">
                         {formatDateWib(leave.estimatedDepartureAt ?? leave.createdAt)}
                         {leave.status === 'PENDING' ? ' · Pengajuan izin menunggu persetujuan.' : ''}
                       </p>
@@ -284,7 +284,7 @@ export default function LeavesPage() {
           <ServerPagination pagination={leavesQuery.data.pagination} onPageChange={setPage} />
         </>
       ) : null}
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-stone-500">
         Status izin ({leaveStatusLabel('PENDING')}, {leaveStatusLabel('DEPARTED')}, dst.) selalu
         mengikuti data server.
       </p>

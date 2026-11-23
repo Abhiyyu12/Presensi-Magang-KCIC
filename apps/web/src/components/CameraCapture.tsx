@@ -132,11 +132,11 @@ export function CameraCapture({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-stone-600">
         Izinkan akses kamera untuk mengambil selfie absensi.
       </p>
 
-      <div className="relative overflow-hidden rounded-xl bg-slate-900">
+      <div className="relative overflow-hidden rounded-xl bg-stone-900">
         <video
           ref={videoRef}
           playsInline
@@ -157,7 +157,7 @@ export function CameraCapture({
 
         {state === 'idle' ? (
           <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 p-4 text-center">
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-stone-300">
               Kamera akan diminta setelah Anda menekan tombol di bawah. Pastikan wajah terlihat
               jelas dan pencahayaan cukup.
             </p>
@@ -170,10 +170,10 @@ export function CameraCapture({
         {state === 'requesting_permission' ? (
           <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 p-4">
             <span
-              className="h-6 w-6 animate-spin rounded-full border-2 border-slate-500 border-t-white"
+              className="h-6 w-6 animate-spin rounded-full border-2 border-stone-500 border-t-white"
               aria-hidden="true"
             />
-            <p className="text-sm text-slate-300" role="status">
+            <p className="text-sm text-stone-300" role="status">
               Menunggu izin kamera…
             </p>
           </div>
@@ -182,7 +182,7 @@ export function CameraCapture({
         {state === 'permission_denied' ? (
           <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 p-4 text-center">
             <p className="text-sm font-semibold text-red-300">Izin kamera ditolak</p>
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-stone-300">
               Buka pengaturan situs di browser Anda, izinkan akses kamera untuk halaman ini, lalu
               coba lagi.
             </p>
@@ -195,7 +195,7 @@ export function CameraCapture({
         {state === 'unavailable' ? (
           <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 p-4 text-center">
             <p className="text-sm font-semibold text-red-300">Kamera tidak tersedia</p>
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-stone-300">
               Pastikan perangkat memiliki kamera dan tidak sedang digunakan aplikasi lain. Kamera
               hanya berfungsi pada HTTPS atau localhost. Coba lagi setelah memeriksa perangkat.
             </p>
@@ -206,9 +206,9 @@ export function CameraCapture({
         ) : null}
 
         {state === 'uploading' ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/70 p-4 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-stone-900/70 p-4 text-center">
             <span
-              className="h-6 w-6 animate-spin rounded-full border-2 border-slate-500 border-t-white"
+              className="h-6 w-6 animate-spin rounded-full border-2 border-stone-500 border-t-white"
               aria-hidden="true"
             />
             <p className="text-sm text-white" role="status" aria-live="polite">

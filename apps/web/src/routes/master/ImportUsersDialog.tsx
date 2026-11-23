@@ -153,7 +153,7 @@ export function ImportUsersDialog({ open, onClose, onImported }: ImportUsersDial
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/50 p-4 sm:items-center"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && !busy) onClose();
       }}
@@ -165,7 +165,7 @@ export function ImportUsersDialog({ open, onClose, onImported }: ImportUsersDial
         aria-labelledby="import-dialog-title"
         className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-5 shadow-xl"
       >
-        <h2 id="import-dialog-title" className="text-base font-semibold text-slate-900">
+        <h2 id="import-dialog-title" className="text-base font-semibold text-stone-900">
           Import Pengguna dari Excel
         </h2>
 
@@ -174,7 +174,7 @@ export function ImportUsersDialog({ open, onClose, onImported }: ImportUsersDial
         ) : null}
 
         {step === 'pick' ? (
-          <div className="mt-3 space-y-3 text-sm text-slate-600">
+          <div className="mt-3 space-y-3 text-sm text-stone-600">
             <ol className="list-decimal space-y-1 pl-5">
               <li>
                 Unduh template, lalu isi data di sheet &quot;Pengguna&quot; mulai baris 2 (maksimal
@@ -208,11 +208,11 @@ export function ImportUsersDialog({ open, onClose, onImported }: ImportUsersDial
               onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
             />
             {file ? (
-              <p className="text-sm text-slate-700">
+              <p className="text-sm text-stone-700">
                 File dipilih: <span className="font-medium">{file.name}</span>
               </p>
             ) : (
-              <p className="text-sm text-slate-500">Belum ada file dipilih.</p>
+              <p className="text-sm text-stone-500">Belum ada file dipilih.</p>
             )}
             <div className="flex justify-end gap-2 pt-1">
               <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
@@ -232,18 +232,18 @@ export function ImportUsersDialog({ open, onClose, onImported }: ImportUsersDial
 
         {step === 'preview' && preview ? (
           <div className="mt-3 space-y-3">
-            <p className="text-sm text-slate-700">
+            <p className="text-sm text-stone-700">
               Total {preview.totalRows} baris:{' '}
               <span className="font-medium text-green-700">{preview.validCount} siap diimpor</span>
               {', '}
               <span className="font-medium text-red-700">{preview.errorCount} bermasalah</span>
               {' '}(baris bermasalah dilewati saat penyimpanan).
             </p>
-            <ul className="max-h-72 space-y-1.5 overflow-y-auto rounded-lg border border-slate-200 p-2">
+            <ul className="max-h-72 space-y-1.5 overflow-y-auto rounded-lg border border-stone-200 p-2">
               {preview.rows.map((r) => (
                 <li key={r.row} className="text-sm">
-                  <span className="font-medium text-slate-900">Baris {r.row}</span>{' '}
-                  <span className="text-slate-600">
+                  <span className="font-medium text-stone-900">Baris {r.row}</span>{' '}
+                  <span className="text-stone-600">
                     {r.username || '(kosong)'} — {r.displayName || '(tanpa nama)'} — {r.roleCode || '-'}
                   </span>{' '}
                   {r.status === 'valid' ? (
@@ -275,7 +275,7 @@ export function ImportUsersDialog({ open, onClose, onImported }: ImportUsersDial
 
         {step === 'done' && result ? (
           <div className="mt-3 space-y-3">
-            <p className="text-sm text-slate-700" role="status">
+            <p className="text-sm text-stone-700" role="status">
               {result.created} pengguna berhasil dibuat, {result.skipped} baris dilewati.
             </p>
             {result.users.length > 0 ? (

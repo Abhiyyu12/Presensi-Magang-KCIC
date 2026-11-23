@@ -136,8 +136,8 @@ export default function ReportsPage() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-slate-900">Report & Statistik</h1>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-lg font-bold text-stone-900">Report & Statistik</h1>
+          <p className="text-sm text-stone-600">
             Metrik dihitung server sesuai filter dan cakupan Anda. Denominator: terjadwal.
           </p>
         </div>
@@ -259,14 +259,14 @@ export default function ReportsPage() {
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
               {METRIC_LABELS.map((metric) => (
                 <div key={metric.key} className="card p-3">
-                  <p className="text-xl font-bold text-slate-900">
+                  <p className="text-xl font-bold text-stone-900">
                     {reportQuery.data?.metrics ? (reportQuery.data.metrics[metric.key] ?? '-') : '-'}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">{metric.label}</p>
+                  <p className="mt-0.5 text-[11px] text-stone-500">{metric.label}</p>
                 </div>
               ))}
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-stone-500">
               Denominator: terjadwal. Kategori metrik bersifat eksklusif dan dihitung backend.
             </p>
           </section>
@@ -300,7 +300,7 @@ export default function ReportsPage() {
         onClose={() => setDetailRow(null)}
       >
         {detailRow ? (
-          <div className="mt-3 space-y-1 text-sm text-slate-700">
+          <div className="mt-3 space-y-1 text-sm text-stone-700">
             <p>
               <strong>{detailRow.participantName}</strong>
               {detailRow.participantNumber ? ` · ${detailRow.participantNumber}` : ''}
@@ -314,7 +314,7 @@ export default function ReportsPage() {
               {detailRow.correctionFlag ? ' (koreksi)' : ''}
             </p>
             {detailRow.leaves && detailRow.leaves.length > 0 ? (
-              <div className="mt-2 space-y-2 border-t border-slate-100 pt-2">
+              <div className="mt-2 space-y-2 border-t border-stone-100 pt-2">
                 {detailRow.leaves.map((l, i) => (
                   <div key={i}>
                     <p className="font-semibold">

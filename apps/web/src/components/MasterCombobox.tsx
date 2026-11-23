@@ -158,8 +158,8 @@ export function MasterCombobox({
           disabled={disabled}
           onClick={() => setOpen((v) => !v)}
         >
-          <span className={`truncate ${hasValue ? 'text-slate-900' : 'text-slate-400'}`}>{display}</span>
-          <span aria-hidden="true" className="ml-2 shrink-0 text-slate-400">▾</span>
+          <span className={`truncate ${hasValue ? 'text-stone-900' : 'text-stone-400'}`}>{display}</span>
+          <span aria-hidden="true" className="ml-2 shrink-0 text-stone-400">▾</span>
         </button>
         {allowClear && hasValue && !disabled ? (
           <button
@@ -177,8 +177,8 @@ export function MasterCombobox({
       ) : null}
 
       {open ? (
-        <div className="menu-enter absolute z-50 mt-1 w-full origin-top rounded-lg border border-slate-200 bg-white shadow-lg">
-          <div className="border-b border-slate-100 p-2">
+        <div className="menu-enter absolute z-50 mt-1 w-full origin-top rounded-lg border border-stone-200 bg-white shadow-lg">
+          <div className="border-b border-stone-100 p-2">
             <input
               type="text"
               role="combobox"
@@ -200,13 +200,13 @@ export function MasterCombobox({
           </div>
           <ul ref={listRef} id={listId} role="listbox" aria-label={label} className="overflow-y-auto py-1" style={{ maxHeight: MAX_VISIBLE_HEIGHT }}>
             {queryExtra === null ? (
-              <li className="px-3 py-2 text-sm text-slate-500">{depHint ?? 'Pilih nilai terkait terlebih dahulu.'}</li>
+              <li className="px-3 py-2 text-sm text-stone-500">{depHint ?? 'Pilih nilai terkait terlebih dahulu.'}</li>
             ) : optionsQuery.isLoading ? (
-              <li className="px-3 py-2 text-sm text-slate-500">{LOAD_TEXT}</li>
+              <li className="px-3 py-2 text-sm text-stone-500">{LOAD_TEXT}</li>
             ) : optionsQuery.isError ? (
               <li className="px-3 py-2 text-sm text-red-600">Gagal memuat data.</li>
             ) : options.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-slate-500">{EMPTY_TEXT}</li>
+              <li className="px-3 py-2 text-sm text-stone-500">{EMPTY_TEXT}</li>
             ) : (
               options.map((option, index) => (
                 <li
@@ -216,14 +216,14 @@ export function MasterCombobox({
                   aria-selected={option.value === value}
                   className={`flex h-10 cursor-pointer items-center gap-2 px-3 text-sm ${
                     index === activeIndex ? 'bg-brand-50' : ''
-                  } ${option.value === value ? 'font-semibold text-brand-800' : 'text-slate-700'}`}
+                  } ${option.value === value ? 'font-semibold text-brand-800' : 'text-stone-700'}`}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => pick(option)}
                   onMouseEnter={() => setActiveIndex(index)}
                 >
                   <span className="truncate">{option.label}</span>
                   {option.description ? (
-                    <span className="ml-auto shrink-0 text-xs text-slate-500">{option.description}</span>
+                    <span className="ml-auto shrink-0 text-xs text-stone-500">{option.description}</span>
                   ) : null}
                 </li>
               ))
