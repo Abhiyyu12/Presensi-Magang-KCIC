@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, firstFieldErrorMessage } from '../lib/api';
 import { asString, isRecord, type HelpArticle, type HelpCategory, type Paginated } from '../lib/types';
 import { DataTable, type Column } from '../components/DataTable';
+import { StatusBadge } from '../components/StatusBadge';
 import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
+import { FetchIndicator } from '../components/FetchIndicator';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface ArticleForm {
@@ -85,14 +87,14 @@ export default function HelpAdminPage() {
   const columns: Column<HelpArticle>[] = [
     { header: 'Judul', cell: (row) => row.title },
     { header: 'Kategori', cell: (row) => row.categoryName ?? '-' },
-    { header: 'Status', cell: (row) => row.status ?? '-' },
+    { header: 'Status', cell: (row) => <StatusBadge kind="neutral" status={row.status ?? '-'} label={row.status ?? '-'} /> },
     {
       header: 'Aksi',
       cell: (row) => (
-        <span className="flex flex-wrap gap-2">
+        <span className="flex items-center gap-1">
           <button
             type="button"
-            className="text-xs font-semibold text-brand-700 hover:underline"
+            className="min-h-touch rounded-lg border border-stone-200 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50"
             onClick={() => {
               setEditing(row);
               setForm({
@@ -109,7 +111,7 @@ export default function HelpAdminPage() {
           {asString(row.status).toUpperCase() !== 'PUBLISHED' ? (
             <button
               type="button"
-              className="text-xs font-semibold text-green-700 hover:underline"
+              className="min-h-touch rounded-lg border border-green-200 px-3 text-xs font-semibold text-green-700 hover:bg-green-50 disabled:opacity-50"
               disabled={statusMutation.isPending}
               onClick={() => statusMutation.mutate({ article: row, action: 'publish' })}
             >
@@ -118,7 +120,7 @@ export default function HelpAdminPage() {
           ) : (
             <button
               type="button"
-              className="text-xs font-semibold text-amber-700 hover:underline"
+              className="min-h-touch rounded-lg border border-amber-200 px-3 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-50"
               disabled={statusMutation.isPending}
               onClick={() => statusMutation.mutate({ article: row, action: 'archive' })}
             >
@@ -164,6 +166,7 @@ export default function HelpAdminPage() {
         />
       ) : (
         <>
+          <FetchIndicator show={articlesQuery.isFetching && !articlesQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={(articlesQuery.data?.items ?? []).filter(isRecord) as unknown as HelpArticle[]}

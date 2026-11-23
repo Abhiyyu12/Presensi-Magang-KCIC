@@ -7,12 +7,34 @@ import { DataTable, type Column } from '../components/DataTable';
 import { StatusBadge } from '../components/StatusBadge';
 import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
+import { FetchIndicator } from '../components/FetchIndicator';
+import { SuccessNotice } from '../components/SuccessNotice';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Icon } from '../components/Icon';
 import { FormField } from '../components/FormField';
 import { usePagedFilters } from '../hooks/useUiHelpers';
 
 type Decision = 'approve' | 'reject';
+
+// Empty state sadar-filter: konteks status ikut dijelaskan, bukan pesan generik.
+const EMPTY_BY_STATUS: Record<string, { title: string; description: string }> = {
+  PENDING: {
+    title: 'Tidak ada pengajuan menunggu',
+    description: 'Semua pengajuan izin sudah diproses, atau belum ada pengajuan baru yang masuk.',
+  },
+  APPROVED: {
+    title: 'Tidak ada pengajuan disetujui',
+    description: 'Belum ada pengajuan izin dengan status disetujui pada cakupan Anda.',
+  },
+  REJECTED: {
+    title: 'Tidak ada pengajuan ditolak',
+    description: 'Belum ada pengajuan izin dengan status ditolak pada cakupan Anda.',
+  },
+};
+const EMPTY_DEFAULT = {
+  title: 'Tidak ada pengajuan',
+  description: 'Tidak ada pengajuan izin yang cocok dengan filter saat ini.',
+};
 
 export default function ApprovalsPage() {
   const queryClient = useQueryClient();
@@ -22,6 +44,7 @@ export default function ApprovalsPage() {
   const [decision, setDecision] = useState<Decision | null>(null);
   const [note, setNote] = useState('');
   const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const leavesQuery = useQuery({
     queryKey: ['leaves', 'all', statusFilter, page, pageSize],
@@ -42,6 +65,7 @@ export default function ApprovalsPage() {
       });
     },
     onSuccess: () => {
+      setNotice(decision === 'approve' ? 'Pengajuan izin disetujui.' : 'Pengajuan izin ditolak.');
       setDecisionError(null);
       setSelected(null);
       setDecision(null);
@@ -62,7 +86,11 @@ export default function ApprovalsPage() {
     { header: 'Jenis', cell: (row) => LEAVE_TYPE_LABELS[row.leaveType] ?? row.leaveType },
     {
       header: 'Estimasi keluar',
-      cell: (row) => formatWib(row.estimatedDepartureAt),
+      className: 'font-mono text-[13px]',
+      cell: (row) => {
+        const v = formatWib(row.estimatedDepartureAt);
+        return v === '-' ? <span className="text-stone-300">-</span> : v;
+      },
     },
     { header: 'Status', cell: (row) => <StatusBadge kind="leaveStatus" status={row.status} /> },
     {
@@ -116,6 +144,8 @@ export default function ApprovalsPage() {
     },
   ];
 
+  const emptyCopy = EMPTY_BY_STATUS[statusFilter] ?? EMPTY_DEFAULT;
+
   return (
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-2">
@@ -145,6 +175,8 @@ export default function ApprovalsPage() {
         </div>
       </header>
 
+      {notice ? <SuccessNotice message={notice} onDismiss={() => setNotice(null)} /> : null}
+
       {leavesQuery.isError ? (
         <ErrorState
           message={leavesQuery.error instanceof Error ? leavesQuery.error.message : 'Gagal memuat.'}
@@ -152,14 +184,15 @@ export default function ApprovalsPage() {
         />
       ) : (
         <>
+          <FetchIndicator show={leavesQuery.isFetching && !leavesQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={leavesQuery.data?.items ?? []}
             rowKey={(row) => row.id}
             loading={leavesQuery.isLoading}
             onRowClick={(row) => setSelected(row)}
-            emptyTitle="Tidak ada pengajuan"
-            emptyDescription="Tidak ada pengajuan izin yang cocok dengan filter saat ini."
+            emptyTitle={emptyCopy.title}
+            emptyDescription={emptyCopy.description}
             caption="Antrean approval izin"
           />
           {leavesQuery.data ? (

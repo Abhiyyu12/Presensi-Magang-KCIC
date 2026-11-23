@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
+import { Tabs } from '../components/Tabs';
 import { MASTER_RESOURCES } from './master/config';
 import { ResourcePanel } from './master/ResourcePanel';
 import { UsersPanel } from './master/UsersPanel';
@@ -63,36 +64,22 @@ export default function MasterDataPage() {
         </p>
       </header>
 
-      <div
-        role="tablist"
-        aria-label="Kategori data master"
-        className="flex gap-1 overflow-x-auto border-b border-stone-200 pb-px"
-      >
-        {tabs.map((key) => (
-          <button
-            key={key}
-            role="tab"
-            type="button"
-            id={`tab-${key}`}
-            aria-selected={activeTab === key}
-            aria-controls={`tabpanel-${key}`}
-            className={`min-h-touch shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${
-              activeTab === key
-                ? 'border-brand-700 text-brand-800'
-                : 'border-transparent text-stone-600 hover:text-stone-900'
-            }`}
-            onClick={() => setTab(key)}
-          >
-            {tabLabel(key)}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        tabs={tabs.map((key) => ({ key, label: tabLabel(key) }))}
+        active={activeTab}
+        onChange={(key) => setTab(key)}
+        ariaLabel="Kategori data master"
+        tabId={(key) => `tab-${key}`}
+        panelId={(key) => `tabpanel-${key}`}
+        indicatorId="master-tabs-indicator"
+      />
 
       <div
+        key={activeTab}
         role="tabpanel"
         id={`tabpanel-${activeTab}`}
         aria-labelledby={`tab-${activeTab}`}
-        className="pt-1"
+        className="tab-enter pt-1"
       >
         {activeTab === 'users' ? (
           <UsersPanel />

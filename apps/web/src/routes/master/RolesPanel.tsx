@@ -8,6 +8,7 @@ import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { SuccessNotice } from '../../components/SuccessNotice';
 import { StatusBadge } from '../../components/StatusBadge';
+import { FetchIndicator } from '../../components/FetchIndicator';
 import { Icon } from '../../components/Icon';
 import { usePagedFilters } from '../../hooks/useUiHelpers';
 
@@ -132,7 +133,7 @@ export function RolesPanel() {
     {
       header: 'Aksi',
       cell: (row) => (
-        <span className="flex flex-wrap gap-2">
+        <span className="flex items-center gap-1">
           <button
             type="button"
             className="btn-icon"
@@ -201,6 +202,7 @@ export function RolesPanel() {
         />
       ) : (
         <>
+          <FetchIndicator show={rolesQuery.isFetching && !rolesQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={items}

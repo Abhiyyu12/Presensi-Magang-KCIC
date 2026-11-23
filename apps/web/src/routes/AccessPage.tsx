@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
+import { Tabs } from '../components/Tabs';
 import { RolesPermissionsPanel } from './access/RolesPermissionsPanel';
 import { FeatureTreePanel } from './access/FeatureTreePanel';
 import { PoliciesPanel } from './access/PoliciesPanel';
@@ -29,27 +30,22 @@ export default function AccessPage() {
           Atur role, pohon permission, policy, dan simulasi akses. Semua perubahan diaudit server.
         </p>
       </header>
-      <div role="tablist" aria-label="Bagian manajemen akses" className="flex gap-1 overflow-x-auto border-b border-stone-200">
-        {visibleTabs.map((item) => (
-          <button
-            key={item.key}
-            role="tab"
-            type="button"
-            id={`access-tab-${item.key}`}
-            aria-selected={activeTab === item.key}
-            aria-controls={`access-panel-${item.key}`}
-            className={`min-h-touch shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium ${
-              activeTab === item.key
-                ? 'border-brand-700 text-brand-800'
-                : 'border-transparent text-stone-600 hover:text-stone-900'
-            }`}
-            onClick={() => setTab(item.key)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-      <div role="tabpanel" id={`access-panel-${activeTab}`} aria-labelledby={`access-tab-${activeTab}`}>
+      <Tabs
+        tabs={visibleTabs.map((t) => ({ key: t.key, label: t.label }))}
+        active={activeTab}
+        onChange={(key) => setTab(key as Tab)}
+        ariaLabel="Bagian manajemen akses"
+        tabId={(key) => `access-tab-${key}`}
+        panelId={(key) => `access-panel-${key}`}
+        indicatorId="access-tabs-indicator"
+      />
+      <div
+        key={activeTab}
+        role="tabpanel"
+        id={`access-panel-${activeTab}`}
+        aria-labelledby={`access-tab-${activeTab}`}
+        className="tab-enter"
+      >
         {activeTab === 'roles' ? <RolesPermissionsPanel /> : null}
         {activeTab === 'tree' ? <FeatureTreePanel /> : null}
         {activeTab === 'policies' ? <PoliciesPanel /> : null}

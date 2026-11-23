@@ -8,6 +8,7 @@ import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { MasterCombobox } from '../../components/MasterCombobox';
 import { SuccessNotice } from '../../components/SuccessNotice';
+import { FetchIndicator } from '../../components/FetchIndicator';
 import { buildSchema, type FieldConfig, type ResourceConfig } from './config';
 
 type Row = Record<string, unknown>;
@@ -257,6 +258,7 @@ export function ResourcePanel({ config }: ResourcePanelProps) {
         />
       ) : (
         <>
+          <FetchIndicator show={listQuery.isFetching && !listQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={items}

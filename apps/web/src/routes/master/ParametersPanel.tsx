@@ -7,6 +7,7 @@ import { ErrorState } from '../../components/ErrorState';
 import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { SuccessNotice } from '../../components/SuccessNotice';
+import { FetchIndicator } from '../../components/FetchIndicator';
 
 type Row = Record<string, unknown>;
 
@@ -167,6 +168,7 @@ export function ParametersPanel({ path, label }: ParametersPanelProps) {
         />
       ) : (
         <>
+          <FetchIndicator show={listQuery.isFetching && !listQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={items}

@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ImportUsersDialog } from './ImportUsersDialog';
 import { SuccessNotice } from '../../components/SuccessNotice';
 import { StatusBadge } from '../../components/StatusBadge';
+import { FetchIndicator } from '../../components/FetchIndicator';
 import { MasterCombobox } from '../../components/MasterCombobox';
 import { Icon } from '../../components/Icon';
 import { useAuth } from '../../lib/auth';
@@ -361,12 +362,27 @@ export function UsersPanel() {
     { header: 'Email', cell: (row) => asString(row['email']) || '-' },
     {
       header: 'Role',
-      cell: (row) =>
-        Array.isArray(row['roles'])
+      cell: (row) => {
+        const codes = Array.isArray(row['roles'])
           ? (row['roles'] as unknown[])
               .map((r) => (isRecord(r) ? asString(r['code'] ?? r['name']) : String(r)))
-              .join(', ') || '-'
-          : '-',
+              .filter(Boolean)
+          : [];
+        return codes.length > 0 ? (
+          <span className="flex flex-wrap items-center gap-1">
+            {codes.map((code) => (
+              <span
+                key={code}
+                className="inline-flex items-center whitespace-nowrap rounded-full border border-stone-200 bg-stone-100 px-1.5 py-0.5 font-mono text-[11px] font-medium text-stone-700"
+              >
+                {code}
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className="text-stone-300">-</span>
+        );
+      },
     },
     {
       header: 'No. Peserta',
@@ -395,7 +411,7 @@ export function UsersPanel() {
     {
       header: 'Aksi',
       cell: (row) => (
-        <span className="flex flex-wrap gap-2">
+        <span className="flex items-center gap-1">
           <button
             type="button"
             className="btn-icon"
@@ -612,18 +628,18 @@ export function UsersPanel() {
         </div>
       ) : null}
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="card flex flex-wrap items-center gap-2 p-3" aria-label="Filter pengguna">
         <input
           type="search"
           aria-label="Cari pengguna"
           placeholder="Cari username / nama…"
-          className="input min-h-touch"
+          className="input min-h-touch w-full sm:min-w-[12rem] sm:flex-1"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
         <select
           aria-label="Filter role"
-          className="input min-h-touch"
+          className="input min-h-touch w-auto min-w-[9rem] flex-1 sm:flex-none"
           value={roleFilter}
           onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
         >
@@ -633,8 +649,8 @@ export function UsersPanel() {
           ))}
         </select>
         <select
-          aria-label="Filter biro"
-          className="input min-h-touch"
+          aria-label="Filter direktorat"
+          className="input min-h-touch w-auto min-w-[9rem] flex-1 sm:flex-none"
           value={bureauId}
           onChange={(e) => { setBureauId(e.target.value); setPage(1); }}
         >
@@ -645,7 +661,7 @@ export function UsersPanel() {
         </select>
         <select
           aria-label="Filter biro"
-          className="input min-h-touch"
+          className="input min-h-touch w-auto min-w-[9rem] flex-1 sm:flex-none"
           value={divisionId}
           disabled={!bureauId}
           onChange={(e) => { setDivisionId(e.target.value); setPage(1); }}
@@ -657,7 +673,7 @@ export function UsersPanel() {
         </select>
         <select
           aria-label="Filter status akun"
-          className="input min-h-touch"
+          className="input min-h-touch w-auto min-w-[9rem] flex-1 sm:flex-none"
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
         >
@@ -666,15 +682,14 @@ export function UsersPanel() {
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
-      </div>
-
-      <div className="flex flex-wrap justify-end gap-2">
-        <button type="button" className="btn-secondary" onClick={() => setImportOpen(true)}>
-          <span className="flex items-center gap-1.5"><Icon name="download" className="h-4 w-4" /> Import Excel</span>
-        </button>
-        <button type="button" className="btn-primary" onClick={() => setCreateOpen(true)}>
-          Tambah Pengguna
-        </button>
+        <div className="ml-auto flex gap-2">
+          <button type="button" className="btn-secondary" onClick={() => setImportOpen(true)}>
+            <span className="flex items-center gap-1.5"><Icon name="download" className="h-4 w-4" /> Import Excel</span>
+          </button>
+          <button type="button" className="btn-primary" onClick={() => setCreateOpen(true)}>
+            Tambah Pengguna
+          </button>
+        </div>
       </div>
 
       {usersQuery.isError ? (
@@ -684,6 +699,7 @@ export function UsersPanel() {
         />
       ) : (
         <>
+          <FetchIndicator show={usersQuery.isFetching && !usersQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={(usersQuery.data?.items ?? []).filter(isRecord) as Row[]}

@@ -160,6 +160,16 @@
     opacity: 0;
   }
 }
+@keyframes tab-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 @keyframes menu-pop {
   from {
     opacity: 0;
@@ -211,6 +221,14 @@
     opacity: 0;
   }
 }
+@keyframes fetch-slide {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(320%);
+  }
+}
 
 @layer utilities {
   /* Scrollbar tipis untuk area gulir di dalam dialog — scrollbar native Windows
@@ -240,6 +258,9 @@
   }
   .notice-enter {
     animation: fade-in 150ms var(--ease-out-strong) both;
+  }
+  .tab-enter {
+    animation: tab-enter 180ms var(--ease-out-strong) both;
   }
   .menu-enter {
     animation: menu-pop 150ms var(--ease-out-strong) both;
@@ -278,6 +299,10 @@
   }
   .chart-band:hover {
     fill: rgba(28, 25, 23, 0.05);
+  }
+  /* Sapuan indikator pembaruan data — loop berbasis transform. */
+  .fetch-bar {
+    animation: fetch-slide 900ms var(--ease-in-out-strong) infinite;
   }
   /* Stagger baris tabel: masuk bergiliran 30ms, maksimal 12 baris pertama;
      baris sisanya menyusul serentak agar tabel besar tetap ringan. */

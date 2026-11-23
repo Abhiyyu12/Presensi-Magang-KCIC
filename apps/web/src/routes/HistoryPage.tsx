@@ -9,6 +9,7 @@ import { DataTable, type Column } from '../components/DataTable';
 import { StatusBadge } from '../components/StatusBadge';
 import { ErrorState } from '../components/ErrorState';
 import { ServerPagination } from '../components/ServerPagination';
+import { FetchIndicator } from '../components/FetchIndicator';
 import { FormField } from '../components/FormField';
 
 interface HistoryFilters {
@@ -171,6 +172,7 @@ export default function HistoryPage() {
         />
       ) : (
         <>
+          <FetchIndicator show={historyQuery.isFetching && !historyQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={historyQuery.data?.items ?? []}

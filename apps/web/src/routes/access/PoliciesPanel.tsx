@@ -5,6 +5,7 @@ import { asString, isRecord, type Paginated } from '../../lib/types';
 import { DataTable, type Column } from '../../components/DataTable';
 import { ErrorState } from '../../components/ErrorState';
 import { ServerPagination } from '../../components/ServerPagination';
+import { FetchIndicator } from '../../components/FetchIndicator';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 type Row = Record<string, unknown>;
@@ -90,6 +91,7 @@ export function PoliciesPanel() {
         />
       ) : (
         <>
+          <FetchIndicator show={policiesQuery.isFetching && !policiesQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={(policiesQuery.data?.items ?? []).filter(isRecord) as Row[]}

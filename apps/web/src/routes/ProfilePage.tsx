@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -75,11 +75,56 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function SectionCard({ title, headingId, children }: { title: string; headingId: string; children: ReactNode }) {
   return (
     <section className="card space-y-3" aria-labelledby={headingId}>
-      <h2 id={headingId} className="text-sm font-semibold uppercase tracking-wide text-stone-500">
+      <h2 id={headingId} className="text-sm font-semibold text-stone-700">
         {title}
       </h2>
       {children}
     </section>
+  );
+}
+
+// Tombol simpan dengan feedback: spinner saat proses, centang singkat setelah sukses.
+function SaveButton({
+  pending,
+  flash,
+  label,
+  busyLabel,
+}: {
+  pending: boolean;
+  flash: boolean;
+  label: string;
+  busyLabel: string;
+}) {
+  return (
+    <button type="submit" className="btn-primary w-full sm:w-auto" disabled={pending}>
+      {pending ? (
+        <>
+          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+            <path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+          {busyLabel}
+        </>
+      ) : flash ? (
+        <>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+            aria-hidden="true"
+          >
+            <path d="m5 13 4 4L19 7" />
+          </svg>
+          {label}
+        </>
+      ) : (
+        label
+      )}
+    </button>
   );
 }
 
@@ -89,6 +134,13 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [savedFlash, setSavedFlash] = useState<'contact' | 'password' | null>(null);
+  const flashTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => flashTimers.current.forEach(clearTimeout), []);
+  const flash = (kind: 'contact' | 'password') => {
+    setSavedFlash(kind);
+    flashTimers.current.push(setTimeout(() => setSavedFlash(null), 1400));
+  };
 
   const profileQuery = useQuery({
     queryKey: ['profile'],
@@ -118,6 +170,7 @@ export default function ProfilePage() {
       }),
     onSuccess: async () => {
       setNotice({ kind: 'ok', text: 'Profil berhasil diperbarui.' });
+      flash('contact');
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
       // Sinkronkan nama tampilan pada header tanpa perlu reload halaman.
       await refresh();
@@ -154,6 +207,7 @@ export default function ProfilePage() {
       }),
     onSuccess: () => {
       setNotice({ kind: 'ok', text: 'Kata sandi berhasil diubah.' });
+      flash('password');
       passwordForm.reset();
     },
     onError: (error: unknown) => {
@@ -216,20 +270,21 @@ export default function ProfilePage() {
       ) : null}
 
       <section className="overflow-hidden rounded-xl border border-stone-200 shadow-sm" aria-label="Identitas akun">
-        <div className="bg-gradient-to-br from-brand-700 to-brand-800 p-5">
-          <div className="flex items-center gap-4">
+        <div className="relative overflow-hidden bg-gradient-to-br from-brand-700 to-brand-800 p-5">
+          <div aria-hidden="true" className="speed-lines streak-drift pointer-events-none absolute -inset-16" />
+          <div className="relative flex items-center gap-4">
             <span
               aria-hidden="true"
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/15 text-lg font-bold text-white ring-2 ring-white/30"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/15 text-xl font-bold text-white ring-2 ring-white/30"
             >
               {initialsOf(profile?.displayName ?? undefined, profile?.username ?? user?.username ?? 'A')}
             </span>
             <div className="min-w-0">
               <p className="truncate text-lg font-bold text-white">{profile?.displayName ?? user?.username ?? '-'}</p>
-              <p className="truncate text-sm text-white/80">@{profile?.username ?? user?.username ?? '-'}</p>
+              <p className="truncate font-mono text-sm text-white/80">@{profile?.username ?? user?.username ?? '-'}</p>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
             {roles.length > 0 ? (
               roles.map((role) => (
                 <span
@@ -280,9 +335,7 @@ export default function ProfilePage() {
             )}
           </FormField>
           <div className="flex justify-end pt-1">
-            <button type="submit" className="btn-primary w-full sm:w-auto" disabled={contactMutation.isPending}>
-              {contactMutation.isPending ? 'Menyimpan…' : 'Simpan Perubahan'}
-            </button>
+            <SaveButton pending={contactMutation.isPending} flash={savedFlash === 'contact'} label="Simpan Perubahan" busyLabel="Menyimpan…" />
           </div>
         </form>
       </SectionCard>
@@ -306,7 +359,7 @@ export default function ProfilePage() {
 
           {intern.supervisors.length > 0 ? (
             <div className="border-t border-stone-100 pt-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Pembimbing</h3>
+              <h3 className="text-xs font-semibold text-stone-500">Pembimbing</h3>
               <ul className="mt-2 space-y-2">
                 {intern.supervisors.map((s) => (
                   <li key={s.displayName} className="flex items-center gap-3">
@@ -391,9 +444,7 @@ export default function ProfilePage() {
             )}
           </FormField>
           <div className="flex justify-end pt-1">
-            <button type="submit" className="btn-primary w-full sm:w-auto" disabled={passwordMutation.isPending}>
-              {passwordMutation.isPending ? 'Memproses…' : 'Ubah Kata Sandi'}
-            </button>
+            <SaveButton pending={passwordMutation.isPending} flash={savedFlash === 'password'} label="Ubah Kata Sandi" busyLabel="Memproses…" />
           </div>
         </form>
       </SectionCard>

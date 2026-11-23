@@ -8,6 +8,7 @@ import { ServerPagination } from '../../components/ServerPagination';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { MasterCombobox } from '../../components/MasterCombobox';
 import { SuccessNotice } from '../../components/SuccessNotice';
+import { FetchIndicator } from '../../components/FetchIndicator';
 import { fetchScheduleScopeOptions } from './options';
 
 type Row = Record<string, unknown>;
@@ -181,7 +182,7 @@ export function SchedulesPanel() {
         <span className="flex gap-2">
           <button
             type="button"
-            className="text-xs font-semibold text-brand-700 hover:underline"
+            className="min-h-touch rounded-lg border border-stone-200 px-3 text-xs font-semibold text-brand-700 hover:bg-brand-50"
             onClick={() => void openEdit(row)}
           >
             Ubah
@@ -222,6 +223,7 @@ export function SchedulesPanel() {
         />
       ) : (
         <>
+          <FetchIndicator show={listQuery.isFetching && !listQuery.isLoading} />
           <DataTable
             columns={columns}
             rows={(listQuery.data?.items ?? []).filter(isRecord) as Row[]}

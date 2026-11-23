@@ -4,6 +4,7 @@ import { api, ApiError } from '../../lib/api';
 import { asString, isRecord, type Paginated } from '../../lib/types';
 import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
+import { EmptyState } from '../../components/EmptyState';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 type Row = Record<string, unknown>;
@@ -442,7 +443,10 @@ export function RolesPermissionsPanel() {
           </div>
         </div>
       ) : (
-        <p className="text-sm text-stone-500">Pilih role untuk melihat dan mengubah permission.</p>
+        <EmptyState
+          title="Pilih role dahulu"
+          description="Pilih salah satu role di atas untuk melihat dan mengubah permission-nya."
+        />
       )}
 
       <ConfirmDialog
